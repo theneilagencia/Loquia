@@ -1,0 +1,17 @@
+{
+  "title": "Market Analysis",
+  "newAnalysis": "New Analysis",
+  "keywords": "Keywords",
+  "keywordsPlaceholder": "Ex: digital marketing, social media, online advertising",
+  "keywordsHint": "Separate multiple keywords with commas",
+  "regions": "Regions",
+  "startAnalysis": "Start Analysis",
+  "previousAnalyses": "Previous Analyses",
+  "noAnalyses": "No analyses performed yet. Create your first market analysis!",
+  "results": "Results",
+  "status": {
+    "running": "Running",
+    "completed": "Completed",
+    "failed": "Failed"
+  }
+}

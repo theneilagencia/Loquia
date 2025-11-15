@@ -1,0 +1,22 @@
+{
+  "title": "Voice Interactions",
+  "newCall": "New Call",
+  "phoneNumber": "Phone Number",
+  "phoneNumberPlaceholder": "+1 555 123-4567",
+  "startCall": "Start Call",
+  "callHistory": "Call History",
+  "noCalls": "No calls made yet. Start your first call!",
+  "transcript": "Transcript",
+  "status": {
+    "initiated": "Initiated",
+    "in_progress": "In Progress",
+    "completed": "Completed",
+    "failed": "Failed",
+    "no_answer": "No Answer"
+  },
+  "sentiment": {
+    "positive": "Positive",
+    "neutral": "Neutral",
+    "negative": "Negative"
+  }
+}

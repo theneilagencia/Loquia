@@ -1,0 +1,17 @@
+{
+  "title": "Análise de Mercado",
+  "newAnalysis": "Nova Análise",
+  "keywords": "Palavras-chave",
+  "keywordsPlaceholder": "Ex: marketing digital, redes sociais, publicidade online",
+  "keywordsHint": "Separe múltiplas palavras-chave com vírgulas",
+  "regions": "Regiões",
+  "startAnalysis": "Iniciar Análise",
+  "previousAnalyses": "Análises Anteriores",
+  "noAnalyses": "Nenhuma análise realizada ainda. Crie sua primeira análise de mercado!",
+  "results": "Resultados",
+  "status": {
+    "running": "Em andamento",
+    "completed": "Concluída",
+    "failed": "Falhou"
+  }
+}

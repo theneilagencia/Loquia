@@ -1,0 +1,22 @@
+{
+  "title": "Interações por Voz",
+  "newCall": "Nova Chamada",
+  "phoneNumber": "Número de Telefone",
+  "phoneNumberPlaceholder": "+55 11 99999-9999",
+  "startCall": "Iniciar Chamada",
+  "callHistory": "Histórico de Chamadas",
+  "noCalls": "Nenhuma chamada realizada ainda. Inicie sua primeira chamada!",
+  "transcript": "Transcrição",
+  "status": {
+    "initiated": "Iniciada",
+    "in_progress": "Em andamento",
+    "completed": "Concluída",
+    "failed": "Falhou",
+    "no_answer": "Sem resposta"
+  },
+  "sentiment": {
+    "positive": "Positivo",
+    "neutral": "Neutro",
+    "negative": "Negativo"
+  }
+}

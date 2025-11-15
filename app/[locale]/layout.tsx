@@ -30,6 +30,8 @@ export default async function LocaleLayout({
       navbar: (await import(`@/messages/${locale}/navbar.json`)).default,
       approvals: (await import(`@/messages/${locale}/approvals.json`)).default,
       comments: (await import(`@/messages/${locale}/comments.json`)).default,
+      market: (await import(`@/messages/${locale}/market.json`)).default,
+      voice: (await import(`@/messages/${locale}/voice.json`)).default,
     };
   } catch (error) {
     notFound();
