@@ -29,13 +29,14 @@ TTL: 3600 (1 hora)
 ```
 Tipo: CNAME
 Host: www
-Valor: cname.vercel-dns.com.
+Valor: cname.vercel-dns.com
 TTL: 3600 (1 hora)
 ```
 
-**⚠️ IMPORTANTE:** 
+**⚠️ IMPORTANTE KingHost:** 
 - Remova qualquer registro A ou CNAME existente para `@` e `www`
-- O ponto (.) no final de `cname.vercel-dns.com.` é importante
+- Na KingHost, use `cname.vercel-dns.com` **SEM o ponto final**
+- Se der erro "formato inválido", tente criar um registro A para `www` apontando para `76.76.21.21`
 
 ### 3. Salvar Alterações
 Clique em **"Salvar"** ou **"Aplicar Alterações"**.
@@ -110,8 +111,9 @@ Após a configuração, você terá:
 - Aguarde propagação DNS (1-2 horas)
 - Verifique se os registros estão corretos
 
-### Erro: "Invalid Configuration"
-- Certifique-se de que o CNAME aponta para `cname.vercel-dns.com.`
+### Erro: "Invalid Configuration" ou "Formato Inválido"
+- Na KingHost, use `cname.vercel-dns.com` sem o ponto final
+- Se o CNAME não for aceito, use registro A: `www` → `76.76.21.21`
 - Remova qualquer registro conflitante
 
 ### Erro: "SSL Certificate Error"
