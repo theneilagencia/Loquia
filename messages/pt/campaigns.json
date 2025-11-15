@@ -13,5 +13,19 @@
   "insights": "Insights",
   "optimizations": "Otimizações",
   "timeline": "Linha do Tempo",
-  "noEvents": "Nenhum evento registrado"
+  "noEvents": "Nenhum evento registrado",
+  "editCampaign": "Editar Campanha",
+  "name": "Nome",
+  "goal": "Objetivo",
+  "description": "Descrição",
+  "startDate": "Data de Início",
+  "endDate": "Data de Término",
+  "platform": "Plataforma",
+  "status": "Status",
+  "statusDraft": "Rascunho",
+  "statusActive": "Ativa",
+  "statusPaused": "Pausada",
+  "statusCompleted": "Concluída",
+  "statusArchived": "Arquivada",
+  "notFound": "Campanha não encontrada"
 }

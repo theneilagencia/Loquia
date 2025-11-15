@@ -11,5 +11,8 @@
   "navbar": {
     "campaigns": "Campaigns",
     "setup": "Setup"
-  }
+  },
+  "readOnlyMode": "Read-Only Mode",
+  "readOnlyDescription": "You are viewing this content as a client. Only agencies can make changes.",
+  "saving": "Saving..."
 }

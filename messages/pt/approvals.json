@@ -1,0 +1,14 @@
+{
+  "title": "Aprovação de Campanha",
+  "platform": "Plataforma",
+  "budget": "Orçamento",
+  "approved": "Aprovada",
+  "rejected": "Rejeitada",
+  "approveOrReject": "Aprovar ou Rejeitar Campanha",
+  "comments": "Comentários",
+  "commentsPlaceholder": "Adicione comentários sobre sua decisão (opcional)",
+  "approve": "Aprovar",
+  "reject": "Rejeitar",
+  "history": "Histórico de Aprovações",
+  "notFound": "Campanha não encontrada"
+}

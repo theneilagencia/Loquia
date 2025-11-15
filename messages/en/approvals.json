@@ -1,0 +1,14 @@
+{
+  "title": "Campaign Approval",
+  "platform": "Platform",
+  "budget": "Budget",
+  "approved": "Approved",
+  "rejected": "Rejected",
+  "approveOrReject": "Approve or Reject Campaign",
+  "comments": "Comments",
+  "commentsPlaceholder": "Add comments about your decision (optional)",
+  "approve": "Approve",
+  "reject": "Reject",
+  "history": "Approval History",
+  "notFound": "Campaign not found"
+}

@@ -28,6 +28,7 @@ export default async function LocaleLayout({
       errors: (await import(`@/messages/${locale}/errors.json`)).default,
       validation: (await import(`@/messages/${locale}/validation.json`)).default,
       navbar: (await import(`@/messages/${locale}/navbar.json`)).default,
+      approvals: (await import(`@/messages/${locale}/approvals.json`)).default,
     };
   } catch (error) {
     notFound();

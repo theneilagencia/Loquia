@@ -13,5 +13,19 @@
   "insights": "Insights",
   "optimizations": "Optimizations",
   "timeline": "Timeline",
-  "noEvents": "No events recorded"
+  "noEvents": "No events recorded",
+  "editCampaign": "Edit Campaign",
+  "name": "Name",
+  "goal": "Goal",
+  "description": "Description",
+  "startDate": "Start Date",
+  "endDate": "End Date",
+  "platform": "Platform",
+  "status": "Status",
+  "statusDraft": "Draft",
+  "statusActive": "Active",
+  "statusPaused": "Paused",
+  "statusCompleted": "Completed",
+  "statusArchived": "Archived",
+  "notFound": "Campaign not found"
 }
