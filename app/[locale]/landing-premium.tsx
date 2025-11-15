@@ -74,7 +74,7 @@ export function LandingPremium({ content, locale }: LandingPremiumProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="text-5xl md:text-7xl lg:text-8xl font-bold mb-8 leading-[1.05] text-balance max-w-6xl mx-auto"
+            className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-[1.1] text-balance max-w-5xl mx-auto"
           >
             {hero.title}
           </motion.h1>
@@ -83,7 +83,7 @@ export function LandingPremium({ content, locale }: LandingPremiumProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="text-xl md:text-2xl lg:text-3xl text-[var(--fg-secondary)] mb-12 max-w-4xl mx-auto leading-relaxed text-balance"
+            className="text-lg md:text-xl text-[var(--fg-secondary)] mb-10 max-w-3xl mx-auto leading-relaxed text-balance"
           >
             {hero.subtitle}
           </motion.p>
@@ -164,11 +164,11 @@ export function LandingPremium({ content, locale }: LandingPremiumProps) {
             variants={staggerContainer}
             className="max-w-6xl mx-auto"
           >
-            <motion.div variants={fadeInUp} className="text-center mb-20">
-              <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 text-balance">
+            <motion.div variants={fadeInUp} className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-balance">
                 {problem.title}
               </h2>
-              <p className="text-xl md:text-2xl text-[var(--fg-secondary)] text-balance max-w-3xl mx-auto">
+              <p className="text-lg md:text-xl text-[var(--fg-secondary)] text-balance max-w-3xl mx-auto">
                 {problem.subtitle}
               </p>
             </motion.div>
@@ -214,7 +214,7 @@ export function LandingPremium({ content, locale }: LandingPremiumProps) {
             variants={staggerContainer}
             className="max-w-6xl mx-auto"
           >
-            <motion.div variants={fadeInUp} className="text-center mb-20">
+            <motion.div variants={fadeInUp} className="text-center mb-16">
               <div className="flex justify-center mb-10">
                 <motion.div 
                   className="w-20 h-20"
@@ -224,10 +224,10 @@ export function LandingPremium({ content, locale }: LandingPremiumProps) {
                   <PrecisionGearIcon />
                 </motion.div>
               </div>
-              <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-8 text-balance">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-balance">
                 {solution.title}
               </h2>
-              <p className="text-xl md:text-2xl text-[var(--fg-secondary)] mb-10 text-balance max-w-3xl mx-auto">
+              <p className="text-lg md:text-xl text-[var(--fg-secondary)] mb-8 text-balance max-w-3xl mx-auto">
                 {solution.subtitle}
               </p>
               <p className="text-lg md:text-xl text-[var(--fg-primary)] leading-relaxed max-w-4xl mx-auto text-balance">
@@ -272,7 +272,7 @@ export function LandingPremium({ content, locale }: LandingPremiumProps) {
           >
             <motion.h2
               variants={fadeInUp}
-              className="text-4xl md:text-6xl lg:text-7xl font-bold text-center mb-24 text-balance"
+              className="text-3xl md:text-4xl lg:text-5xl font-bold text-center mb-20 text-balance"
             >
               {features.title}
             </motion.h2>
@@ -320,11 +320,11 @@ export function LandingPremium({ content, locale }: LandingPremiumProps) {
             variants={staggerContainer}
             className="max-w-7xl mx-auto"
           >
-            <motion.div variants={fadeInUp} className="text-center mb-20">
-              <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 text-balance">
+            <motion.div variants={fadeInUp} className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-balance">
                 {target_audience.title}
               </h2>
-              <p className="text-xl md:text-2xl text-[var(--fg-secondary)] text-balance">
+              <p className="text-lg md:text-xl text-[var(--fg-secondary)] text-balance">
                 {target_audience.subtitle}
               </p>
             </motion.div>
@@ -361,11 +361,11 @@ export function LandingPremium({ content, locale }: LandingPremiumProps) {
             variants={staggerContainer}
             className="max-w-5xl mx-auto"
           >
-            <motion.div variants={fadeInUp} className="text-center mb-20">
-              <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 text-balance">
+            <motion.div variants={fadeInUp} className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-balance">
                 {how_it_works.title}
               </h2>
-              <p className="text-xl md:text-2xl text-[var(--fg-secondary)] text-balance">
+              <p className="text-lg md:text-xl text-[var(--fg-secondary)] text-balance">
                 {how_it_works.subtitle}
               </p>
             </motion.div>
@@ -411,11 +411,11 @@ export function LandingPremium({ content, locale }: LandingPremiumProps) {
             variants={staggerContainer}
             className="max-w-7xl mx-auto"
           >
-            <motion.div variants={fadeInUp} className="text-center mb-20">
-              <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 text-balance">
+            <motion.div variants={fadeInUp} className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-balance">
                 {social_proof.title}
               </h2>
-              <p className="text-xl md:text-2xl text-[var(--fg-secondary)] text-balance">
+              <p className="text-lg md:text-xl text-[var(--fg-secondary)] text-balance">
                 {social_proof.subtitle}
               </p>
             </motion.div>
@@ -430,7 +430,7 @@ export function LandingPremium({ content, locale }: LandingPremiumProps) {
                   className="glow-card-success p-16 rounded-2xl text-center cursor-pointer"
                 >
                   <motion.div 
-                    className="text-6xl md:text-7xl lg:text-8xl font-bold mb-6 gradient-text"
+                    className="text-5xl md:text-6xl font-bold mb-6 gradient-text"
                     initial={{ scale: 0.5, opacity: 0 }}
                     whileInView={{ scale: 1, opacity: 1 }}
                     viewport={{ once: true }}
@@ -462,22 +462,22 @@ export function LandingPremium({ content, locale }: LandingPremiumProps) {
             className="max-w-4xl mx-auto"
           >
             <div className="glow-card p-16 md:p-20 rounded-3xl text-center">
-              <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-8 text-balance">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-balance">
                 {cta_final.title}
               </h2>
-              <p className="text-xl md:text-2xl text-[var(--fg-secondary)] mb-12 leading-relaxed text-balance">
+              <p className="text-lg md:text-xl text-[var(--fg-secondary)] mb-10 leading-relaxed text-balance">
                 {cta_final.subtitle}
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
                 <Link 
                   href={`/${locale}/pricing`}
-                  className="btn-primary text-xl"
+                  className="btn-primary"
                 >
                   {cta_final.cta_primary}
                 </Link>
                 <Link 
                   href={`/${locale}/contact`}
-                  className="btn-secondary text-xl"
+                  className="btn-secondary"
                 >
                   {cta_final.cta_secondary}
                 </Link>

@@ -23,14 +23,14 @@
   /* Borders */
   --border-primary: rgba(0, 0, 0, 0.06);
   --border-secondary: rgba(0, 0, 0, 0.03);
-  --border-focus: rgba(0, 113, 227, 0.5);
-  --border-glow: rgba(0, 113, 227, 0.2);
+  --border-focus: rgba(16, 185, 129, 0.5);
+  --border-glow: rgba(16, 185, 129, 0.2);
   
   /* Brand Colors */
-  --color-brand-primary: #0071e3;
-  --color-brand-secondary: #06c;
-  --color-brand-accent: #5e5ce6;
-  --color-brand-purple: #bf5af2;
+  --color-brand-primary: #10b981;
+  --color-brand-secondary: #059669;
+  --color-brand-accent: #14b8a6;
+  --color-brand-purple: #8b5cf6;
   
   /* Semantic Colors */
   --color-success: #30d158;
@@ -38,19 +38,19 @@
   --color-error: #ff3b30;
   
   /* Premium Gradients */
-  --gradient-hero: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 113, 227, 0.15), transparent);
+  --gradient-hero: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(16, 185, 129, 0.10), transparent);
   --gradient-mesh-light: 
-    radial-gradient(at 0% 0%, rgba(0, 113, 227, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(94, 92, 230, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(191, 90, 242, 0.08) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(0, 113, 227, 0.08) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.04) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(20, 184, 166, 0.04) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.04) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(16, 185, 129, 0.04) 0px, transparent 50%);
   --gradient-card: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
-  --gradient-border: linear-gradient(135deg, rgba(0, 113, 227, 0.3), rgba(94, 92, 230, 0.3));
+  --gradient-border: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(20, 184, 166, 0.2));
   
   /* Grid Pattern */
   --pattern-grid: 
-    linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+    linear-gradient(rgba(0, 0, 0, 0.01) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.01) 1px, transparent 1px);
   --pattern-dots:
     radial-gradient(circle, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
   
@@ -58,9 +58,9 @@
   --shadow-subtle: 0 2px 8px rgba(0, 0, 0, 0.04);
   --shadow-medium: 0 8px 24px rgba(0, 0, 0, 0.08);
   --shadow-strong: 0 16px 48px rgba(0, 0, 0, 0.12);
-  --shadow-glow: 0 0 60px rgba(0, 113, 227, 0.15);
-  --glow-primary: 0 0 40px rgba(0, 113, 227, 0.2);
-  --glow-secondary: 0 0 40px rgba(94, 92, 230, 0.2);
+  --shadow-glow: 0 0 60px rgba(16, 185, 129, 0.10);
+  --glow-primary: 0 0 40px rgba(16, 185, 129, 0.15);
+  --glow-secondary: 0 0 40px rgba(20, 184, 166, 0.15);
   --glow-success: 0 0 40px rgba(48, 209, 88, 0.2);
   
   /* Noise Texture */
@@ -97,22 +97,22 @@
   /* Borders */
   --border-primary: rgba(255, 255, 255, 0.08);
   --border-secondary: rgba(255, 255, 255, 0.04);
-  --border-focus: rgba(0, 113, 227, 0.6);
-  --border-glow: rgba(0, 113, 227, 0.3);
+  --border-focus: rgba(16, 185, 129, 0.6);
+  --border-glow: rgba(16, 185, 129, 0.3);
   
   /* Premium Gradients */
-  --gradient-hero: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 113, 227, 0.25), transparent);
+  --gradient-hero: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(16, 185, 129, 0.15), transparent);
   --gradient-mesh-light: 
-    radial-gradient(at 0% 0%, rgba(0, 113, 227, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(94, 92, 230, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(191, 90, 242, 0.15) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(0, 113, 227, 0.15) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(20, 184, 166, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.08) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 50%);
   --gradient-card: linear-gradient(135deg, rgba(26, 26, 26, 0.9) 0%, rgba(20, 20, 20, 0.7) 100%);
   
   /* Grid Pattern */
   --pattern-grid: 
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
   --pattern-dots:
     radial-gradient(circle, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
   
@@ -120,9 +120,9 @@
   --shadow-subtle: 0 2px 8px rgba(0, 0, 0, 0.6);
   --shadow-medium: 0 8px 24px rgba(0, 0, 0, 0.8);
   --shadow-strong: 0 16px 48px rgba(0, 0, 0, 0.9);
-  --shadow-glow: 0 0 60px rgba(0, 113, 227, 0.3);
-  --glow-primary: 0 0 40px rgba(0, 113, 227, 0.4);
-  --glow-secondary: 0 0 40px rgba(94, 92, 230, 0.4);
+  --shadow-glow: 0 0 60px rgba(16, 185, 129, 0.2);
+  --glow-primary: 0 0 40px rgba(16, 185, 129, 0.3);
+  --glow-secondary: 0 0 40px rgba(20, 184, 166, 0.3);
   --glow-success: 0 0 40px rgba(48, 209, 88, 0.4);
   
   /* Noise Texture */
