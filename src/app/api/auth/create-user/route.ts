@@ -3,7 +3,7 @@ import { supabaseServer } from "@/lib/supabase-server";
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const supabase = supabaseServer();
+  const supabase = await supabaseServer();
 
   const {
     data: { user }
