@@ -24,6 +24,10 @@ export default getRequestConfig(async ({ requestLocale }) => {
       errors: (await import(`./messages/${locale}/errors.json`)).default,
       validation: (await import(`./messages/${locale}/validation.json`)).default,
       navbar: (await import(`./messages/${locale}/navbar.json`)).default,
+      landing: (await import(`./messages/${locale}/landing.json`)).default,
+      pricing: (await import(`./messages/${locale}/pricing.json`)).default,
+      addons: (await import(`./messages/${locale}/addons.json`)).default,
+      roi: (await import(`./messages/${locale}/roi.json`)).default,
     }
   };
 });
