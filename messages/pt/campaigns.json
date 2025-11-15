@@ -27,5 +27,9 @@
   "statusPaused": "Pausada",
   "statusCompleted": "Concluída",
   "statusArchived": "Arquivada",
-  "notFound": "Campanha não encontrada"
+  "notFound": "Campanha não encontrada",
+  "duplicate": "Duplicar",
+  "edit": "Editar",
+  "duplicating": "Duplicando...",
+  "duplicateSuccess": "Campanha duplicada com sucesso!"
 }

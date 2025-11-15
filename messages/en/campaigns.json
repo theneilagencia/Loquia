@@ -27,5 +27,9 @@
   "statusPaused": "Paused",
   "statusCompleted": "Completed",
   "statusArchived": "Archived",
-  "notFound": "Campaign not found"
+  "notFound": "Campaign not found",
+  "duplicate": "Duplicate",
+  "edit": "Edit",
+  "duplicating": "Duplicating...",
+  "duplicateSuccess": "Campaign duplicated successfully!"
 }

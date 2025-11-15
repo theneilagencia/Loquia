@@ -14,5 +14,6 @@
   },
   "readOnlyMode": "Read-Only Mode",
   "readOnlyDescription": "You are viewing this content as a client. Only agencies can make changes.",
-  "saving": "Saving..."
+  "saving": "Saving...",
+  "sending": "Sending..."
 }

@@ -14,5 +14,6 @@
   },
   "readOnlyMode": "Modo Somente Leitura",
   "readOnlyDescription": "Você está visualizando este conteúdo como cliente. Apenas agências podem fazer alterações.",
-  "saving": "Salvando..."
+  "saving": "Salvando...",
+  "sending": "Enviando..."
 }
