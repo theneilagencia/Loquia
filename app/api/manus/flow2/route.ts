@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
+import { generateCampaignInsights, InsightGenerationParams } from "@/lib/openai";
 
 /**
- * Flow 2 - Insights Inteligentes (IA)
+ * Flow 2 - Insights Inteligentes (OpenAI GPT-4o-mini)
  * 
- * Gera insights estruturados para uma campanha usando IA
+ * Gera insights estruturados para uma campanha usando OpenAI
+ * Implementa cache de 24h para reduzir custos
  * Salva em campaign_insights e notifica o webhook Manus
  */
 
@@ -57,10 +59,98 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "campaign_not_found" }, { status: 404 });
     }
 
-    // 3. Gerar insights estruturados (simulação de IA)
-    const insights: InsightData[] = await generateInsights(campaign);
+    // 3. Verificar cache (se não for reprocessamento)
+    if (!reprocess) {
+      const { data: cachedInsight } = await supabase
+        .from('insights_cache')
+        .select('*')
+        .eq('campaign_id', campaign_id)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
 
-    // 4. Salvar insights no banco
+      if (cachedInsight) {
+        console.log('[Flow 2] Usando insight em cache');
+        return NextResponse.json({
+          success: true,
+          cached: true,
+          insights: cachedInsight.insights_data,
+          tokens_used: cachedInsight.tokens_used,
+          cost_usd: parseFloat(cachedInsight.cost_usd),
+          model: cachedInsight.model,
+          generated_at: cachedInsight.created_at
+        });
+      }
+    }
+
+    // 4. Gerar insights com OpenAI
+    console.log('[Flow 2] Gerando novos insights com OpenAI...');
+    const params: InsightGenerationParams = {
+      campaignId: campaign.id,
+      campaignName: campaign.name,
+      platform: campaign.platform,
+      objective: campaign.objective,
+      budget: campaign.budget,
+      startDate: campaign.start_date,
+      endDate: campaign.end_date,
+      status: campaign.status
+    };
+
+    const aiInsights = await generateCampaignInsights(params);
+
+    // 5. Converter para formato do banco
+    const insights: InsightData[] = [];
+    
+    // Adicionar métricas chave como insights
+    aiInsights.keyMetrics.forEach((metric, index) => {
+      insights.push({
+        type: 'metric',
+        title: metric.metric,
+        description: metric.insight,
+        impact: index < 2 ? 'high' : 'medium',
+        confidence: 0.85,
+        metadata: { value: metric.value }
+      });
+    });
+
+    // Adicionar recomendações
+    aiInsights.recommendations.forEach((rec, index) => {
+      insights.push({
+        type: 'recommendation',
+        title: `Recomendação ${index + 1}`,
+        description: rec,
+        impact: 'high',
+        confidence: 0.80,
+        metadata: {}
+      });
+    });
+
+    // Adicionar riscos
+    aiInsights.risks.forEach((risk, index) => {
+      insights.push({
+        type: 'risk',
+        title: `Risco Identificado ${index + 1}`,
+        description: risk,
+        impact: 'medium',
+        confidence: 0.75,
+        metadata: {}
+      });
+    });
+
+    // Adicionar oportunidades
+    aiInsights.opportunities.forEach((opp, index) => {
+      insights.push({
+        type: 'opportunity',
+        title: `Oportunidade ${index + 1}`,
+        description: opp,
+        impact: 'high',
+        confidence: 0.78,
+        metadata: {}
+      });
+    });
+
+    // 6. Salvar insights no banco
     const { data: savedInsights, error: insertError } = await supabase
       .from('campaign_insights')
       .insert(
@@ -87,7 +177,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: insertError.message }, { status: 500 });
     }
 
-    // 5. Criar evento de timeline
+    // 7. Salvar no cache
+    await supabase.from('insights_cache').insert({
+      campaign_id,
+      insights_data: {
+        summary: aiInsights.summary,
+        insights: savedInsights,
+        keyMetrics: aiInsights.keyMetrics,
+        recommendations: aiInsights.recommendations,
+        risks: aiInsights.risks,
+        opportunities: aiInsights.opportunities
+      },
+      tokens_used: aiInsights.tokensUsed,
+      cost_usd: aiInsights.cost,
+      model: 'gpt-4o-mini'
+    });
+
+    // 8. Criar evento de timeline
     await supabase.from('campaign_events').insert({
       tenant_id,
       campaign_id,
@@ -95,11 +201,14 @@ export async function POST(req: Request) {
       user_id: null,
       metadata: {
         insights_count: savedInsights?.length || 0,
+        tokens_used: aiInsights.tokensUsed,
+        cost_usd: aiInsights.cost,
+        model: 'gpt-4o-mini',
         reprocessed: reprocess
       }
     });
 
-    // 6. Notificar conclusão
+    // 9. Notificar conclusão
     await notifyWebhook({
       event_type: "insights_completed",
       flow_id: `flow2_${campaign_id}_${Date.now()}`,
@@ -107,6 +216,8 @@ export async function POST(req: Request) {
         campaign_id,
         tenant_id,
         insights_count: savedInsights?.length || 0,
+        tokens_used: aiInsights.tokensUsed,
+        cost_usd: aiInsights.cost,
         insights: savedInsights
       },
       status: "success"
@@ -114,8 +225,13 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
+      cached: false,
+      summary: aiInsights.summary,
       insights_count: savedInsights?.length || 0,
-      insights: savedInsights
+      insights: savedInsights,
+      tokens_used: aiInsights.tokensUsed,
+      cost_usd: aiInsights.cost,
+      model: 'gpt-4o-mini'
     });
 
   } catch (error) {
@@ -125,133 +241,6 @@ export async function POST(req: Request) {
       message: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
   }
-}
-
-/**
- * Gera insights estruturados baseados nos dados da campanha
- */
-async function generateInsights(campaign: any): Promise<InsightData[]> {
-  const insights: InsightData[] = [];
-
-  // Insight 1: Performance Geral
-  insights.push({
-    type: 'performance',
-    title: 'Performance acima da média',
-    description: `A campanha "${campaign.name}" está performando 23% acima da média do setor. Continue monitorando os criativos de melhor desempenho.`,
-    impact: 'high',
-    confidence: 0.87,
-    metadata: {
-      metric: 'ctr',
-      current_value: 3.2,
-      average_value: 2.6,
-      improvement: 23
-    }
-  });
-
-  // Insight 2: Segmentação
-  insights.push({
-    type: 'segmentation',
-    title: 'Oportunidade de expansão de público',
-    description: 'Audiência de 25-34 anos apresenta CTR 45% maior. Considere aumentar investimento neste segmento.',
-    impact: 'high',
-    confidence: 0.92,
-    metadata: {
-      segment: '25-34',
-      ctr_improvement: 45,
-      current_budget_allocation: 30
-    }
-  });
-
-  // Insight 3: Criativos
-  insights.push({
-    type: 'creative',
-    title: 'Criativo #3 com baixo desempenho',
-    description: 'O criativo "Banner Blue" está com CTR 60% abaixo da média. Recomenda-se pausar ou substituir.',
-    impact: 'medium',
-    confidence: 0.78,
-    metadata: {
-      creative_id: 'banner_blue',
-      ctr: 0.8,
-      average_ctr: 2.0,
-      underperformance: 60
-    }
-  });
-
-  // Insight 4: Canais
-  insights.push({
-    type: 'channel',
-    title: 'Instagram Stories superando Feed',
-    description: 'Stories gerando 2.3x mais conversões que Feed com mesmo investimento. Considere realocar verba.',
-    impact: 'high',
-    confidence: 0.85,
-    metadata: {
-      channel_winner: 'stories',
-      channel_loser: 'feed',
-      conversion_ratio: 2.3
-    }
-  });
-
-  // Insight 5: Frequência
-  insights.push({
-    type: 'frequency',
-    title: 'Frequência elevada detectada',
-    description: 'Frequência média de 4.2 pode indicar fadiga de anúncio. Considere expandir público ou renovar criativos.',
-    impact: 'medium',
-    confidence: 0.73,
-    metadata: {
-      current_frequency: 4.2,
-      recommended_frequency: 3.0,
-      risk_level: 'medium'
-    }
-  });
-
-  // Insight 6: CPC/CPM
-  insights.push({
-    type: 'cost',
-    title: 'CPC em tendência de queda',
-    description: 'CPC reduziu 18% nos últimos 7 dias. Momento favorável para aumentar investimento.',
-    impact: 'medium',
-    confidence: 0.81,
-    metadata: {
-      metric: 'cpc',
-      current_value: 1.20,
-      previous_value: 1.46,
-      reduction: 18,
-      trend: 'down'
-    }
-  });
-
-  // Insight 7: Conversões
-  insights.push({
-    type: 'conversion',
-    title: 'Taxa de conversão acima do objetivo',
-    description: 'Conversões 12% acima da meta. Campanha está otimizada e pode suportar escala.',
-    impact: 'high',
-    confidence: 0.89,
-    metadata: {
-      current_cvr: 5.6,
-      target_cvr: 5.0,
-      overperformance: 12,
-      scale_ready: true
-    }
-  });
-
-  // Insight 8: Previsões
-  insights.push({
-    type: 'forecast',
-    title: 'Previsão de resultados para próximos 7 dias',
-    description: 'Com base no desempenho atual, estima-se 340 conversões e R$ 4.200 em receita nos próximos 7 dias.',
-    impact: 'low',
-    confidence: 0.68,
-    metadata: {
-      forecast_period: 7,
-      estimated_conversions: 340,
-      estimated_revenue: 4200,
-      confidence_interval: [300, 380]
-    }
-  });
-
-  return insights;
 }
 
 /**
