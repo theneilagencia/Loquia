@@ -1,99 +1,153 @@
 {
   "hero": {
-    "title": "Clarity, Control and Predictability for Your Ad Campaigns",
-    "subtitle": "Connect Google, Meta, TikTok, LinkedIn, X and YouTube in one place. See everything organized, make confident decisions and grow consistently.",
-    "cta_primary": "Start Now",
-    "cta_secondary": "Book a Demo",
-    "cta_premium": "Talk to a Loquia Specialist"
-  },
-  "audiences": {
-    "title": "Who is Loquia For?",
-    "subtitle": "Three audiences arrive at Loquia:",
-    "agency": {
-      "title": "Marketing Agencies",
-      "description": "Need to organize clients, deliver predictable results, and increase perceived value."
-    },
-    "mediabuyer": {
-      "title": "Media Buyers / Paid Ads Specialists",
-      "description": "Spend hours analyzing dashboards, reporting data, and searching for opportunities."
-    },
-    "business": {
-      "title": "Small and Medium Businesses",
-      "description": "Invest in ads but lack clarity, rely on others, and want control."
-    },
-    "benefits": {
-      "title": "All of them want:",
-      "clarity": "Clarity",
-      "control": "Control",
-      "predictability": "Predictability",
-      "results": "Consistent results",
-      "time": "Time savings"
-    }
+    "title": "Bring clarity, control and growth to your ads",
+    "subtitle": "Organize all your campaigns, discover where you're losing money (and where you can actually win) while gaining time to focus on what really generates results.",
+    "cta_primary": "Get started",
+    "cta_secondary": "View plans",
+    "cta_tertiary": "Simulate ROI",
+    "available_in": "Available in Portuguese and English"
   },
   "problem": {
-    "title": "The Problem You Face",
-    "external_title": "External Problem",
-    "external_items": [
-      "Scattered dashboards",
-      "Slow analysis",
-      "Manual reporting",
-      "Hard-to-see opportunities",
-      "No consolidated view"
+    "title": "The Problem",
+    "subtitle": "You shouldn't waste time and money trying to understand your campaigns. But reality is different.",
+    "issues": [
+      {
+        "title": "Campaigns scattered across multiple dashboards",
+        "description": "You waste time navigating between different platforms"
+      },
+      {
+        "title": "Difficulty understanding what really works",
+        "description": "Disconnected data makes decision-making difficult"
+      },
+      {
+        "title": "Slow to identify problems",
+        "description": "You discover problems too late"
+      },
+      {
+        "title": "Hours spent on manual reports and analysis",
+        "description": "Time that could be used to optimize campaigns"
+      },
+      {
+        "title": "Lack of clarity about ROI and opportunities",
+        "description": "You don't know where to invest more or cut costs"
+      }
     ],
-    "internal_title": "Internal Problem",
-    "internal_text": "I should be delivering better results… but I'm constantly overwhelmed.",
-    "philosophical_title": "Philosophical Problem",
-    "philosophical_text": "Managing ads shouldn't be this complicated."
+    "conclusion": "This creates insecurity, waste and slow decisions."
   },
-  "guide": {
-    "title": "How Loquia Helps You",
-    "empathy_title": "Empathy",
-    "empathy_text": "We understand how complex and exhausting it can be to manage campaigns without clarity or predictability.",
-    "authority_title": "Authority",
-    "authority_items": [
-      "Direct connections to major ad platforms",
-      "Robust and reliable architecture",
-      "Practical insights",
-      "Actionable recommendations",
-      "Designed by marketing and performance experts"
+  "solution": {
+    "title": "Introducing Loquia",
+    "subtitle": "Loquia puts everything in order for you.",
+    "intro": "You see your campaigns in one environment, understand what deserves attention and act with confidence. It's a platform that simplifies, organizes and accelerates the work of those who need to generate results.",
+    "benefits": [
+      {
+        "title": "Consolidated view",
+        "description": "All your campaigns in a single dashboard"
+      },
+      {
+        "title": "Immediate clarity",
+        "description": "Quickly understand what's working"
+      },
+      {
+        "title": "Fast problem identification",
+        "description": "Detect opportunities and risks in real-time"
+      },
+      {
+        "title": "Time savings",
+        "description": "Less time analyzing, more time optimizing"
+      },
+      {
+        "title": "Confident decisions",
+        "description": "Organized data for assertive actions"
+      }
     ]
   },
-  "plan": {
-    "title": "Three-Step Success Path",
-    "step1_title": "1. Connect your accounts",
-    "step1_text": "Google, Meta, TikTok, LinkedIn, X and YouTube.",
-    "step2_title": "2. See everything organized",
-    "step2_text": "Clear insights, structured opportunities, unified dashboards.",
-    "step3_title": "3. Grow predictably",
-    "step3_text": "Consistent decision-making and scalable performance."
-  },
-  "success": {
-    "title": "The Success You Achieve",
-    "subtitle": "With Loquia, you:",
+  "features": {
+    "title": "Loquia helps you",
     "items": [
-      "Know exactly what works",
-      "Make confident decisions",
-      "Save hours weekly",
-      "Deliver better results",
-      "Grow consistently",
-      "Strengthen the value you provide"
+      {
+        "title": "See everything in one place",
+        "description": "Connect Google Ads, Meta Ads, TikTok Ads, LinkedIn Ads, X Ads and YouTube Ads"
+      },
+      {
+        "title": "Identify what deserves attention",
+        "description": "Smart alerts and automatic prioritization"
+      },
+      {
+        "title": "Make fast and safe decisions",
+        "description": "Clear and actionable data in real-time"
+      },
+      {
+        "title": "Save time",
+        "description": "Automate manual reports and analysis"
+      },
+      {
+        "title": "Grow with predictability",
+        "description": "Track metrics and trends with clarity"
+      }
     ]
   },
-  "failure": {
-    "title": "What Happens Without Loquia",
-    "subtitle": "Without Loquia:",
-    "items": [
-      "Money continues to be wasted",
-      "Decisions become guesswork",
-      "Competitors gain advantage",
-      "Time is lost on manual work",
-      "It's harder to scale predictably"
+  "target_audience": {
+    "title": "Who is Loquia for?",
+    "subtitle": "Three profiles that benefit the most",
+    "profiles": [
+      {
+        "name": "Marketing Agencies",
+        "description": "Manage multiple clients and need consolidated view, automated reports and predictability to deliver consistent results."
+      },
+      {
+        "name": "Media Professionals / Media Buyers",
+        "description": "Live under pressure for results, spend hours analyzing data and need clarity to optimize campaigns quickly."
+      },
+      {
+        "name": "Small and Medium Businesses",
+        "description": "Invest in ads but have little clarity on ROI. Want to understand what works and make decisions with confidence."
+      }
     ]
   },
-  "cta_section": {
-    "title": "Ready to Transform Your Campaigns?",
-    "subtitle": "Join hundreds of professionals who are already growing predictably.",
-    "cta_primary": "Start Now",
-    "cta_secondary": "Book a Demo"
+  "how_it_works": {
+    "title": "How it works",
+    "subtitle": "3 simple steps to get started",
+    "steps": [
+      {
+        "number": "1",
+        "title": "Connect your accounts",
+        "description": "Integrate Google, Meta, TikTok, LinkedIn, X and YouTube in minutes"
+      },
+      {
+        "number": "2",
+        "title": "See everything organized",
+        "description": "Consolidated dashboard with clear insights and prioritized opportunities"
+      },
+      {
+        "number": "3",
+        "title": "Grow with predictability",
+        "description": "Make confident decisions and optimize campaigns safely"
+      }
+    ]
+  },
+  "social_proof": {
+    "title": "Real results",
+    "subtitle": "Professionals already growing with Loquia",
+    "stats": [
+      {
+        "value": "52%",
+        "label": "Reduction in analysis time"
+      },
+      {
+        "value": "3x",
+        "label": "Faster to identify problems"
+      },
+      {
+        "value": "89%",
+        "label": "Greater clarity on ROI"
+      }
+    ]
+  },
+  "cta_final": {
+    "title": "Ready to have clarity, control and growth?",
+    "subtitle": "Start now and transform how you manage your campaigns.",
+    "cta_primary": "Start free trial",
+    "cta_secondary": "Schedule demo",
+    "guarantee": "No credit card required. Cancel anytime."
   }
 }

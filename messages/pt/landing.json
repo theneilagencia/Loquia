@@ -1,99 +1,153 @@
 {
   "hero": {
-    "title": "Clareza, Controle e Previsibilidade para suas Campanhas de Anúncios",
-    "subtitle": "Conecte Google, Meta, TikTok, LinkedIn, X e YouTube em um só lugar. Veja tudo organizado, tome decisões confiáveis e cresça com consistência.",
-    "cta_primary": "Começar Agora",
-    "cta_secondary": "Agendar Demonstração",
-    "cta_premium": "Fale com Especialista Loquia"
-  },
-  "audiences": {
-    "title": "Para Quem é o Loquia?",
-    "subtitle": "Três perfis que chegam ao Loquia:",
-    "agency": {
-      "title": "Agências de Marketing",
-      "description": "Precisam organizar múltiplos clientes, entregar previsibilidade e elevar o valor percebido pelos contratantes."
-    },
-    "mediabuyer": {
-      "title": "Profissionais de Mídia / Media Buyers",
-      "description": "Vivem sob pressão por resultado, passam horas analisando dados, criando relatórios e buscando otimizações."
-    },
-    "business": {
-      "title": "Pequenas e Médias Empresas",
-      "description": "Investem em anúncios, mas têm pouca clareza do retorno, dependem de terceiros e querem entender o que funciona."
-    },
-    "benefits": {
-      "title": "Todos querem a mesma coisa:",
-      "clarity": "Clareza",
-      "control": "Controle",
-      "predictability": "Previsibilidade",
-      "results": "Resultados consistentes",
-      "time": "Economia de tempo"
-    }
+    "title": "Trate clareza, controle e crescimento em seus anúncios",
+    "subtitle": "Organize todas as suas campanhas, descubra onde está perdendo dinheiro (e onde você realmente pode ganhar) ganhando tempo para focar no que realmente gera resultado.",
+    "cta_primary": "Começar agora",
+    "cta_secondary": "Ver planos",
+    "cta_tertiary": "Simular ROI",
+    "available_in": "Disponível em português e inglês"
   },
   "problem": {
-    "title": "O Problema que Você Enfrenta",
-    "external_title": "Problema Externo",
-    "external_items": [
-      "Painéis separados e difíceis de operar",
-      "Falta de visão consolidada",
-      "Otimizações demoradas",
-      "Decisões tomadas sem contexto",
-      "Relatórios manuais que consomem horas"
+    "title": "O Problema",
+    "subtitle": "Você não deveria perder tempo e dinheiro tentando entender suas campanhas. Mas a realidade é outra.",
+    "issues": [
+      {
+        "title": "Campanhas espalhadas em vários painéis",
+        "description": "Você perde tempo navegando entre plataformas diferentes"
+      },
+      {
+        "title": "Dificuldade para entender o que realmente funciona",
+        "description": "Dados desconexos dificultam a tomada de decisão"
+      },
+      {
+        "title": "Demora para identificar problemas",
+        "description": "Você descobre os problemas tarde demais"
+      },
+      {
+        "title": "Horas gastas em relatórios e análises manuais",
+        "description": "Tempo que poderia ser usado para otimizar campanhas"
+      },
+      {
+        "title": "Falta de clareza sobre retorno e oportunidades",
+        "description": "Você não sabe onde investir mais ou cortar gastos"
+      }
     ],
-    "internal_title": "Problema Interno",
-    "internal_text": "Eu deveria estar entregando resultados melhores… mas estou sempre apagando incêndios.",
-    "philosophical_title": "Problema Filosófico",
-    "philosophical_text": "Gerenciar anúncios não deveria ser tão complicado."
+    "conclusion": "Isso gera insegurança, desperdício e decisões lentas."
   },
-  "guide": {
-    "title": "Como o Loquia Ajuda Você",
-    "empathy_title": "Empatia",
-    "empathy_text": "Sabemos como é frustrante gerenciar campanhas com pressão constante, dados desconexos e resultados imprevisíveis.",
-    "authority_title": "Autoridade",
-    "authority_items": [
-      "Conexão direta com as principais plataformas de anúncios",
-      "Estrutura moderna, confiável e rápida",
-      "Análises consistentes",
-      "Recomendações práticas e acionáveis",
-      "Plataforma projetada por especialistas de marketing e performance"
+  "solution": {
+    "title": "Apresentação do Loquia",
+    "subtitle": "O Loquia coloca tudo em ordem para você.",
+    "intro": "Você enxerga suas campanhas em um só ambiente, entende o que merece atenção e age com confiança. É uma plataforma que simplifica, organiza e acelera o trabalho de quem precisa gerar resultado.",
+    "benefits": [
+      {
+        "title": "Visão consolidada",
+        "description": "Todas as suas campanhas em um único painel"
+      },
+      {
+        "title": "Clareza imediata",
+        "description": "Entenda rapidamente o que está funcionando"
+      },
+      {
+        "title": "Identificação rápida de problemas",
+        "description": "Detecte oportunidades e riscos em tempo real"
+      },
+      {
+        "title": "Economia de tempo",
+        "description": "Menos tempo em análises, mais tempo otimizando"
+      },
+      {
+        "title": "Decisões confiáveis",
+        "description": "Dados organizados para ações assertivas"
+      }
     ]
   },
-  "plan": {
-    "title": "Plano Simples de 3 Passos",
-    "step1_title": "1. Conecte suas contas",
-    "step1_text": "Google, Meta, TikTok, LinkedIn, X e YouTube.",
-    "step2_title": "2. Veja tudo organizado em um só lugar",
-    "step2_text": "Painel consolidado, insights claros e oportunidades priorizadas.",
-    "step3_title": "3. Cresça com previsibilidade",
-    "step3_text": "Caminho estruturado, decisões confiáveis e evolução contínua."
-  },
-  "success": {
-    "title": "O Sucesso que Você Alcança",
-    "subtitle": "Depois de usar o Loquia, você:",
+  "features": {
+    "title": "O Loquia ajuda você a",
     "items": [
-      "Enxerga claramente o que funciona",
-      "Sabe onde investir",
-      "Ganha tempo e autonomia",
-      "Otimiza campanhas com segurança",
-      "Obtém crescimento consistente",
-      "Aumenta o valor entregue aos clientes"
+      {
+        "title": "Enxergar tudo em um só lugar",
+        "description": "Conecte Google Ads, Meta Ads, TikTok Ads, LinkedIn Ads, X Ads e YouTube Ads"
+      },
+      {
+        "title": "Identificar o que merece atenção",
+        "description": "Alertas inteligentes e priorização automática"
+      },
+      {
+        "title": "Tomar decisões rápidas e seguras",
+        "description": "Dados claros e acionáveis em tempo real"
+      },
+      {
+        "title": "Economizar tempo",
+        "description": "Automatize relatórios e análises manuais"
+      },
+      {
+        "title": "Crescer com previsibilidade",
+        "description": "Acompanhe métricas e tendências com clareza"
+      }
     ]
   },
-  "failure": {
-    "title": "O que Acontece Sem o Loquia",
-    "subtitle": "Sem o Loquia:",
-    "items": [
-      "Você continuará perdendo dinheiro em campanhas ineficientes",
-      "Ficará vulnerável à concorrência",
-      "Tomará decisões com base em feeling",
-      "Desperdiçará horas com tarefas manuais",
-      "Não terá clareza sobre o que impulsiona seus resultados"
+  "target_audience": {
+    "title": "Para quem é o Loquia?",
+    "subtitle": "Três perfis que mais se beneficiam",
+    "profiles": [
+      {
+        "name": "Agências de Marketing",
+        "description": "Gerenciam múltiplos clientes e precisam de visão consolidada, relatórios automatizados e previsibilidade para entregar resultados consistentes."
+      },
+      {
+        "name": "Profissionais de Mídia / Media Buyers",
+        "description": "Vivem sob pressão por resultado, passam horas analisando dados e precisam de clareza para otimizar campanhas rapidamente."
+      },
+      {
+        "name": "Pequenas e Médias Empresas",
+        "description": "Investem em anúncios mas têm pouca clareza do retorno. Querem entender o que funciona e tomar decisões com confiança."
+      }
     ]
   },
-  "cta_section": {
-    "title": "Pronto para Transformar suas Campanhas?",
-    "subtitle": "Junte-se a centenas de profissionais que já estão crescendo com previsibilidade.",
-    "cta_primary": "Começar Agora",
-    "cta_secondary": "Agendar Demonstração"
+  "how_it_works": {
+    "title": "Como funciona",
+    "subtitle": "3 passos simples para começar",
+    "steps": [
+      {
+        "number": "1",
+        "title": "Conecte suas contas",
+        "description": "Integre Google, Meta, TikTok, LinkedIn, X e YouTube em minutos"
+      },
+      {
+        "number": "2",
+        "title": "Veja tudo organizado",
+        "description": "Painel consolidado com insights claros e oportunidades priorizadas"
+      },
+      {
+        "number": "3",
+        "title": "Cresça com previsibilidade",
+        "description": "Tome decisões confiáveis e otimize campanhas com segurança"
+      }
+    ]
+  },
+  "social_proof": {
+    "title": "Resultados reais",
+    "subtitle": "Profissionais que já estão crescendo com o Loquia",
+    "stats": [
+      {
+        "value": "52%",
+        "label": "Redução no tempo de análise"
+      },
+      {
+        "value": "3x",
+        "label": "Mais rápido para identificar problemas"
+      },
+      {
+        "value": "89%",
+        "label": "Maior clareza sobre ROI"
+      }
+    ]
+  },
+  "cta_final": {
+    "title": "Pronto para ter clareza, controle e crescimento?",
+    "subtitle": "Comece agora e transforme a forma como você gerencia suas campanhas.",
+    "cta_primary": "Começar teste gratuito",
+    "cta_secondary": "Agendar demonstração",
+    "guarantee": "Sem cartão de crédito. Cancele quando quiser."
   }
 }
