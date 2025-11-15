@@ -130,10 +130,7 @@ export default async function LandingPage({ params }: { params: { locale: string
               {problem.items.map((item, index) => (
                 <div 
                   key={index} 
-                  className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-6 md:p-8 transition-all duration-300 hover:border-white/[0.15] hover:bg-white/[0.04]"
-                  style={{transform: 'translateY(0)'}}
-                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                  className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-6 md:p-8 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.15] hover:bg-white/[0.04]"
                 >
                   <h3 className="text-xl md:text-2xl font-semibold tracking-tight leading-snug mb-3" style={{letterSpacing: '-0.01em'}}>
                     {item.title}
@@ -175,10 +172,7 @@ export default async function LandingPage({ params }: { params: { locale: string
               {solution.benefits.map((benefit, index) => (
                 <div 
                   key={index} 
-                  className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-6 md:p-8 transition-all duration-300 hover:border-emerald-500/30 hover:bg-white/[0.03]"
-                  style={{transform: 'translateY(0)'}}
-                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                  className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-6 md:p-8 transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-500/30 hover:bg-white/[0.03]"
                 >
                   <h3 className="text-xl md:text-2xl font-semibold tracking-tight leading-snug mb-3 bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent" style={{letterSpacing: '-0.01em'}}>
                     {benefit.title}
@@ -208,10 +202,7 @@ export default async function LandingPage({ params }: { params: { locale: string
               {features.items.map((item, index) => (
                 <div 
                   key={index} 
-                  className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-6 md:p-8 transition-all duration-300 hover:border-white/[0.15] hover:bg-white/[0.04]"
-                  style={{transform: 'translateY(0)'}}
-                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                  className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-6 md:p-8 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.15] hover:bg-white/[0.04]"
                 >
                   <h3 className="text-xl md:text-2xl font-semibold tracking-tight leading-snug mb-3" style={{letterSpacing: '-0.01em'}}>
                     {item.title}
@@ -246,10 +237,7 @@ export default async function LandingPage({ params }: { params: { locale: string
               {audience.profiles.map((profile, index) => (
                 <div 
                   key={index} 
-                  className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-6 md:p-8 text-center transition-all duration-300 hover:border-white/[0.15] hover:bg-white/[0.04]"
-                  style={{transform: 'translateY(0)'}}
-                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                  className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-6 md:p-8 text-center transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.15] hover:bg-white/[0.04]"
                 >
                   <h3 className="text-xl md:text-2xl font-semibold tracking-tight leading-snug mb-4" style={{letterSpacing: '-0.01em'}}>
                     {profile.title}
@@ -284,10 +272,7 @@ export default async function LandingPage({ params }: { params: { locale: string
               {howItWorks.steps.map((step, index) => (
                 <div 
                   key={index} 
-                  className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-6 md:p-8 text-center transition-all duration-300 hover:border-white/[0.15] hover:bg-white/[0.04]"
-                  style={{transform: 'translateY(0)'}}
-                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                  className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-6 md:p-8 text-center transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.15] hover:bg-white/[0.04]"
                 >
                   <div className="text-5xl font-bold text-emerald-500 mb-4">{index + 1}</div>
                   <h3 className="text-xl md:text-2xl font-semibold tracking-tight leading-snug mb-3" style={{letterSpacing: '-0.01em'}}>
