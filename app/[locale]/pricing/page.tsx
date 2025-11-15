@@ -2,9 +2,9 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { GlowButton, GlowCard } from '@/components/glow';
 import { LanguageSwitcher } from '@/components/language-switcher';
+import { PricingCard } from './pricing-card';
 import { 
-  ArrowRight, 
-  CheckCircle2,
+  ArrowRight,
   Sparkles,
   Star,
   Zap,
@@ -17,31 +17,31 @@ export default async function PricingPage({ params }: { params: Promise<{ locale
 
   const plans = [
     {
-      id: 'starter',
+      id: 'starter' as const,
       icon: Sparkles,
       color: 'blue',
       popular: false
     },
     {
-      id: 'professional',
+      id: 'professional' as const,
       icon: Star,
       color: 'purple',
       popular: true
     },
     {
-      id: 'advanced',
+      id: 'advanced' as const,
       icon: Zap,
       color: 'green',
       popular: false
     },
     {
-      id: 'enterprise',
+      id: 'enterprise' as const,
       icon: Crown,
       color: 'orange',
       popular: false
     },
     {
-      id: 'premium',
+      id: 'premium' as const,
       icon: Crown,
       color: 'pink',
       popular: false
@@ -76,71 +76,18 @@ export default async function PricingPage({ params }: { params: Promise<{ locale
         {/* Plans Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
           {plans.map((plan) => {
-            const Icon = plan.icon;
             const planData = t.raw(`plans.${plan.id}`);
-            const isPopular = plan.popular;
             
             return (
-              <GlowCard 
+              <PricingCard
                 key={plan.id}
-                glow={isPopular}
-                glowColor={plan.color as any}
-                className={`relative ${isPopular ? 'border-purple-500/50' : ''}`}
-              >
-                {/* Popular Badge */}
-                {isPopular && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <div className="bg-purple-500 text-white px-4 py-1 rounded-full text-sm font-semibold">
-                      {planData.badge}
-                    </div>
-                  </div>
-                )}
-
-                {/* Plan Header */}
-                <div className="text-center mb-6">
-                  <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full bg-${plan.color}-500/10 mb-4`}>
-                    <Icon className={`w-8 h-8 text-${plan.color}-400`} />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">
-                    {planData.name}
-                  </h3>
-                  <div className="flex items-baseline justify-center mb-2">
-                    <span className="text-gray-400 text-sm">{t('currency')}</span>
-                    <span className="text-5xl font-bold text-white mx-2">
-                      {planData.price}
-                    </span>
-                    <span className="text-gray-400 text-sm">{t('per_month')}</span>
-                  </div>
-                  <p className="text-sm text-gray-400 italic">
-                    {planData.tagline}
-                  </p>
-                </div>
-
-                {/* Description */}
-                <p className="text-gray-300 text-sm mb-6">
-                  {planData.description}
-                </p>
-
-                {/* Features */}
-                <ul className="space-y-3 mb-8">
-                  {planData.features.map((feature: string, index: number) => (
-                    <li key={index} className="flex items-start space-x-2">
-                      <CheckCircle2 className={`w-5 h-5 text-${plan.color}-400 flex-shrink-0 mt-0.5`} />
-                      <span className="text-gray-300 text-sm">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* CTA */}
-                <Link href={`/${locale}/auth/sign-up?plan=${plan.id}`}>
-                  <GlowButton 
-                    className="w-full"
-                    variant={isPopular ? 'primary' : 'outline'}
-                  >
-                    {planData.cta}
-                  </GlowButton>
-                </Link>
-              </GlowCard>
+                planId={plan.id}
+                planData={planData}
+                icon={plan.icon}
+                color={plan.color}
+                isPopular={plan.popular}
+                locale={locale}
+              />
             );
           })}
         </div>

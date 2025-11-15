@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { GlowButton, GlowCard } from '@/components/glow';
 import { LanguageSwitcher } from '@/components/language-switcher';
+import { AddonCard } from './addon-card';
 import { 
   ArrowRight, 
   CheckCircle2,
@@ -17,12 +18,12 @@ export default async function AddonsPage({ params }: { params: Promise<{ locale:
 
   const addons = [
     {
-      id: 'diagnostics',
+      id: 'diagnostico' as const,
       icon: BarChart3,
       color: 'yellow'
     },
     {
-      id: 'calls',
+      id: 'qualificacao' as const,
       icon: Phone,
       color: 'purple'
     }
@@ -59,71 +60,23 @@ export default async function AddonsPage({ params }: { params: Promise<{ locale:
         {/* Addons Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-20 max-w-5xl mx-auto">
           {addons.map((addon) => {
-            const Icon = addon.icon;
             const addonData = t.raw(`addons.${addon.id}`);
             
             return (
-              <GlowCard 
+              <AddonCard
                 key={addon.id}
-                glow
-                glowColor={addon.color as any}
-                className="relative"
-              >
-                {/* Addon Header */}
-                <div className="text-center mb-6">
-                  <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full bg-${addon.color}-500/10 mb-4`}>
-                    <Icon className={`w-8 h-8 text-${addon.color}-400`} />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">
-                    {addonData.name}
-                  </h3>
-                  <div className="flex items-baseline justify-center mb-2">
-                    <span className="text-gray-400 text-sm">{t('currency')}</span>
-                    <span className="text-5xl font-bold text-white mx-2">
-                      {addonData.price}
-                    </span>
-                    <span className="text-gray-400 text-sm">{t('per_month')}</span>
-                  </div>
-                  <p className="text-sm text-gray-400 italic">
-                    {addonData.tagline}
-                  </p>
-                </div>
-
-                {/* Description */}
-                <p className="text-gray-300 text-sm mb-6">
-                  {addonData.description}
-                </p>
-
-                {/* Features */}
-                <ul className="space-y-3 mb-6">
-                  {addonData.features.map((feature: string, index: number) => (
-                    <li key={index} className="flex items-start space-x-2">
-                      <CheckCircle2 className={`w-5 h-5 text-${addon.color}-400 flex-shrink-0 mt-0.5`} />
-                      <span className="text-gray-300 text-sm">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* For Who */}
-                <div className="bg-white/5 backdrop-blur-sm rounded-lg p-4 mb-6">
-                  <p className="text-sm text-gray-300">
-                    <span className="font-semibold text-white">Para quem: </span>
-                    {addonData.for_who}
-                  </p>
-                </div>
-
-                {/* CTA */}
-                <Link href={`/${locale}/auth/sign-up?addon=${addon.id}`}>
-                  <GlowButton className="w-full">
-                    {addonData.cta}
-                  </GlowButton>
-                </Link>
-              </GlowCard>
+                addonId={addon.id}
+                addonData={addonData}
+                icon={addon.icon}
+                color={addon.color}
+                currency={t('currency')}
+                perMonth={t('per_month')}
+              />
             );
           })}
         </div>
 
-        {/* How It Works Section */}
+        {/* How it Works */}
         <div className="mt-32">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
@@ -134,39 +87,35 @@ export default async function AddonsPage({ params }: { params: Promise<{ locale:
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {t.raw('how_it_works.steps').map((step: any, index: number) => (
-              <GlowCard key={index} glow glowColor="blue">
-                <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-500/10 mb-4">
-                    <span className="text-2xl font-bold text-blue-400">{index + 1}</span>
-                  </div>
-                  <h3 className="text-xl font-semibold text-white mb-3">
-                    {step.title}
-                  </h3>
-                  <p className="text-gray-400">
-                    {step.description}
-                  </p>
+              <GlowCard key={index} className="text-center">
+                <div className="text-4xl font-bold text-blue-400 mb-4">
+                  {index + 1}
                 </div>
+                <h3 className="text-xl font-semibold text-white mb-3">
+                  {step.title}
+                </h3>
+                <p className="text-gray-400">
+                  {step.description}
+                </p>
               </GlowCard>
             ))}
           </div>
         </div>
 
-        {/* Compatibility Section */}
+        {/* Compatibility */}
         <div className="mt-32">
-          <GlowCard glow glowColor="purple" className="text-center py-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-purple-500/10 mb-6">
-              <Layers className="w-8 h-8 text-purple-400" />
-            </div>
+          <GlowCard glow glowColor="green" className="text-center py-12">
+            <Layers className="w-12 h-12 text-green-400 mx-auto mb-6" />
             <h2 className="text-3xl font-bold text-white mb-4">
               {t('compatibility.title')}
             </h2>
-            <p className="text-lg text-gray-300 mb-4 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-300 mb-2">
               {t('compatibility.description')}
             </p>
-            <p className="text-sm text-gray-400 italic">
-              {t('compatibility.note')}
+            <p className="text-gray-400">
+              {t('compatibility.flexibility')}
             </p>
           </GlowCard>
         </div>
