@@ -1,13 +1,18 @@
 import Stripe from 'stripe';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not defined');
-}
+// Make Stripe optional for build time
+const stripeKey = process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder';
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+export const stripe = new Stripe(stripeKey, {
   apiVersion: '2025-10-29.clover',
   typescript: true,
 });
+
+// Check if Stripe is properly configured
+export const isStripeConfigured = () => {
+  return !!process.env.STRIPE_SECRET_KEY && 
+         process.env.STRIPE_SECRET_KEY !== 'sk_test_placeholder';
+};
 
 // Planos e preços
 export const PLANS = {

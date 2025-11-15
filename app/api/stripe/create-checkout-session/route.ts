@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
+import { stripe, isStripeConfigured } from '@/lib/stripe';
 
 export async function POST(req: NextRequest) {
   try {
+    // Check if Stripe is configured
+    if (!isStripeConfigured()) {
+      return NextResponse.json(
+        { error: 'Stripe is not configured. Please contact support.' },
+        { status: 503 }
+      );
+    }
     const { priceId, planName, locale } = await req.json();
 
     if (!priceId) {
