@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
-import { generateCampaignInsights, InsightGenerationParams } from "@/lib/openai";
+import { generateCampaignInsights as generateWithGemini, InsightGenerationParams } from "@/lib/gemini";
+import { generateCampaignInsights as generateWithOpenAI } from "@/lib/openai";
 
 /**
- * Flow 2 - Insights Inteligentes (OpenAI GPT-4o-mini)
+ * Flow 2 - Insights Inteligentes (Google Gemini 2.0 Flash)
  * 
- * Gera insights estruturados para uma campanha usando OpenAI
- * Implementa cache de 24h para reduzir custos
+ * Gera insights estruturados para uma campanha usando Google Gemini (GRATUITO)
+ * Fallback para OpenAI se Gemini falhar
+ * Implementa cache de 24h para reduzir chamadas
  * Salva em campaign_insights e notifica o webhook Manus
  */
 
@@ -84,8 +86,8 @@ export async function POST(req: Request) {
       }
     }
 
-    // 4. Gerar insights com OpenAI
-    console.log('[Flow 2] Gerando novos insights com OpenAI...');
+    // 4. Gerar insights com Gemini (ou OpenAI como fallback)
+    console.log('[Flow 2] Gerando novos insights...');
     const params: InsightGenerationParams = {
       campaignId: campaign.id,
       campaignName: campaign.name,
@@ -97,7 +99,27 @@ export async function POST(req: Request) {
       status: campaign.status
     };
 
-    const aiInsights = await generateCampaignInsights(params);
+    let aiInsights;
+    let model = 'gemini-2.0-flash';
+    
+    try {
+      // Tentar Gemini primeiro (GRATUITO)
+      console.log('[Flow 2] Tentando Gemini...');
+      aiInsights = await generateWithGemini(params);
+      console.log('[Flow 2] ✅ Gemini gerou insights com sucesso');
+    } catch (geminiError) {
+      console.error('[Flow 2] ⚠️ Gemini falhou, usando OpenAI como fallback:', geminiError);
+      
+      // Fallback para OpenAI
+      try {
+        aiInsights = await generateWithOpenAI(params);
+        model = 'gpt-4o-mini';
+        console.log('[Flow 2] ✅ OpenAI gerou insights com sucesso');
+      } catch (openaiError) {
+        console.error('[Flow 2] ❌ OpenAI também falhou:', openaiError);
+        throw new Error('Both Gemini and OpenAI failed to generate insights');
+      }
+    }
 
     // 5. Converter para formato do banco
     const insights: InsightData[] = [];
@@ -190,7 +212,7 @@ export async function POST(req: Request) {
       },
       tokens_used: aiInsights.tokensUsed,
       cost_usd: aiInsights.cost,
-      model: 'gpt-4o-mini'
+      model
     });
 
     // 8. Criar evento de timeline
@@ -203,7 +225,7 @@ export async function POST(req: Request) {
         insights_count: savedInsights?.length || 0,
         tokens_used: aiInsights.tokensUsed,
         cost_usd: aiInsights.cost,
-        model: 'gpt-4o-mini',
+        model,
         reprocessed: reprocess
       }
     });
@@ -218,6 +240,7 @@ export async function POST(req: Request) {
         insights_count: savedInsights?.length || 0,
         tokens_used: aiInsights.tokensUsed,
         cost_usd: aiInsights.cost,
+        model,
         insights: savedInsights
       },
       status: "success"
@@ -231,7 +254,7 @@ export async function POST(req: Request) {
       insights: savedInsights,
       tokens_used: aiInsights.tokensUsed,
       cost_usd: aiInsights.cost,
-      model: 'gpt-4o-mini'
+      model
     });
 
   } catch (error) {
