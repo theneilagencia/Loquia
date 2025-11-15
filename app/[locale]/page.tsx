@@ -30,13 +30,13 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           </p>
           
           <div className="flex items-center justify-center space-x-4">
-            <Link href={`/${locale}/sign-up`}>
+            <Link href={`/${locale}/auth/sign-up`}>
               <GlowButton size="lg" className="flex items-center space-x-2">
                 <span>{t('hero.getStarted')}</span>
                 <ArrowRight className="w-5 h-5" />
               </GlowButton>
             </Link>
-            <Link href={`/${locale}/sign-in`}>
+            <Link href={`/${locale}/auth/sign-in`}>
               <GlowButton variant="outline" size="lg">
                 {t('hero.signIn')}
               </GlowButton>

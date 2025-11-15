@@ -53,7 +53,7 @@ export default function SignUpPage() {
             {t('confirmationSent')} <strong>{email}</strong>
           </p>
           <Link
-            href={`/${locale}/sign-in`}
+            href={`/${locale}/auth/sign-in`}
             className="block w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-center transition-colors duration-200"
           >
             {t('goToSignIn')}
@@ -140,7 +140,7 @@ export default function SignUpPage() {
 
         <p className="mt-6 text-center text-sm text-gray-400">
           {t('hasAccount')}{' '}
-          <Link href={`/${locale}/sign-in`} className="text-blue-400 hover:text-blue-300">
+          <Link href={`/${locale}/auth/sign-in`} className="text-blue-400 hover:text-blue-300">
             {t('signIn')}
           </Link>
         </p>

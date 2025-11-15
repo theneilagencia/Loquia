@@ -94,7 +94,7 @@ export default function SignInPage() {
 
         <p className="mt-6 text-center text-sm text-gray-400">
           {t('noAccount')}{' '}
-          <Link href={`/${locale}/sign-up`} className="text-blue-400 hover:text-blue-300">
+          <Link href={`/${locale}/auth/sign-up`} className="text-blue-400 hover:text-blue-300">
             {t('signUp')}
           </Link>
         </p>
