@@ -5,7 +5,8 @@ import { createServerClient } from '@supabase/ssr';
 const intlMiddleware = createMiddleware({
   locales: ['pt', 'en'],
   defaultLocale: 'pt',
-  localePrefix: 'always'
+  localePrefix: 'always',
+  localeDetection: false // Desabilita detecção automática do navegador
 });
 
 export async function middleware(request: NextRequest) {

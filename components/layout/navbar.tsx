@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
 import { GlowButton } from '@/components/glow';
+import { LanguageSwitcher } from '@/components/language-switcher';
 import { LogOut, User } from 'lucide-react';
 
 export function Navbar() {
@@ -49,6 +50,7 @@ export function Navbar() {
 
           {/* User menu */}
           <div className="flex items-center space-x-4">
+            <LanguageSwitcher />
             <button className="text-gray-300 hover:text-white p-2 rounded-md transition-colors">
               <User className="w-5 h-5" />
             </button>

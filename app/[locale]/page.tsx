@@ -2,6 +2,7 @@ import { useTranslations } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { GlowButton, GlowCard } from '@/components/glow';
+import { LanguageSwitcher } from '@/components/language-switcher';
 import { ArrowRight, Sparkles, Target, TrendingUp } from 'lucide-react';
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
@@ -10,6 +11,11 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
+      {/* Header com seletor de idioma */}
+      <div className="absolute top-4 right-4 z-10">
+        <LanguageSwitcher />
+      </div>
+
       {/* Hero Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center">
