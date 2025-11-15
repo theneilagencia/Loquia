@@ -1,4 +1,7 @@
 import { getTranslations } from 'next-intl/server';
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
 import Link from 'next/link';
 import Image from 'next/image';
 import { LanguageSwitcher } from '@/components/language-switcher';
