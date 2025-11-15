@@ -3,54 +3,20 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { LandingClient } from './landing-client';
 
-// Force dynamic rendering and disable all caching
+// Force dynamic rendering
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-export const fetchCache = 'force-no-store';
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const t = await getTranslations('landing');
 
-  // Prepare data for client component
-  const landingData = {
-    hero: {
-      title: t('hero.title'),
-      subtitle: t('hero.subtitle'),
-      cta_primary: t('hero.cta_primary'),
-      cta_secondary: t('hero.cta_secondary'),
-      cta_premium: t('hero.cta_premium')
-    },
-    audiences: {
-      title: t('audiences.title'),
-      subtitle: t('audiences.subtitle'),
-      agency: t.raw('audiences.agency'),
-      media_buyer: t.raw('audiences.media_buyer'),
-      sme: t.raw('audiences.sme'),
-      common_goal: t.raw('audiences.common_goal')
-    },
-    benefits: t.raw('benefits'),
-    problem: t.raw('problem'),
-    guide: t.raw('guide'),
-    plan: t.raw('plan'),
-    success: t.raw('success'),
-    failure: t.raw('failure'),
-    cta_final: t.raw('cta_final')
-  };
-
   return (
-    <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
-      {/* Gradient Mesh Background */}
-      <div 
-        className="fixed inset-0 pointer-events-none"
-        style={{ background: 'var(--gradient-mesh)', opacity: 0.5 }}
-      />
-      
+    <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 glass">
-        <div className="container-wide py-4">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-gray-900/80 backdrop-blur">
+        <div className="container mx-auto py-4 px-6">
           <div className="flex justify-between items-center">
             <Link href={`/${locale}`}>
               <Image
@@ -71,35 +37,73 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       </header>
 
       {/* Main Content */}
-      <LandingClient locale={locale} data={landingData} />
-
-      {/* Footer */}
-      <footer className="relative py-12 border-t" style={{ borderColor: 'var(--border-primary)' }}>
-        <div className="container-wide">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <p className="text-small" style={{ color: 'var(--fg-tertiary)' }}>
-              © 2024 Loquia. All rights reserved.
+      <main className="pt-32 pb-20">
+        <div className="container mx-auto px-6">
+          {/* Hero */}
+          <section className="text-center mb-20">
+            <h1 className="text-5xl font-bold mb-6">
+              {t('hero.title')}
+            </h1>
+            <p className="text-xl text-gray-400 mb-8 max-w-3xl mx-auto">
+              {t('hero.subtitle')}
             </p>
-            <div className="flex gap-8">
+            <div className="flex gap-4 justify-center">
               <Link 
                 href={`/${locale}/pricing`}
-                className="text-small hover:opacity-70 transition-opacity"
-                style={{ color: 'var(--fg-secondary)' }}
+                className="px-8 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-colors"
               >
-                Pricing
-              </Link>
-              <Link 
-                href={`/${locale}/addons`}
-                className="text-small hover:opacity-70 transition-opacity"
-                style={{ color: 'var(--fg-secondary)' }}
-              >
-                Addons
+                {t('hero.cta_primary')}
               </Link>
               <Link 
                 href={`/${locale}/contact`}
-                className="text-small hover:opacity-70 transition-opacity"
-                style={{ color: 'var(--fg-secondary)' }}
+                className="px-8 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-semibold transition-colors"
               >
+                {t('hero.cta_secondary')}
+              </Link>
+            </div>
+            <p className="mt-6 text-sm text-gray-500">
+              ✅ TESTE: Novo design está funcionando!
+            </p>
+          </section>
+
+          {/* Audiences */}
+          <section className="mb-20">
+            <h2 className="text-3xl font-bold text-center mb-12">
+              {t('audiences.title')}
+            </h2>
+            <div className="grid md:grid-cols-3 gap-8">
+              <div className="bg-gray-800 p-8 rounded-lg">
+                <h3 className="text-xl font-semibold mb-4">Agências</h3>
+                <p className="text-gray-400">Teste de conteúdo</p>
+              </div>
+              <div className="bg-gray-800 p-8 rounded-lg">
+                <h3 className="text-xl font-semibold mb-4">Media Buyers</h3>
+                <p className="text-gray-400">Teste de conteúdo</p>
+              </div>
+              <div className="bg-gray-800 p-8 rounded-lg">
+                <h3 className="text-xl font-semibold mb-4">PMEs</h3>
+                <p className="text-gray-400">Teste de conteúdo</p>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-800 py-12">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+            <p className="text-sm text-gray-500">
+              © 2024 Loquia. All rights reserved.
+            </p>
+            <div className="flex gap-8">
+              <Link href={`/${locale}/pricing`} className="text-sm text-gray-400 hover:text-white transition-colors">
+                Pricing
+              </Link>
+              <Link href={`/${locale}/addons`} className="text-sm text-gray-400 hover:text-white transition-colors">
+                Addons
+              </Link>
+              <Link href={`/${locale}/contact`} className="text-sm text-gray-400 hover:text-white transition-colors">
                 Contact
               </Link>
             </div>
