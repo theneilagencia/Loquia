@@ -1,9 +1,9 @@
 import { getTranslations } from 'next-intl/server';
-import Link from 'next/link';
+import { Link } from '@/navigation';
 import Image from 'next/image';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { NavbarLinks } from '@/components/navbar-links';
-import { CTAButtons } from '@/components/cta-buttons';
+
 import { CTAFinal } from '@/components/cta-final';
 
 export const dynamic = 'force-dynamic';
@@ -118,7 +118,26 @@ export default async function LandingPage({ params }: { params: { locale: string
               {hero.subtitle}
             </p>
             
-            <CTAButtons cta1Text={hero.cta1} cta2Text={hero.cta2} cta3Text={hero.cta3} />
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 opacity-0 animate-fade-in-up animate-delay-400">
+              <Link 
+                href="/pricing" 
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-emerald-500 text-black hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-black glow-emerald-hover magnetic-button shine-effect"
+              >
+                {hero.cta1}
+              </Link>
+              <Link 
+                href="/pricing" 
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-white/5 text-white hover:bg-white/10 border border-white/10 hover:border-white/20 focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-black"
+              >
+                {hero.cta2}
+              </Link>
+              <Link 
+                href="/roi-calculator" 
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 text-white/70 hover:text-white hover:bg-white/5"
+              >
+                {hero.cta3}
+              </Link>
+            </div>
           </div>
         </section>
 
