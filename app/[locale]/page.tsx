@@ -77,6 +77,19 @@ export default async function LandingPage({ params }: { params: { locale: string
               priority
             />
           </Link>
+          
+          <nav className="hidden md:flex items-center gap-6">
+            <Link href={`/${params.locale}/pricing`} className="text-sm text-white/70 hover:text-white transition-colors">
+              Pricing
+            </Link>
+            <Link href={`/${params.locale}/addons`} className="text-sm text-white/70 hover:text-white transition-colors">
+              Addons
+            </Link>
+            <Link href={`/${params.locale}/contact`} className="text-sm text-white/70 hover:text-white transition-colors">
+              Contact
+            </Link>
+          </nav>
+          
           <LanguageSwitcher />
         </div>
       </header>
