@@ -1,14 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { useLocale } from 'next-intl';
+import { usePathname } from 'next/navigation';
 
 interface CTAFinalProps {
   buttonText: string;
 }
 
 export function CTAFinal({ buttonText }: CTAFinalProps) {
-  const locale = useLocale();
+  const pathname = usePathname();
+  const locale = pathname?.split('/')[1] || 'pt';
 
   return (
     <Link 

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useLocale } from 'next-intl';
+import { usePathname } from 'next/navigation';
 
 interface CTAButtonsProps {
   cta1Text: string;
@@ -10,7 +10,8 @@ interface CTAButtonsProps {
 }
 
 export function CTAButtons({ cta1Text, cta2Text, cta3Text }: CTAButtonsProps) {
-  const locale = useLocale();
+  const pathname = usePathname();
+  const locale = pathname?.split('/')[1] || 'pt';
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 opacity-0 animate-fade-in-up animate-delay-400">

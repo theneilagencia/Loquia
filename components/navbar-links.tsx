@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useLocale } from 'next-intl';
+import { usePathname } from 'next/navigation';
 
 export function NavbarLinks() {
-  const locale = useLocale();
+  const pathname = usePathname();
+  const locale = pathname?.split('/')[1] || 'pt';
 
   return (
     <nav className="hidden md:flex items-center gap-6">

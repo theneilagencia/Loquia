@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useLocale } from 'next-intl';
+import { usePathname } from 'next/navigation';
 import { ReactNode } from 'react';
 
 interface LocaleLinkProps {
@@ -12,7 +12,10 @@ interface LocaleLinkProps {
 }
 
 export function LocaleLink({ href, className, style, children }: LocaleLinkProps) {
-  const locale = useLocale();
+  const pathname = usePathname();
+  
+  // Extrair locale da URL atual (ex: /pt/pricing -> pt)
+  const locale = pathname?.split('/')[1] || 'pt';
   
   // Se o href já começa com /, adiciona o locale
   // Se não, usa como está
