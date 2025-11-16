@@ -1,173 +1,208 @@
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
-import { GlowButton, GlowCard } from '@/components/glow';
+import Image from 'next/image';
 import { LanguageSwitcher } from '@/components/language-switcher';
-import { AddonCard } from './addon-card';
-import { 
-  ArrowRight, 
-  CheckCircle2,
-  BarChart3,
-  Phone,
-  Puzzle,
-  Layers
-} from 'lucide-react';
+import { CheckCircle2, Phone, BarChart3 } from 'lucide-react';
 
-export default async function AddonsPage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+
+export default async function AddonsPage({ params }: { params: { locale: string } }) {
   const t = await getTranslations('addons');
 
   const addons = [
     {
-      id: 'diagnostico' as const,
-      icon: BarChart3,
-      color: 'yellow'
+      id: 'qualificacao',
+      name: 'Qualificação Inteligente de Leads por Voz',
+      icon: Phone,
+      tagline: 'Filtre leads com potencial real',
+      description: 'Ideal para quem precisa filtrar rapidamente leads que realmente têm potencial. O sistema faz a primeira conversa, coleta informações e ajuda você a priorizar quem vale a pena.',
+      benefits: [
+        'Atendimento imediato',
+        'Menos tempo gasto com leads frios',
+        'Aumento de conversão de oportunidades',
+        'Escalabilidade sem contratar equipe'
+      ],
+      price: '42',
+      cta: 'Adicionar ao plano'
     },
     {
-      id: 'qualificacao' as const,
-      icon: Phone,
-      color: 'purple'
+      id: 'diagnostico',
+      name: 'Diagnóstico e Planejamento Automático',
+      icon: BarChart3,
+      tagline: 'Acelere diagnósticos e planos estratégicos',
+      description: 'Para quem quer acelerar a criação de diagnósticos e planos estratégicos. O módulo analisa páginas públicas e extrai informações úteis para montar uma base sólida para suas campanhas.',
+      benefits: [
+        'Economia de horas de pesquisa',
+        'Plano estratégico mais completo',
+        'Visão de mercado clara',
+        'Diagnósticos mais profissionais'
+      ],
+      price: '38',
+      cta: 'Adicionar ao plano'
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
-      {/* Header */}
-      <div className="border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <Link href={`/${locale}`} className="text-2xl font-bold text-white">
-              Loquia
-            </Link>
-            <LanguageSwitcher />
-          </div>
+    <>
+      {/* HEADER */}
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.08] bg-black/80 backdrop-blur-xl">
+        <div className="mx-auto max-w-[1280px] px-6 md:px-8 lg:px-12 flex items-center justify-between h-16 md:h-20">
+          <Link href={`/${params.locale}`} className="flex items-center">
+            <Image
+              src="/logo-white.png"
+              alt="Loquia"
+              width={120}
+              height={30}
+              className="h-8 w-auto"
+              priority
+            />
+          </Link>
+          <LanguageSwitcher />
         </div>
+      </header>
+
+      {/* PREMIUM ANIMATED BACKGROUND */}
+      <div className="premium-bg">
+        {/* Geometric Shapes */}
+        <div className="geometric-circle-1" />
+        <div className="geometric-circle-2" />
+        <div className="geometric-circle-3" />
+        <div className="geometric-hexagon-1" />
+        <div className="geometric-hexagon-2" />
+        <div className="diagonal-lines" />
+        
+        {/* Subtle Orbs */}
+        <div className="subtle-orb-1" />
+        <div className="subtle-orb-2" />
+        
+        {/* Grid Pattern */}
+        <div className="grid-pattern" />
       </div>
 
-      {/* Hero */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-500/10 mb-6">
-            <Puzzle className="w-10 h-10 text-blue-400" />
-          </div>
-          <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
-            {t('title')}
-          </h1>
-          <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-            {t('subtitle')}
-          </p>
-        </div>
-
-        {/* Addons Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-20 max-w-5xl mx-auto">
-          {addons.map((addon) => {
-            const addonData = t.raw(`addons.${addon.id}`);
-            
-            return (
-              <AddonCard
-                key={addon.id}
-                addonId={addon.id}
-                addonData={addonData}
-                icon={addon.icon}
-                color={addon.color}
-                currency={t('currency')}
-                perMonth={t('per_month')}
-              />
-            );
-          })}
-        </div>
-
-        {/* How it Works */}
-        <div className="mt-32">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
-              {t('how_it_works.title')}
-            </h2>
-            <p className="text-xl text-gray-400">
-              {t('how_it_works.subtitle')}
+      {/* MAIN CONTENT */}
+      <main className="pt-16 md:pt-20 relative z-10">
+        {/* HERO SECTION */}
+        <section className="py-20 md:py-32 lg:py-40 relative">
+          <div className="mx-auto max-w-[1280px] px-6 md:px-8 lg:px-12 text-center relative z-10">
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-none mb-6 opacity-0 animate-fade-in-up" style={{letterSpacing: '-0.03em', textWrap: 'balance'}}>
+              Módulos Opcionais que Entregam Vantagens Exclusivas
+            </h1>
+            <p className="text-lg md:text-xl leading-relaxed max-w-3xl mx-auto mb-12 text-white/70 opacity-0 animate-fade-in-up animate-delay-200" style={{textWrap: 'balance'}}>
+              Adicione funcionalidades específicas ao seu plano e ganhe vantagens competitivas imediatas
             </p>
           </div>
+        </section>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {t.raw('how_it_works.steps').map((step: any, index: number) => (
-              <GlowCard key={index} className="text-center">
-                <div className="text-4xl font-bold text-blue-400 mb-4">
-                  {index + 1}
+        {/* DIVIDER */}
+        <div className="mx-auto max-w-[1280px] px-6 md:px-8 lg:px-12">
+          <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        </div>
+
+        {/* ADDONS CARDS */}
+        <section className="py-16 md:py-24 lg:py-32">
+          <div className="mx-auto max-w-[1280px] px-6 md:px-8 lg:px-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 grid-stagger">
+              {addons.map((addon, index) => (
+                <div key={addon.id} className="premium-card">
+                  <div className="flex items-start gap-4 mb-6">
+                    <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                      <addon.icon className="w-7 h-7 text-emerald-500" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-2xl md:text-3xl font-bold tracking-tight mb-2" style={{letterSpacing: '-0.01em'}}>
+                        {addon.name}
+                      </h3>
+                      <p className="text-sm text-emerald-500 font-medium">
+                        {addon.tagline}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="text-base md:text-lg text-white/70 mb-6 leading-relaxed">
+                    {addon.description}
+                  </p>
+
+                  <div className="mb-8">
+                    <h4 className="text-sm font-semibold text-emerald-500 uppercase mb-4">
+                      Benefícios diretos
+                    </h4>
+                    <ul className="space-y-3">
+                      {addon.benefits.map((benefit, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                          <span className="text-sm md:text-base text-white/70">{benefit}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-6 border-t border-white/10">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-white/50 text-sm">USD</span>
+                      <span className="text-4xl md:text-5xl font-bold">{addon.price}</span>
+                      <span className="text-white/50 text-sm">/mês</span>
+                    </div>
+                    <Link 
+                      href={`/${params.locale}/pricing`}
+                      className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-emerald-500 text-black hover:bg-emerald-400 glow-emerald-hover"
+                    >
+                      {addon.cta}
+                    </Link>
+                  </div>
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-3">
-                  {step.title}
-                </h3>
-                <p className="text-gray-400">
-                  {step.description}
-                </p>
-              </GlowCard>
-            ))}
+              ))}
+            </div>
           </div>
+        </section>
+
+        {/* DIVIDER */}
+        <div className="mx-auto max-w-[1280px] px-6 md:px-8 lg:px-12">
+          <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         </div>
 
-        {/* Compatibility */}
-        <div className="mt-32">
-          <GlowCard glow glowColor="green" className="text-center py-12">
-            <Layers className="w-12 h-12 text-green-400 mx-auto mb-6" />
-            <h2 className="text-3xl font-bold text-white mb-4">
-              {t('compatibility.title')}
+        {/* FINAL CTA */}
+        <section className="py-16 md:py-24 lg:py-32">
+          <div className="mx-auto max-w-[1280px] px-6 md:px-8 lg:px-12 text-center">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight leading-tight mb-6" style={{letterSpacing: '-0.02em', textWrap: 'balance'}}>
+              Pronto para adicionar vantagens ao seu plano?
             </h2>
-            <p className="text-xl text-gray-300 mb-2">
-              {t('compatibility.description')}
-            </p>
-            <p className="text-gray-400">
-              {t('compatibility.flexibility')}
-            </p>
-          </GlowCard>
-        </div>
-
-        {/* Final CTA */}
-        <div className="mt-32">
-          <GlowCard glow glowColor="blue" className="text-center py-16">
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
-              Ready to Expand Your Capabilities?
-            </h2>
-            <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
-              Add specialized modules to your Loquia plan and unlock new possibilities.
+            <p className="text-lg md:text-xl leading-relaxed max-w-2xl mx-auto mb-8 text-white/70">
+              Escolha seu plano base e adicione os módulos que fazem sentido para o seu negócio
             </p>
             
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href={`/${locale}/pricing`}>
-                <GlowButton size="lg" className="flex items-center space-x-2">
-                  <span>View Plans</span>
-                  <ArrowRight className="w-5 h-5" />
-                </GlowButton>
-              </Link>
-              <Link href={`/${locale}/contact`}>
-                <GlowButton variant="outline" size="lg">
-                  Talk to Sales
-                </GlowButton>
-              </Link>
-            </div>
-          </GlowCard>
-        </div>
-      </div>
+            <Link 
+              href={`/${params.locale}/pricing`}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-emerald-500 text-black hover:bg-emerald-400 glow-emerald-hover"
+            >
+              Ver planos
+            </Link>
+          </div>
+        </section>
+      </main>
 
-      {/* Footer */}
-      <footer className="border-t border-white/10 py-8 mt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <div className="text-gray-400 text-sm">
-              © 2024 Loquia. All rights reserved.
+      {/* FOOTER */}
+      <footer className="border-t border-white/[0.08] py-8 relative z-10">
+        <div className="mx-auto max-w-[1280px] px-6 md:px-8 lg:px-12">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="text-white/40 text-sm">
+              © 2024 Loquia. Todos os direitos reservados.
             </div>
-            <div className="flex space-x-6">
-              <Link href={`/${locale}`} className="text-gray-400 hover:text-white transition-colors">
+            <div className="flex gap-6">
+              <Link href={`/${params.locale}`} className="text-white/40 hover:text-white transition-colors text-sm">
                 Home
               </Link>
-              <Link href={`/${locale}/pricing`} className="text-gray-400 hover:text-white transition-colors">
+              <Link href={`/${params.locale}/pricing`} className="text-white/40 hover:text-white transition-colors text-sm">
                 Pricing
               </Link>
-              <Link href={`/${locale}/contact`} className="text-gray-400 hover:text-white transition-colors">
-                Contact
+              <Link href={`/${params.locale}/roi-calculator`} className="text-white/40 hover:text-white transition-colors text-sm">
+                ROI Calculator
               </Link>
             </div>
           </div>
         </div>
       </footer>
-    </div>
+    </>
   );
 }
