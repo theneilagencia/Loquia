@@ -25,12 +25,10 @@ export default async function LandingPage({ params }: { params: { locale: string
     title: t('problem.title'),
     subtitle: t('problem.subtitle'),
     items: t.raw('problem.issues') as Array<{title: string; description: string}>,
-    conclusion: t('problem.conclusion'),
   };
 
   const solution = {
     title: t('solution.title'),
-    subtitle: t('solution.subtitle'),
     intro: t('solution.intro'),
     benefits: t.raw('solution.benefits') as Array<{title: string; description: string}>,
   };
@@ -167,10 +165,6 @@ export default async function LandingPage({ params }: { params: { locale: string
                 </div>
               ))}
             </div>
-
-            <p className="text-lg md:text-xl leading-relaxed text-center text-red-400 font-medium">
-              {problem.conclusion}
-            </p>
           </div>
         </section>
 
@@ -186,9 +180,6 @@ export default async function LandingPage({ params }: { params: { locale: string
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight leading-tight mb-4" style={{letterSpacing: '-0.02em'}}>
                 {solution.title}
               </h2>
-              <p className="text-lg md:text-xl leading-relaxed max-w-2xl mx-auto mb-6 text-white/70">
-                {solution.subtitle}
-              </p>
               <p className="text-base md:text-lg leading-relaxed max-w-3xl mx-auto text-white/65">
                 {solution.intro}
               </p>
