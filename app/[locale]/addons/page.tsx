@@ -105,7 +105,7 @@ export default async function AddonsPage({ params }: { params: { locale: string 
           <div className="mx-auto max-w-[1280px] px-6 md:px-8 lg:px-12">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 grid-stagger">
               {addons.map((addon, index) => (
-                <div key={addon.id} className="premium-card">
+                <div key={addon.id} className="premium-card scroll-reveal tilt-on-hover">
                   <div className="flex items-start gap-4 mb-6">
                     <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-emerald-500/10 flex items-center justify-center">
                       <addon.icon className="w-7 h-7 text-emerald-500" />
@@ -146,7 +146,7 @@ export default async function AddonsPage({ params }: { params: { locale: string 
                     </div>
                     <Link 
                       href={`/${params.locale}/pricing`}
-                      className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-emerald-500 text-black hover:bg-emerald-400 glow-emerald-hover"
+                      className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-emerald-500 text-black hover:bg-emerald-400 glow-emerald-hover magnetic-button shine-effect"
                     >
                       {addon.cta}
                     </Link>
@@ -174,7 +174,7 @@ export default async function AddonsPage({ params }: { params: { locale: string 
             
             <Link 
               href={`/${params.locale}/pricing`}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-emerald-500 text-black hover:bg-emerald-400 glow-emerald-hover"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-emerald-500 text-black hover:bg-emerald-400 glow-emerald-hover magnetic-button shine-effect"
             >
               Ver planos
             </Link>

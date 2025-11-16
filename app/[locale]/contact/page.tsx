@@ -145,7 +145,7 @@ export default async function ContactPage({ params }: { params: { locale: string
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-              <div className="premium-card">
+              <div className="premium-card scroll-reveal tilt-on-hover">
                 <h3 className="text-xl font-semibold mb-3">
                   Quanto tempo leva para implementar?
                 </h3>
@@ -154,7 +154,7 @@ export default async function ContactPage({ params }: { params: { locale: string
                 </p>
               </div>
 
-              <div className="premium-card">
+              <div className="premium-card scroll-reveal tilt-on-hover">
                 <h3 className="text-xl font-semibold mb-3">
                   Preciso de conhecimento técnico?
                 </h3>
@@ -163,7 +163,7 @@ export default async function ContactPage({ params }: { params: { locale: string
                 </p>
               </div>
 
-              <div className="premium-card">
+              <div className="premium-card scroll-reveal tilt-on-hover">
                 <h3 className="text-xl font-semibold mb-3">
                   Posso cancelar a qualquer momento?
                 </h3>
@@ -172,7 +172,7 @@ export default async function ContactPage({ params }: { params: { locale: string
                 </p>
               </div>
 
-              <div className="premium-card">
+              <div className="premium-card scroll-reveal tilt-on-hover">
                 <h3 className="text-xl font-semibold mb-3">
                   Oferecem suporte em português?
                 </h3>
@@ -202,7 +202,7 @@ export default async function ContactPage({ params }: { params: { locale: string
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link 
                 href={`/${params.locale}/auth/sign-up`}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-emerald-500 text-black hover:bg-emerald-400 glow-emerald-hover"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-emerald-500 text-black hover:bg-emerald-400 glow-emerald-hover magnetic-button shine-effect"
               >
                 Começar teste gratuito
               </Link>

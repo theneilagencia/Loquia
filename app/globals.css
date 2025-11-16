@@ -545,3 +545,263 @@
     0 0 60px rgba(16, 185, 129, 0.3),
     0 0 90px rgba(16, 185, 129, 0.2);
 }
+
+
+/* ============================================
+   MODERN SCROLL ANIMATIONS - REVEAL ON SCROLL
+   ============================================ */
+
+/* Scroll Reveal Base */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scroll-reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Scroll Reveal Variants */
+.scroll-reveal-left {
+  opacity: 0;
+  transform: translateX(-40px);
+  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scroll-reveal-left.revealed {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.scroll-reveal-right {
+  opacity: 0;
+  transform: translateX(40px);
+  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scroll-reveal-right.revealed {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.scroll-reveal-scale {
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scroll-reveal-scale.revealed {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ============================================
+   PARALLAX EFFECTS
+   ============================================ */
+
+.parallax-slow {
+  will-change: transform;
+  transition: transform 0.1s linear;
+}
+
+.parallax-medium {
+  will-change: transform;
+  transition: transform 0.1s linear;
+}
+
+.parallax-fast {
+  will-change: transform;
+  transition: transform 0.1s linear;
+}
+
+/* ============================================
+   MICRO-INTERACTIONS - ADVANCED HOVER EFFECTS
+   ============================================ */
+
+/* Magnetic Button Effect */
+.magnetic-button {
+  position: relative;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.magnetic-button:hover {
+  transform: scale(1.05);
+}
+
+/* Ripple Effect */
+.ripple-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-effect::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.ripple-effect:hover::after {
+  width: 300px;
+  height: 300px;
+}
+
+/* Tilt Effect on Hover */
+.tilt-on-hover {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tilt-on-hover:hover {
+  transform: perspective(1000px) rotateX(2deg) rotateY(-2deg);
+}
+
+/* Shine Effect */
+.shine-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine-effect::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transition: left 0.6s;
+}
+
+.shine-effect:hover::before {
+  left: 100%;
+}
+
+/* Glow Pulse on Hover */
+.glow-pulse-hover {
+  transition: box-shadow 0.3s ease;
+}
+
+.glow-pulse-hover:hover {
+  animation: pulse-glow-hover 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-glow-hover {
+  0%, 100% {
+    box-shadow: 
+      0 0 20px rgba(16, 185, 129, 0.3),
+      0 0 40px rgba(16, 185, 129, 0.2);
+  }
+  50% {
+    box-shadow: 
+      0 0 30px rgba(16, 185, 129, 0.5),
+      0 0 60px rgba(16, 185, 129, 0.3),
+      0 0 90px rgba(16, 185, 129, 0.2);
+  }
+}
+
+/* ============================================
+   SMOOTH PAGE TRANSITIONS
+   ============================================ */
+
+.page-transition {
+  animation: page-fade-in 0.6s ease-out;
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================
+   LOADING SKELETON
+   ============================================ */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.02) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ============================================
+   STAGGER ANIMATIONS WITH DELAYS
+   ============================================ */
+
+.stagger-children > * {
+  opacity: 0;
+  animation: fade-in-up 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.3s; }
+.stagger-children > *:nth-child(7) { animation-delay: 0.35s; }
+.stagger-children > *:nth-child(8) { animation-delay: 0.4s; }
+.stagger-children > *:nth-child(9) { animation-delay: 0.45s; }
+.stagger-children > *:nth-child(10) { animation-delay: 0.5s; }
+
+/* ============================================
+   PERFORMANCE OPTIMIZATIONS
+   ============================================ */
+
+/* GPU Acceleration */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Smooth Scrolling */
+.smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+/* Reduce Motion for Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

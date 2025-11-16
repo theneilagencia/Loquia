@@ -115,7 +115,7 @@ export default async function LandingPage({ params }: { params: { locale: string
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 opacity-0 animate-fade-in-up animate-delay-400">
               <Link 
                 href={`/${params.locale}/pricing`} 
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-emerald-500 text-black hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-black glow-emerald-hover"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-emerald-500 text-black hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-black glow-emerald-hover magnetic-button shine-effect"
               >
                 {hero.cta1}
               </Link>
@@ -143,7 +143,7 @@ export default async function LandingPage({ params }: { params: { locale: string
         {/* PROBLEM SECTION */}
         <section className="py-16 md:py-24 lg:py-32">
           <div className="mx-auto max-w-[1280px] px-6 md:px-8 lg:px-12">
-            <div className="text-center mb-16">
+            <div className="text-center mb-16 scroll-reveal">
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight leading-tight mb-4" style={{letterSpacing: '-0.02em'}}>
                 {problem.title}
               </h2>
@@ -156,7 +156,7 @@ export default async function LandingPage({ params }: { params: { locale: string
               {problem.items.map((item, index) => (
                 <div 
                   key={index} 
-                  className="premium-card"
+                  className="premium-card scroll-reveal tilt-on-hover"
                 >
                   <h3 className="text-xl md:text-2xl font-semibold tracking-tight leading-snug mb-3" style={{letterSpacing: '-0.01em'}}>
                     {item.title}
@@ -198,7 +198,7 @@ export default async function LandingPage({ params }: { params: { locale: string
               {solution.benefits.map((benefit, index) => (
                 <div 
                   key={index} 
-                  className="premium-card"
+                  className="premium-card scroll-reveal tilt-on-hover"
                 >
                   <h3 className="text-xl md:text-2xl font-semibold tracking-tight leading-snug mb-3 bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent" style={{letterSpacing: '-0.01em'}}>
                     {benefit.title}
@@ -228,7 +228,7 @@ export default async function LandingPage({ params }: { params: { locale: string
               {features.items.map((item, index) => (
                 <div 
                   key={index} 
-                  className="premium-card"
+                  className="premium-card scroll-reveal tilt-on-hover"
                 >
                   <h3 className="text-xl md:text-2xl font-semibold tracking-tight leading-snug mb-3" style={{letterSpacing: '-0.01em'}}>
                     {item.title}
@@ -339,7 +339,7 @@ export default async function LandingPage({ params }: { params: { locale: string
                     <span className="text-2xl md:text-3xl font-bold text-emerald-500">1</span>
                   </div>
                 </div>
-                <div className="premium-card">
+                <div className="premium-card scroll-reveal tilt-on-hover">
                   <h3 className="text-2xl md:text-3xl font-bold tracking-tight leading-snug mb-3" style={{letterSpacing: '-0.01em'}}>
                     Loquia Hub
                   </h3>
@@ -370,7 +370,7 @@ export default async function LandingPage({ params }: { params: { locale: string
                     <span className="text-2xl md:text-3xl font-bold text-emerald-500">2</span>
                   </div>
                 </div>
-                <div className="premium-card">
+                <div className="premium-card scroll-reveal tilt-on-hover">
                   <h3 className="text-2xl md:text-3xl font-bold tracking-tight leading-snug mb-3" style={{letterSpacing: '-0.01em'}}>
                     Loquia Insight Center
                   </h3>
@@ -401,7 +401,7 @@ export default async function LandingPage({ params }: { params: { locale: string
                     <span className="text-2xl md:text-3xl font-bold text-emerald-500">3</span>
                   </div>
                 </div>
-                <div className="premium-card">
+                <div className="premium-card scroll-reveal tilt-on-hover">
                   <h3 className="text-2xl md:text-3xl font-bold tracking-tight leading-snug mb-3" style={{letterSpacing: '-0.01em'}}>
                     Loquia Action Priority
                   </h3>
@@ -432,7 +432,7 @@ export default async function LandingPage({ params }: { params: { locale: string
                     <span className="text-2xl md:text-3xl font-bold text-emerald-500">4</span>
                   </div>
                 </div>
-                <div className="premium-card">
+                <div className="premium-card scroll-reveal tilt-on-hover">
                   <h3 className="text-2xl md:text-3xl font-bold tracking-tight leading-snug mb-3" style={{letterSpacing: '-0.01em'}}>
                     Loquia Timeline
                   </h3>
@@ -475,7 +475,7 @@ export default async function LandingPage({ params }: { params: { locale: string
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
               {/* Qualificação Inteligente */}
-              <div className="premium-card">
+              <div className="premium-card scroll-reveal tilt-on-hover">
                 <h3 className="text-2xl md:text-3xl font-semibold tracking-tight leading-snug mb-4" style={{letterSpacing: '-0.01em'}}>
                   Qualificação Inteligente de Leads por Voz
                 </h3>
@@ -506,7 +506,7 @@ export default async function LandingPage({ params }: { params: { locale: string
               </div>
 
               {/* Diagnóstico e Planejamento */}
-              <div className="premium-card">
+              <div className="premium-card scroll-reveal tilt-on-hover">
                 <h3 className="text-2xl md:text-3xl font-semibold tracking-tight leading-snug mb-4" style={{letterSpacing: '-0.01em'}}>
                   Diagnóstico e Planejamento Automático
                 </h3>

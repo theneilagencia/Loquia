@@ -39,6 +39,9 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} className="dark">
+      <head>
+        <script src="/animations.js" defer />
+      </head>
       <body className="min-h-screen bg-black text-white">
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}
