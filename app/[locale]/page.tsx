@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import Image from 'next/image';
 import { LanguageSwitcher } from '@/components/language-switcher';
+import { NavbarLinks } from '@/components/navbar-links';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -78,17 +79,7 @@ export default async function LandingPage({ params }: { params: { locale: string
             />
           </Link>
           
-          <nav className="hidden md:flex items-center gap-6">
-            <Link href={`/${params.locale}/pricing`} className="text-sm text-white/70 hover:text-white transition-colors">
-              Pricing
-            </Link>
-            <Link href={`/${params.locale}/addons`} className="text-sm text-white/70 hover:text-white transition-colors">
-              Addons
-            </Link>
-            <Link href={`/${params.locale}/contact`} className="text-sm text-white/70 hover:text-white transition-colors">
-              Contact
-            </Link>
-          </nav>
+          <NavbarLinks />
           
           <LanguageSwitcher />
         </div>
