@@ -9,7 +9,7 @@ export function NavbarLinks() {
         href="/pricing" 
         className="text-sm text-white/70 hover:text-white transition-colors"
       >
-        Pricing
+        Ver planos
       </Link>
       <Link 
         href="/addons" 
@@ -22,6 +22,12 @@ export function NavbarLinks() {
         className="text-sm text-white/70 hover:text-white transition-colors"
       >
         Contact
+      </Link>
+      <Link 
+        href="/auth/login" 
+        className="px-4 py-2 text-sm font-medium text-black bg-emerald-400 hover:bg-emerald-300 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-emerald-400/20"
+      >
+        Login
       </Link>
     </nav>
   );
