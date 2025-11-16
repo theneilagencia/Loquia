@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { LocaleLink } from '@/components/locale-link';
 import Image from 'next/image';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { Mail, MessageSquare, Calendar, ArrowRight } from 'lucide-react';
@@ -43,7 +44,7 @@ export default async function ContactPage({ params }: { params: { locale: string
       {/* HEADER */}
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.08] bg-black/80 backdrop-blur-xl">
         <div className="mx-auto max-w-[1280px] px-6 md:px-8 lg:px-12 flex items-center justify-between h-16 md:h-20">
-          <Link href={`/${params.locale}`} className="flex items-center">
+          <Link href="/" className="flex items-center">
             <Image
               src="/logo-white.png"
               alt="Loquia"
@@ -52,7 +53,7 @@ export default async function ContactPage({ params }: { params: { locale: string
               className="h-8 w-auto"
               priority
             />
-          </Link>
+          </LocaleLink>
           <LanguageSwitcher />
         </div>
       </header>
@@ -200,18 +201,18 @@ export default async function ContactPage({ params }: { params: { locale: string
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link 
-                href={`/${params.locale}/auth/sign-up`}
+              <LocaleLink 
+                href="/auth/sign-up"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-emerald-500 text-black hover:bg-emerald-400 glow-emerald-hover magnetic-button shine-effect"
               >
                 Começar teste gratuito
-              </Link>
-              <Link 
-                href={`/${params.locale}/pricing`}
+              </LocaleLink>
+              <LocaleLink 
+                href="/pricing"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-white/5 text-white hover:bg-white/10 border border-white/10 hover:border-white/20"
               >
                 Ver planos
-              </Link>
+              </LocaleLink>
             </div>
           </div>
         </section>
@@ -225,15 +226,15 @@ export default async function ContactPage({ params }: { params: { locale: string
               © 2024 Loquia. Todos os direitos reservados.
             </div>
             <div className="flex gap-6">
-              <Link href={`/${params.locale}`} className="text-white/40 hover:text-white transition-colors text-sm">
+              <LocaleLink href="/" className="text-white/40 hover:text-white transition-colors text-sm">
                 Home
-              </Link>
-              <Link href={`/${params.locale}/pricing`} className="text-white/40 hover:text-white transition-colors text-sm">
+              </LocaleLink>
+              <LocaleLink href="/pricing" className="text-white/40 hover:text-white transition-colors text-sm">
                 Pricing
-              </Link>
-              <Link href={`/${params.locale}/addons`} className="text-white/40 hover:text-white transition-colors text-sm">
+              </LocaleLink>
+              <Link href="/addons" className="text-white/40 hover:text-white transition-colors text-sm">
                 Addons
-              </Link>
+              </LocaleLink>
             </div>
           </div>
         </div>

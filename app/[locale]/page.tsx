@@ -3,6 +3,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { NavbarLinks } from '@/components/navbar-links';
+import { CTAButtons } from '@/components/cta-buttons';
+import { CTAFinal } from '@/components/cta-final';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -116,26 +118,7 @@ export default async function LandingPage({ params }: { params: { locale: string
               {hero.subtitle}
             </p>
             
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 opacity-0 animate-fade-in-up animate-delay-400">
-              <Link 
-                href={`/${params.locale}/pricing`} 
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-emerald-500 text-black hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-black glow-emerald-hover magnetic-button shine-effect"
-              >
-                {hero.cta1}
-              </Link>
-              <Link 
-                href={`/${params.locale}/pricing`} 
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-white/5 text-white hover:bg-white/10 border border-white/10 hover:border-white/20 focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-black"
-              >
-                {hero.cta2}
-              </Link>
-              <Link 
-                href={`/${params.locale}/roi-calculator`} 
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 text-white/70 hover:text-white hover:bg-white/5"
-              >
-                {hero.cta3}
-              </Link>
-            </div>
+            <CTAButtons cta1Text={hero.cta1} cta2Text={hero.cta2} cta3Text={hero.cta3} />
           </div>
         </section>
 
@@ -553,13 +536,7 @@ export default async function LandingPage({ params }: { params: { locale: string
               {cta.subtitle}
             </p>
             
-            <Link 
-              href={`/${params.locale}/pricing`} 
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 text-lg rounded-lg font-medium transition-all duration-200 bg-emerald-500 text-black hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-black"
-              style={{boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'}}
-            >
-              {cta.button}
-            </Link>
+            <CTAFinal buttonText={cta.button} />
             
             <p className="text-sm md:text-base leading-relaxed mt-6 text-white/60">
               {cta.note}
