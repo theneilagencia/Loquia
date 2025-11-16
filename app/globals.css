@@ -37,7 +37,7 @@
     text-rendering: optimizeLegibility;
   }
 
-  /* Dark Mode Only */
+  /* Dark Mode Only - PRETO PROFUNDO */
   body {
     background-color: #000000;
     color: #ffffff;
@@ -80,69 +80,42 @@
 }
 
 /* ============================================
-   PREMIUM ANIMATED BACKGROUNDS
+   GEOMETRIC SHAPES BACKGROUND - SUBTLE
    ============================================ */
 
-/* Animated Gradient Mesh - VISIBLE */
-@keyframes gradient-shift {
+/* Animated Geometric Shapes */
+@keyframes float-geometric {
   0%, 100% {
-    opacity: 1;
-    transform: translate(0%, 0%) scale(1);
-  }
-  33% {
-    opacity: 0.8;
-    transform: translate(10%, 10%) scale(1.1);
-  }
-  66% {
-    opacity: 0.9;
-    transform: translate(-10%, 10%) scale(1.05);
-  }
-}
-
-@keyframes gradient-rotate {
-  0% {
-    transform: rotate(0deg) scale(1);
-  }
-  50% {
-    transform: rotate(180deg) scale(1.1);
-  }
-  100% {
-    transform: rotate(360deg) scale(1);
-  }
-}
-
-@keyframes float-slow {
-  0%, 100% {
-    transform: translateY(0px) translateX(0px);
+    transform: translateY(0px) translateX(0px) rotate(0deg);
   }
   25% {
-    transform: translateY(-30px) translateX(20px);
+    transform: translateY(-20px) translateX(15px) rotate(5deg);
   }
   50% {
-    transform: translateY(-50px) translateX(-20px);
+    transform: translateY(-35px) translateX(-15px) rotate(-5deg);
   }
   75% {
-    transform: translateY(-30px) translateX(10px);
+    transform: translateY(-20px) translateX(10px) rotate(3deg);
   }
 }
 
-@keyframes pulse-glow {
+@keyframes pulse-subtle {
   0%, 100% {
-    opacity: 0.6;
+    opacity: 0.03;
     transform: scale(1);
   }
   50% {
-    opacity: 1;
-    transform: scale(1.1);
+    opacity: 0.06;
+    transform: scale(1.05);
   }
 }
 
-@keyframes mesh-move {
+@keyframes diagonal-move {
   0%, 100% {
-    background-position: 0% 50%;
+    transform: translateX(0) translateY(0);
   }
   50% {
-    background-position: 100% 50%;
+    transform: translateX(50px) translateY(-50px);
   }
 }
 
@@ -156,62 +129,154 @@
   pointer-events: none;
   z-index: 0;
   overflow: hidden;
+  background: #000000;
 }
 
-/* Animated Mesh Pattern */
-.animated-mesh {
+/* Geometric Circle 1 - Top Left */
+.geometric-circle-1 {
   position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: 
-    radial-gradient(circle at 20% 30%, rgba(16, 185, 129, 0.15) 0%, transparent 50%),
-    radial-gradient(circle at 80% 70%, rgba(16, 185, 129, 0.12) 0%, transparent 50%),
-    radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 70%);
-  background-size: 200% 200%;
-  animation: mesh-move 20s ease-in-out infinite;
-  filter: blur(40px);
-}
-
-/* Floating Orbs - VISIBLE */
-.floating-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  pointer-events: none;
-  animation: float-slow 20s ease-in-out infinite;
-  mix-blend-mode: screen;
-}
-
-.floating-orb-1 {
   top: 10%;
-  left: 10%;
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.4) 0%, rgba(16, 185, 129, 0.1) 50%, transparent 70%);
-  animation-delay: 0s;
+  left: 5%;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  border: 1px solid rgba(16, 185, 129, 0.08);
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(16, 185, 129, 0.05) 0%,
+    transparent 70%
+  );
+  animation: float-geometric 25s ease-in-out infinite;
 }
 
-.floating-orb-2 {
-  top: 50%;
+/* Geometric Circle 2 - Top Right */
+.geometric-circle-2 {
+  position: absolute;
+  top: 20%;
   right: 10%;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  border: 1px solid rgba(16, 185, 129, 0.06);
+  background: radial-gradient(
+    circle at 70% 70%,
+    rgba(16, 185, 129, 0.04) 0%,
+    transparent 70%
+  );
+  animation: float-geometric 30s ease-in-out infinite reverse;
+}
+
+/* Geometric Circle 3 - Bottom Center */
+.geometric-circle-3 {
+  position: absolute;
+  bottom: 15%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 350px;
+  height: 350px;
+  border-radius: 50%;
+  border: 1px solid rgba(16, 185, 129, 0.07);
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(16, 185, 129, 0.045) 0%,
+    transparent 70%
+  );
+  animation: pulse-subtle 20s ease-in-out infinite;
+}
+
+/* Geometric Hexagon 1 */
+.geometric-hexagon-1 {
+  position: absolute;
+  top: 40%;
+  left: 15%;
+  width: 200px;
+  height: 200px;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  background: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.04) 0%,
+    transparent 100%
+  );
+  border: 1px solid rgba(16, 185, 129, 0.05);
+  animation: float-geometric 35s ease-in-out infinite;
+}
+
+/* Geometric Hexagon 2 */
+.geometric-hexagon-2 {
+  position: absolute;
+  top: 60%;
+  right: 20%;
+  width: 180px;
+  height: 180px;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  background: linear-gradient(
+    225deg,
+    rgba(16, 185, 129, 0.035) 0%,
+    transparent 100%
+  );
+  border: 1px solid rgba(16, 185, 129, 0.045);
+  animation: pulse-subtle 25s ease-in-out infinite;
+}
+
+/* Diagonal Lines */
+.diagonal-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    linear-gradient(
+      45deg,
+      transparent 0%,
+      transparent 48%,
+      rgba(16, 185, 129, 0.02) 49%,
+      rgba(16, 185, 129, 0.02) 51%,
+      transparent 52%,
+      transparent 100%
+    );
+  background-size: 100px 100px;
+  opacity: 0.5;
+  animation: diagonal-move 40s linear infinite;
+}
+
+/* Subtle Orb 1 - MUITO MAIS SUTIL */
+.subtle-orb-1 {
+  position: absolute;
+  top: 30%;
+  right: 30%;
   width: 600px;
   height: 600px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, rgba(16, 185, 129, 0.08) 50%, transparent 70%);
-  animation-delay: 7s;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(16, 185, 129, 0.08) 0%,
+    rgba(16, 185, 129, 0.03) 40%,
+    transparent 70%
+  );
+  filter: blur(100px);
+  animation: pulse-subtle 30s ease-in-out infinite;
 }
 
-.floating-orb-3 {
-  bottom: 10%;
-  left: 50%;
-  width: 550px;
-  height: 550px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.3) 0%, rgba(16, 185, 129, 0.06) 50%, transparent 70%);
-  animation-delay: 14s;
+/* Subtle Orb 2 - MUITO MAIS SUTIL */
+.subtle-orb-2 {
+  position: absolute;
+  bottom: 20%;
+  left: 25%;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(16, 185, 129, 0.06) 0%,
+    rgba(16, 185, 129, 0.02) 40%,
+    transparent 70%
+  );
+  filter: blur(100px);
+  animation: pulse-subtle 35s ease-in-out infinite reverse;
 }
 
-/* Grid Pattern Overlay */
+/* Grid Pattern - SUTIL */
 .grid-pattern {
   position: absolute;
   top: 0;
@@ -219,10 +284,10 @@
   width: 100%;
   height: 100%;
   background-image: 
-    linear-gradient(rgba(16, 185, 129, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(16, 185, 129, 0.03) 1px, transparent 1px);
-  background-size: 50px 50px;
-  opacity: 0.5;
+    linear-gradient(rgba(16, 185, 129, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 185, 129, 0.015) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.6;
 }
 
 /* ============================================

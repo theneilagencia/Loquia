@@ -83,10 +83,19 @@ export default async function LandingPage({ params }: { params: { locale: string
 
       {/* PREMIUM ANIMATED BACKGROUND */}
       <div className="premium-bg">
-        <div className="animated-mesh" />
-        <div className="floating-orb floating-orb-1" />
-        <div className="floating-orb floating-orb-2" />
-        <div className="floating-orb floating-orb-3" />
+        {/* Geometric Shapes */}
+        <div className="geometric-circle-1" />
+        <div className="geometric-circle-2" />
+        <div className="geometric-circle-3" />
+        <div className="geometric-hexagon-1" />
+        <div className="geometric-hexagon-2" />
+        <div className="diagonal-lines" />
+        
+        {/* Subtle Orbs */}
+        <div className="subtle-orb-1" />
+        <div className="subtle-orb-2" />
+        
+        {/* Grid Pattern */}
         <div className="grid-pattern" />
       </div>
 
