@@ -1,64 +1,98 @@
+"use client";
+
+import Section from "./ui/Section";
+import { H2, Body } from "./ui/Typography";
+import Button from "./ui/Button";
+import Link from "next/link";
+
 export default function Plans() {
-  const plans = [
-    {
-      name: "Basic",
-      price: "US$ 59",
-      features: [
-        "Até 10 intenções",
-        "Presença IA essencial",
-        "Feeds OpenAI e Perplexity",
-        "Atualizações automáticas"
-      ],
-      cta: "Começar com Basic"
-    },
-    {
-      name: "Pro",
-      price: "US$ 79",
-      features: [
-        "Até 30 intenções",
-        "Feeds OpenAI, Perplexity e Claude",
-        "Atualizações diárias",
-        "Add-ons opcionais"
-      ],
-      cta: "Começar com Pro"
-    },
-    {
-      name: "Enterprise",
-      price: "US$ 280",
-      features: [
-        "Intenções ilimitadas",
-        "API completa",
-        "Otimizações contínuas",
-        "Intent Boost ilimitado",
-        "Reputação IA ativa"
-      ],
-      cta: "Começar com Enterprise"
-    }
-  ];
-
   return (
-    <section className="w-full bg-white py-24 px-6">
-      <h2 className="text-center text-3xl font-bold mb-10 text-gray-900">
-        Planos e Preços
-      </h2>
+    <Section id="planos" className="bg-gray-50">
+      <div className="text-center max-w-4xl mx-auto mb-16">
+        <H2>Escolha o plano certo para começar agora</H2>
+        <Body>Ative sua Presença IA em poucos minutos.</Body>
+      </div>
 
-      <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-        {plans.map((p) => (
-          <div
-            key={p.name}
-            className="border border-gray-200 rounded-xl p-8 shadow-sm bg-white"
-          >
-            <h3 className="text-2xl font-bold text-gray-900">{p.name}</h3>
-            <p className="text-4xl font-extrabold mt-4">{p.price}</p>
+      {/* Grid de Planos */}
+      <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-10">
 
-            <ul className="mt-6 space-y-2 text-gray-600">
-              {p.features.map((f) => (
-                <li key={f}>• {f}</li>
-              ))}
-            </ul>
+        {/* PLANO BASIC */}
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 flex flex-col">
+          <h3 className="text-2xl font-bold mb-2 text-gray-900">Basic</h3>
+          <p className="text-gray-600 mb-6">Para pequenos negócios locais.</p>
 
-            <a
-              href="/signup"
+          <p className="text-4xl font-bold mb-1">US$ 59</p>
+          <p className="text-gray-500 mb-6 text-sm">por mês</p>
+
+          <ul className="text-gray-700 space-y-2 mb-8 text-sm leading-relaxed">
+            <li>✔ até 10 intenções ativas</li>
+            <li>✔ presença IA essencial</li>
+            <li>✔ feed OpenAI e Perplexity</li>
+            <li>✔ atualizações automáticas</li>
+            <li className="text-red-400">✘ sem Intent Boost</li>
+            <li className="text-red-400">✘ sem API</li>
+          </ul>
+
+          <Link href="/signup" className="mt-auto">
+            <Button size="lg" className="w-full">Começar com Basic</Button>
+          </Link>
+        </div>
+
+        {/* PLANO PRO — PLANO MAIS VENDIDO */}
+        <div className="bg-white border-2 border-yellow-400 rounded-2xl shadow-md p-8 flex flex-col relative">
+          
+          {/* Badge do mais vendido */}
+          <span className="absolute -top-3 right-4 bg-yellow-400 text-gray-900 text-xs font-semibold px-3 py-1 rounded-full shadow">
+            Mais vendido
+          </span>
+
+          <h3 className="text-2xl font-bold mb-2 text-gray-900">Pro</h3>
+          <p className="text-gray-600 mb-6">Perfeito para quem quer dominar sua região.</p>
+
+          <p className="text-4xl font-bold mb-1">US$ 79</p>
+          <p className="text-gray-500 mb-6 text-sm">por mês</p>
+
+          <ul className="text-gray-700 space-y-2 mb-8 text-sm leading-relaxed">
+            <li>✔ até 30 intenções ativas</li>
+            <li>✔ feeds OpenAI, Perplexity e Claude</li>
+            <li>✔ atualizações diárias</li>
+            <li>✔ Intent Boost e Reputação IA opcionais</li>
+            <li className="text-red-400">✘ sem API</li>
+          </ul>
+
+          <Link href="/signup" className="mt-auto">
+            <Button size="lg" className="w-full bg-yellow-400 hover:bg-yellow-300">
+              Começar com Pro
+            </Button>
+          </Link>
+        </div>
+
+        {/* PLANO ENTERPRISE */}
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 flex flex-col">
+          <h3 className="text-2xl font-bold mb-2 text-gray-900">Enterprise</h3>
+          <p className="text-gray-600 mb-6">Para quem quer presença IA ilimitada e total controle.</p>
+
+          <p className="text-4xl font-bold mb-1">US$ 280</p>
+          <p className="text-gray-500 mb-6 text-sm">por mês</p>
+
+          <ul className="text-gray-700 space-y-2 mb-8 text-sm leading-relaxed">
+            <li>✔ intenções ilimitadas</li>
+            <li>✔ API completa</li>
+            <li>✔ Reputação IA ativa</li>
+            <li>✔ Intent Boost ilimitado</li>
+            <li>✔ prioridade em todos os feeds</li>
+            <li>✔ suporte premium</li>
+          </ul>
+
+          <Link href="/signup" className="mt-auto">
+            <Button size="lg" className="w-full">Começar com Enterprise</Button>
+          </Link>
+        </div>
+
+      </div>
+    </Section>
+  );
+}
               className="block mt-8 px-6 py-3 bg-yellow-400 text-black rounded-lg font-semibold text-center hover:bg-yellow-300 transition"
             >
               {p.cta}

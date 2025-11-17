@@ -4,96 +4,59 @@ import { useState } from "react";
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [company, setCompany] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [message, setMessage] = useState("");
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSignup(e: any) {
     e.preventDefault();
     setLoading(true);
-    setError("");
-    setSuccess(false);
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
-      const res = await fetch(`${apiUrl}/auth/signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, company }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Erro ao cadastrar");
-      }
-      setSuccess(true);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (error) {
+      setMessage(error.message);
+    } else {
+      setMessage("Conta criada! Verifique seu e-mail para confirmar.");
     }
+
+    setLoading(false);
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f9fafb] px-4">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white rounded-2xl shadow-lg p-10 w-full max-w-md flex flex-col gap-6 border border-[#e9ecef]"
-      >
-        <h1 className="text-3xl font-bold text-[#22223b] text-center mb-2">Criar Conta</h1>
-        <p className="text-[#4a4e69] text-center mb-4 text-base">Cadastre-se para criar sua presença digital com IA.</p>
-        <div className="flex flex-col gap-2">
-          <label htmlFor="company" className="text-sm font-medium text-[#22223b]">
-            Nome da empresa
-          </label>
-          <input
-            id="company"
-            type="text"
-            required
-            value={company}
-            onChange={e => setCompany(e.target.value)}
-            className="rounded-lg border border-[#e9ecef] px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#3a86ff] bg-[#f9fafb]"
-            placeholder="Minha Empresa Ltda"
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label htmlFor="email" className="text-sm font-medium text-[#22223b]">
-            E-mail
-          </label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            className="rounded-lg border border-[#e9ecef] px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#3a86ff] bg-[#f9fafb]"
-            placeholder="seu@email.com"
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label htmlFor="password" className="text-sm font-medium text-[#22223b]">
-            Senha
-          </label>
-          <input
-            id="password"
-            type="password"
-            autoComplete="new-password"
-            required
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            className="rounded-lg border border-[#e9ecef] px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#3a86ff] bg-[#f9fafb]"
-            placeholder="••••••••"
-          />
-        </div>
-        {error && <div className="text-red-600 text-sm text-center">{error}</div>}
-        {success && <div className="text-green-600 text-sm text-center">Cadastro realizado com sucesso!</div>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="mt-2 px-6 py-3 rounded-full bg-gradient-to-r from-[#3a86ff] to-[#00b4d8] text-white text-lg font-bold shadow-lg border-2 border-[#3a86ff] hover:from-[#265d97] hover:to-[#0096c7] hover:scale-105 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {loading ? "Cadastrando..." : "Cadastrar"}
-        </button>
+    <div className="max-w-lg mx-auto pt-24 px-6">
+      <H2>Criar conta</H2>
+      <Body>Preencha os campos abaixo:</Body>
+
+      <form onSubmit={handleSignup} className="mt-8 space-y-6">
+
+        <input
+          type="email"
+          placeholder="Seu e-mail"
+          className="w-full border border-gray-300 rounded-lg px-4 py-3"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+
+        <input
+          type="password"
+          placeholder="Senha"
+          className="w-full border border-gray-300 rounded-lg px-4 py-3"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+
+        <Button size="lg" className="w-full" type="submit">
+          {loading ? "Criando..." : "Criar conta"}
+        </Button>
+
+        {message && (
+          <p className="text-center text-sm text-gray-700 mt-4">{message}</p>
+        )}
       </form>
     </div>
   );
