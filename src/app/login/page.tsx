@@ -34,7 +34,11 @@ export default function LoginPage() {
       console.log("Response data:", data);
 
       if (!response.ok) {
-        setError(data.error || "Erro ao fazer login");
+        const errorMsg = data.error || "Erro ao fazer login";
+        const errorCode = data.errorCode ? ` (${data.errorCode})` : "";
+        const errorDetails = data.errorDetails ? ` - ${data.errorDetails}` : "";
+        setError(`${errorMsg}${errorCode}${errorDetails}`);
+        console.error("Login failed:", data);
         setLoading(false);
         return;
       }

@@ -29,8 +29,13 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error("Supabase login error:", error);
+      console.error("Error details:", JSON.stringify(error, null, 2));
       return NextResponse.json(
-        { error: error.message },
+        { 
+          error: error.message,
+          errorCode: error.status,
+          errorDetails: error.name
+        },
         { status: 400 }
       );
     }
