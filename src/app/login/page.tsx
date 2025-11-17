@@ -18,19 +18,31 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      setError(error.message);
+      if (error) {
+        console.error("Login error:", error);
+        setError(error.message);
+        setLoading(false);
+        return;
+      }
+
+      if (data.session) {
+        console.log("Login successful, redirecting...");
+        router.push("/dashboard");
+      } else {
+        setError("Falha ao criar sessão. Tente novamente.");
+        setLoading(false);
+      }
+    } catch (err: any) {
+      console.error("Unexpected error:", err);
+      setError(`Erro de conexão: ${err.message || "Failed to fetch"}. Verifique as variáveis de ambiente.`);
       setLoading(false);
-      return;
     }
-
-    // sucesso → redireciona
-    router.push("/dashboard");
   }
 
   return (
