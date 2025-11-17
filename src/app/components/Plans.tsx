@@ -1,121 +1,83 @@
 "use client";
 
-import Section from "./ui/Section";
-import { H2, Body } from "./ui/Typography";
-import Button from "./ui/Button";
-import Link from "next/link";
+const plans = [
+  {
+    name: "Basic",
+    price: "R$ 49/mês",
+    features: [
+      "Presença IA para 1 produto/serviço",
+      "Monitoramento básico",
+      "Atualizações mensais",
+    ],
+    cta: "Começar com Basic",
+    link: "/signup?plan=basic",
+  },
+  {
+    name: "Pro",
+    price: "R$ 129/mês",
+    features: [
+      "Presença IA para 5 produtos/serviços",
+      "Monitoramento avançado",
+      "Atualizações semanais",
+      "Dashboard inteligente",
+    ],
+    cta: "Assinar Pro",
+    link: "/signup?plan=pro",
+  },
+  {
+    name: "Enterprise",
+    price: "Sob consulta",
+    features: [
+      "Presença IA ilimitada",
+      "Integração premium com motores de IA",
+      "Monitoramento em tempo real",
+      "Equipe dedicada",
+    ],
+    cta: "Falar com vendas",
+    link: "https://calendly.com/la-guimaraes/30min",
+  },
+];
 
 export default function Plans() {
   return (
-    <Section id="planos" className="bg-gray-50">
-      <div className="text-center max-w-4xl mx-auto mb-16">
-        <H2>Escolha o plano certo para começar agora</H2>
-        <Body>Ative sua Presença IA em poucos minutos.</Body>
-      </div>
+    <section className="w-full py-20 bg-gray-50">
+      <div className="max-w-6xl mx-auto px-6 text-center">
+        <h2 className="text-4xl font-bold mb-10 text-gray-900">
+          Planos para todos os tipos de negócio
+        </h2>
 
-      {/* Grid de Planos */}
-      <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-10">
-
-        {/* PLANO BASIC */}
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 flex flex-col">
-          <h3 className="text-2xl font-bold mb-2 text-gray-900">Basic</h3>
-          <p className="text-gray-600 mb-6">Para pequenos negócios locais.</p>
-
-          <p className="text-4xl font-bold mb-1">US$ 59</p>
-          <p className="text-gray-500 mb-6 text-sm">por mês</p>
-
-          <ul className="text-gray-700 space-y-2 mb-8 text-sm leading-relaxed">
-            <li>✔ até 10 intenções ativas</li>
-            <li>✔ presença IA essencial</li>
-            <li>✔ feed OpenAI e Perplexity</li>
-            <li>✔ atualizações automáticas</li>
-            <li className="text-red-400">✘ sem Intent Boost</li>
-            <li className="text-red-400">✘ sem API</li>
-          </ul>
-
-          <Link href="/signup" className="mt-auto">
-            <Button size="lg" className="w-full">Começar com Basic</Button>
-          </Link>
-        </div>
-
-        {/* PLANO PRO — PLANO MAIS VENDIDO */}
-        <div className="bg-white border-2 border-yellow-400 rounded-2xl shadow-md p-8 flex flex-col relative">
-          
-          {/* Badge do mais vendido */}
-          <span className="absolute -top-3 right-4 bg-yellow-400 text-gray-900 text-xs font-semibold px-3 py-1 rounded-full shadow">
-            Mais vendido
-          </span>
-
-          <h3 className="text-2xl font-bold mb-2 text-gray-900">Pro</h3>
-          <p className="text-gray-600 mb-6">Perfeito para quem quer dominar sua região.</p>
-
-          <p className="text-4xl font-bold mb-1">US$ 79</p>
-          <p className="text-gray-500 mb-6 text-sm">por mês</p>
-
-          <ul className="text-gray-700 space-y-2 mb-8 text-sm leading-relaxed">
-            <li>✔ até 30 intenções ativas</li>
-            <li>✔ feeds OpenAI, Perplexity e Claude</li>
-            <li>✔ atualizações diárias</li>
-            <li>✔ Intent Boost e Reputação IA opcionais</li>
-            <li className="text-red-400">✘ sem API</li>
-          </ul>
-
-          <Link href="/signup" className="mt-auto">
-            <Button size="lg" className="w-full bg-yellow-400 hover:bg-yellow-300">
-              Começar com Pro
-            </Button>
-          </Link>
-        </div>
-
-        {/* PLANO ENTERPRISE */}
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 flex flex-col">
-          <h3 className="text-2xl font-bold mb-2 text-gray-900">Enterprise</h3>
-          <p className="text-gray-600 mb-6">Para quem quer presença IA ilimitada e total controle.</p>
-
-          <p className="text-4xl font-bold mb-1">US$ 280</p>
-          <p className="text-gray-500 mb-6 text-sm">por mês</p>
-
-          <ul className="text-gray-700 space-y-2 mb-8 text-sm leading-relaxed">
-            <li>✔ intenções ilimitadas</li>
-            <li>✔ API completa</li>
-            <li>✔ Reputação IA ativa</li>
-            <li>✔ Intent Boost ilimitado</li>
-            <li>✔ prioridade em todos os feeds</li>
-            <li>✔ suporte premium</li>
-          </ul>
-
-          <Link href="/signup" className="mt-auto">
-            <Button size="lg" className="w-full">Começar com Enterprise</Button>
-          </Link>
-        </div>
-
-      </div>
-    </Section>
-  );
-}
-              className="block mt-8 px-6 py-3 bg-yellow-400 text-black rounded-lg font-semibold text-center hover:bg-yellow-300 transition"
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+          {plans.map((p) => (
+            <div
+              key={p.name}
+              className="bg-white shadow-lg rounded-2xl p-8 border border-gray-200 flex flex-col"
             >
-              {p.cta}
-            </a>
-          </div>
-        ))}
-      </div>
+              <h3 className="text-2xl font-bold mb-4 text-gray-900">
+                {p.name}
+              </h3>
 
-      {/* Pacote avançado */}
-      <div className="max-w-3xl mx-auto mt-20 text-center p-10 bg-gray-50 rounded-xl border border-gray-200">
-        <h3 className="text-2xl font-bold text-gray-900">Pacote Avançado</h3>
-        <p className="text-gray-600 mt-3">
-          Inclui integração completa com todas as IAs (Claude, SGE, agentes
-          autônomos), add-ons internos e feed premium otimizado.  <br />
-          (Indisponível na V1)
-        </p>
+              <p className="text-3xl font-semibold text-indigo-600 mb-6">
+                {p.price}
+              </p>
 
-        <a
-          href="/advanced"
-          className="inline-block mt-6 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-100 transition"
-        >
-          Clique para saber mais
-        </a>
+              <ul className="text-left text-gray-700 space-y-3 mb-8 flex-1">
+                {p.features.map((f, i) => (
+                  <li key={i} className="flex items-center gap-2">
+                    <span className="text-green-500 font-bold">✓</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              <a
+                href={p.link}
+                className="block mt-8 px-6 py-3 bg-yellow-400 text-black rounded-lg font-semibold text-center hover:bg-yellow-300 transition"
+              >
+                {p.cta}
+              </a>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );

@@ -2,7 +2,7 @@
 
 import Section from "./ui/Section";
 import { H2, Body, H3 } from "./ui/Typography";
-import { Activity, BarChart3, Sparkles, CheckCircle, SquareChart } from "lucide-react";
+import { Activity, BarChart3, Sparkles, CheckCircle, SquareChartGantt } from "lucide-react";
 
 export default function DashboardPreview() {
   return (
@@ -49,7 +49,7 @@ export default function DashboardPreview() {
 
         {/* SIMULAÇÃO DE FEED VIEWER */}
         <div className="bg-gray-50 border border-gray-200 rounded-2xl p-10 mt-16 shadow-sm text-left max-w-4xl mx-auto">
-          <SquareChart className="text-yellow-400 mb-6" size={34} />
+          <SquareChartGantt className="w-10 h-10 text-indigo-600" />
           <H3 className="mb-3">Feed Viewer — como as IAs veem sua marca</H3>
           <div className="bg-white border border-gray-200 rounded-xl p-6 text-sm leading-relaxed shadow-sm">
             <p className="text-gray-700">
