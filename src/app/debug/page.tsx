@@ -11,7 +11,7 @@ export default function DebugPage() {
       const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
       
-      const debugInfo = {
+      const debugInfo: any = {
         supabaseUrl: url || "NOT SET",
         supabaseKeyLength: key ? key.length : 0,
         supabaseKeyPrefix: key ? key.substring(0, 20) + "..." : "NOT SET",
