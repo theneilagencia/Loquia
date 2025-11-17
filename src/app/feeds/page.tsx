@@ -52,25 +52,33 @@ export default function FeedsPage() {
   async function generateFeeds() {
     setGenerating(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
 
-      // Check if intent_graph has data
-      const { data: intents } = await supabase
-        .from("intent_graph")
-        .select("*")
-        .limit(1);
+      const response = await fetch("/api/workflows/generate-feeds", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+        },
+      });
 
-      if (!intents || intents.length === 0) {
-        alert("Você precisa gerar intenções primeiro!");
-        router.push("/intent");
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || "Erro ao gerar feeds");
+        if (data.error?.includes("intenções")) {
+          router.push("/intent");
+        }
         return;
       }
 
-      alert("Workflow de geração de feeds será executado em breve. Esta funcionalidade requer integração com os scripts Python.");
+      alert(data.message + "\n\n" + (data.note || ""));
       
-      // TODO: Integrar com workflow Python commerce_feed_generator.py
-      // Por enquanto, apenas mostramos a mensagem
+      // Recarregar feeds após alguns segundos
+      setTimeout(() => {
+        loadFeeds();
+      }, 2000);
       
     } catch (error: any) {
       alert("Erro: " + error.message);

@@ -52,25 +52,33 @@ export default function IntentPage() {
   async function generateIntents() {
     setGenerating(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
 
-      // Check if catalog has items
-      const { data: catalogItems } = await supabase
-        .from("catalog")
-        .select("*")
-        .limit(1);
+      const response = await fetch("/api/workflows/generate-intents", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+        },
+      });
 
-      if (!catalogItems || catalogItems.length === 0) {
-        alert("Você precisa adicionar itens ao catálogo primeiro!");
-        router.push("/catalog");
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || "Erro ao gerar intenções");
+        if (data.error?.includes("catálogo")) {
+          router.push("/catalog");
+        }
         return;
       }
 
-      alert("Workflow de geração de intenções será executado em breve. Esta funcionalidade requer integração com os scripts Python.");
+      alert(data.message + "\n\n" + (data.note || ""));
       
-      // TODO: Integrar com workflow Python intent_graph_lite_loquia.py
-      // Por enquanto, apenas mostramos a mensagem
+      // Recarregar intenções após alguns segundos
+      setTimeout(() => {
+        loadIntents();
+      }, 2000);
       
     } catch (error: any) {
       alert("Erro: " + error.message);
