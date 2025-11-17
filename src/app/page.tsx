@@ -7,25 +7,24 @@ export default function Home() {
           Crie sua presença digital com IA
         export default function Home() {
           return (
-            <main className="min-h-screen bg-white text-gray-900">
-              <section className="max-w-4xl mx-auto py-24 px-6">
-                <h1 className="text-5xl font-bold leading-tight mb-6">
+            <main className="min-h-screen bg-white flex flex-col justify-center items-center p-10">
+              <div className="max-w-3xl text-center">
+                <h1 className="text-5xl font-bold mb-6 text-gray-900">
                   Sua empresa precisa existir na era da IA.
                 </h1>
-
-                <p className="text-lg text-gray-700 mb-8">
-                  A Loquia Intent Engine conecta seu negócio ao OpenAI Search, Perplexity,
-                  Claude e Google SGE – permitindo que você seja recomendado pela IA
-                  sempre que alguém perguntar algo que você resolve.
+                <p className="text-lg text-gray-600 mb-8">
+                  Loquia Intent Engine conecta o seu negócio ao OpenAI Search, Perplexity,
+                  Claude e Google SGE — permitindo que sua marca seja recomendada como
+                  resposta oficial sempre que alguém perguntar algo que você resolve.
                 </p>
 
                 <a
                   href="/signup"
-                  className="inline-block bg-black text-white px-8 py-4 rounded-lg text-lg hover:bg-gray-800 transition"
+                  className="px-8 py-4 bg-yellow-400 text-black rounded-lg font-semibold text-lg hover:bg-yellow-300 transition-all"
                 >
                   Criar minha Presença IA agora
                 </a>
-              </section>
+              </div>
             </main>
           );
         }
