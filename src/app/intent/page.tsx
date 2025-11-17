@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Button from "../components/ui/Button";
+import { useToast } from "../contexts/ToastContext";
 
 interface Intent {
   id: string;
@@ -16,6 +17,7 @@ interface Intent {
 
 export default function IntentPage() {
   const router = useRouter();
+  const { showSuccess, showError, showInfo } = useToast();
   const [intents, setIntents] = useState<Intent[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -66,14 +68,17 @@ export default function IntentPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.error || "Erro ao gerar intenções");
+        showError(data.error || "Erro ao gerar intenções");
         if (data.error?.includes("catálogo")) {
-          router.push("/catalog");
+          setTimeout(() => router.push("/catalog"), 2000);
         }
         return;
       }
 
-      alert(data.message + "\n\n" + (data.note || ""));
+      showSuccess(data.message);
+      if (data.note) {
+        showInfo(data.note);
+      }
       
       // Recarregar intenções após alguns segundos
       setTimeout(() => {
@@ -81,7 +86,7 @@ export default function IntentPage() {
       }, 2000);
       
     } catch (error: any) {
-      alert("Erro: " + error.message);
+      showError("Erro: " + error.message);
     } finally {
       setGenerating(false);
     }
@@ -97,9 +102,10 @@ export default function IntentPage() {
         .eq("id", id);
 
       if (error) throw error;
+      showSuccess("Intenção excluída com sucesso!");
       loadIntents();
     } catch (error: any) {
-      alert("Erro ao excluir: " + error.message);
+      showError("Erro ao excluir: " + error.message);
     }
   }
 

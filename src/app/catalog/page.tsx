@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Button from "../components/ui/Button";
+import { useToast } from "../contexts/ToastContext";
 
 interface CatalogItem {
   id: string;
@@ -21,6 +22,7 @@ interface CatalogItem {
 
 export default function CatalogPage() {
   const router = useRouter();
+  const { showSuccess, showError } = useToast();
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -108,9 +110,10 @@ export default function CatalogPage() {
       });
       setShowForm(false);
       setEditingItem(null);
+      showSuccess(editingItem ? "Item atualizado com sucesso!" : "Item criado com sucesso!");
       loadItems();
     } catch (error: any) {
-      alert("Erro: " + error.message);
+      showError("Erro: " + error.message);
     }
   }
 
@@ -124,9 +127,10 @@ export default function CatalogPage() {
         .eq("id", id);
 
       if (error) throw error;
+      showSuccess("Item excluído com sucesso!");
       loadItems();
     } catch (error: any) {
-      alert("Erro ao excluir: " + error.message);
+      showError("Erro ao excluir: " + error.message);
     }
   }
 

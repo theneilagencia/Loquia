@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Button from "../components/ui/Button";
+import { useToast } from "../contexts/ToastContext";
 
 interface Feed {
   id: string;
@@ -15,6 +16,7 @@ interface Feed {
 
 export default function FeedsPage() {
   const router = useRouter();
+  const { showSuccess, showError, showInfo } = useToast();
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -66,14 +68,17 @@ export default function FeedsPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.error || "Erro ao gerar feeds");
+        showError(data.error || "Erro ao gerar feeds");
         if (data.error?.includes("intenções")) {
-          router.push("/intent");
+          setTimeout(() => router.push("/intent"), 2000);
         }
         return;
       }
 
-      alert(data.message + "\n\n" + (data.note || ""));
+      showSuccess(data.message);
+      if (data.note) {
+        showInfo(data.note);
+      }
       
       // Recarregar feeds após alguns segundos
       setTimeout(() => {
@@ -81,7 +86,7 @@ export default function FeedsPage() {
       }, 2000);
       
     } catch (error: any) {
-      alert("Erro: " + error.message);
+      showError("Erro: " + error.message);
     } finally {
       setGenerating(false);
     }
@@ -97,9 +102,10 @@ export default function FeedsPage() {
         .eq("id", id);
 
       if (error) throw error;
+      showSuccess("Feed excluído com sucesso!");
       loadFeeds();
     } catch (error: any) {
-      alert("Erro ao excluir: " + error.message);
+      showError("Erro ao excluir: " + error.message);
     }
   }
 
@@ -113,6 +119,7 @@ export default function FeedsPage() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    showSuccess("Feed baixado com sucesso!");
   }
 
   const filteredFeeds = filterType === "all" 

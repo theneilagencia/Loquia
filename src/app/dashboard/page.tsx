@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Button from "../components/ui/Button";
+import { useToast } from "../contexts/ToastContext";
+import Onboarding from "../components/ui/Onboarding";
 
 interface Stats {
   catalogCount: number;
@@ -28,17 +30,32 @@ interface Feed {
 
 export default function Dashboard() {
   const router = useRouter();
+  const { showSuccess, showError } = useToast();
   const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState<Stats>({ catalogCount: 0, intentCount: 0, feedCount: 0 });
   const [recentIntents, setRecentIntents] = useState<Intent[]>([]);
   const [recentFeeds, setRecentFeeds] = useState<Feed[]>([]);
   const [loading, setLoading] = useState(true);
   const [optimizing, setOptimizing] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     checkUser();
     loadDashboardData();
+    checkFirstTime();
   }, []);
+
+  function checkFirstTime() {
+    const hasSeenOnboarding = localStorage.getItem("loquia_onboarding_completed");
+    if (!hasSeenOnboarding) {
+      setShowOnboarding(true);
+    }
+  }
+
+  function completeOnboarding() {
+    localStorage.setItem("loquia_onboarding_completed", "true");
+    setShowOnboarding(false);
+  }
 
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -108,11 +125,11 @@ export default function Dashboard() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.error || "Erro ao otimizar intenções");
+        showError(data.error || "Erro ao otimizar intenções");
         return;
       }
 
-      alert(data.message);
+      showSuccess(data.message);
       
       // Recarregar dados após otimização
       setTimeout(() => {
@@ -120,7 +137,7 @@ export default function Dashboard() {
       }, 2000);
       
     } catch (error: any) {
-      alert("Erro: " + error.message);
+      showError("Erro: " + error.message);
     } finally {
       setOptimizing(false);
     }
@@ -143,7 +160,9 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
+      {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
+      <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -316,5 +335,6 @@ export default function Dashboard() {
         </div>
       </main>
     </div>
+    </>
   );
 }
