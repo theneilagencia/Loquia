@@ -16,18 +16,27 @@ export default function SignupPage() {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/dashboard`,
+      },
     });
 
     if (error) {
       setMessage(error.message);
-    } else {
-      setMessage("Conta criada! Verifique seu e-mail para confirmar.");
+      setLoading(false);
+      return;
     }
 
-    setLoading(false);
+    // Se o usuário foi criado e está autenticado, redireciona
+    if (data.user && data.session) {
+      window.location.href = "/dashboard";
+    } else {
+      setMessage("Conta criada! Verifique seu e-mail para confirmar.");
+      setLoading(false);
+    }
   }
 
   return (
