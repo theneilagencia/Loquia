@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { loginAction } from "../actions/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,28 +19,20 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const result = await loginAction(email, password);
 
-      if (error) {
-        console.error("Login error:", error);
-        setError(error.message);
+      if (!result.success) {
+        setError(result.error || "Erro ao fazer login");
         setLoading(false);
         return;
       }
 
-      if (data.session) {
-        console.log("Login successful, redirecting...");
-        router.push("/dashboard");
-      } else {
-        setError("Falha ao criar sessão. Tente novamente.");
-        setLoading(false);
-      }
+      // Redirect to dashboard
+      router.push("/dashboard");
+      router.refresh();
     } catch (err: any) {
-      console.error("Unexpected error:", err);
-      setError(`Erro de conexão: ${err.message || "Failed to fetch"}. Verifique as variáveis de ambiente.`);
+      console.error("Login error:", err);
+      setError(`Erro inesperado: ${err.message}`);
       setLoading(false);
     }
   }
@@ -68,7 +60,7 @@ export default function LoginPage() {
         </h1>
 
         {error && (
-          <p className="text-red-500 text-center bg-red-100 p-2 rounded">
+          <p className="text-red-500 text-center bg-red-100 p-3 rounded-lg text-sm">
             {error}
           </p>
         )}
@@ -76,34 +68,36 @@ export default function LoginPage() {
         <input
           type="email"
           placeholder="Seu email"
-          className="border p-3 rounded-lg"
+          className="border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ffe066]"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          disabled={loading}
         />
 
         <input
           type="password"
           placeholder="Sua senha"
-          className="border p-3 rounded-lg"
+          className="border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ffe066]"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          disabled={loading}
         />
 
         <button
           type="submit"
           disabled={loading}
-          className="bg-[#ffe066] hover:bg-[#ffd43b] text-black font-semibold p-3 rounded-lg transition"
+          className="bg-[#ffe066] hover:bg-[#ffd43b] text-black font-semibold p-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? "Entrando..." : "Entrar"}
         </button>
 
         <p className="text-center text-sm text-gray-600">
           Ainda não tem conta?{" "}
-          <a href="/signup" className="text-blue-600 underline">
+          <Link href="/signup" className="text-blue-600 underline hover:text-blue-700">
             Criar conta
-          </a>
+          </Link>
         </p>
       </form>
     </div>
