@@ -38,12 +38,16 @@ export default function CustomEra() {
         </div>
 
         {/* Title */}
-        <h2 className="text-5xl md:text-6xl font-bold text-black mb-6">
+        <h2 className="text-5xl md:text-6xl font-bold text-black mb-6 text-center">
           O fim de uma era
         </h2>
 
-        <p className="text-xl text-gray-700 mb-16 max-w-3xl">
-          Antes as pessoas buscavam. Agora elas perguntam à IA e respondem. Sua empresa já é a resposta?
+        <p className="text-xl text-gray-700 mb-4 max-w-3xl mx-auto text-center">
+          Antes as pessoas buscavam na internet. Agora elas perguntam e a IA responde
+        </p>
+        
+        <p className="text-xl text-gray-700 mb-16 max-w-3xl mx-auto text-center">
+          Pare de competir por cliques, comece a ser recomendada pelas IAs que o mundo inteiro usa todos os dias.
         </p>
 
         {/* Comparison Cards */}
@@ -112,11 +116,11 @@ export default function CustomEra() {
             <span className="text-sm text-gray-700">O uso da IA no dia a dia</span>
           </div>
 
-          <h2 className="text-4xl md:text-5xl font-bold text-black mb-4">
+          <h2 className="text-4xl md:text-5xl font-bold text-black mb-4 text-center">
             Perguntas reais, intenções<br />comerciais claras
           </h2>
-          <p className="text-lg text-gray-600 mb-12 max-w-3xl">
-            Milhões de decisões de compra acontecem assim, todos os dias, em mais diferentes setores.
+          <p className="text-lg text-gray-600 mb-12 max-w-3xl mx-auto text-center">
+            Milhões de decisões de compra acontecem assim, todos os dias, nos mais diferentes setores.
           </p>
 
           {/* Use cases grid */}
@@ -162,7 +166,7 @@ export default function CustomEra() {
                   <span className="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
                     {item.category}
                   </span>
-                  <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">
+                  <span className="px-3 py-1 bg-yellow-50 text-yellow-700 text-xs font-medium rounded-full">
                     {item.intent}
                   </span>
                 </div>

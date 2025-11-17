@@ -26,7 +26,7 @@ export default function CustomHero() {
           }`}
         >
           <span className="w-2 h-2 bg-black rounded-full"></span>
-          <span className="text-sm text-gray-700">Precificação Loquia</span>
+          <span className="text-sm text-gray-700">Loquia Intent Engine™</span>
         </div>
 
         {/* Headline */}
@@ -45,8 +45,8 @@ export default function CustomHero() {
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
           }`}
         >
-          Milhões de pessoas já não buscam no Google.<br />
-          Elas perguntam direto para a IA.
+          Milhões de pessoas já não buscam no Google ou nas redes sociais,<br />
+          elas perguntam direto para a IA.
         </p>
 
         {/* Description */}
@@ -55,7 +55,7 @@ export default function CustomHero() {
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
           }`}
         >
-          A era do "buscar" acabou. Bem-vinda à era do "responder". Sua marca está pronta para isso?
+          Criamos presença IA contínua por meio de nossos planos de assinatura recorrente
         </p>
 
         {/* CTAs */}

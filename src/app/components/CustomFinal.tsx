@@ -13,7 +13,7 @@ export default function CustomFinal() {
         {/* Badge */}
         <div className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full mb-8">
           <span className="w-2 h-2 bg-black rounded-full"></span>
-          <span className="text-sm text-gray-700">Seção Final — Chamada Final</span>
+          <span className="text-sm text-gray-700">AI Presence Engine</span>
         </div>
 
         {/* Title */}
