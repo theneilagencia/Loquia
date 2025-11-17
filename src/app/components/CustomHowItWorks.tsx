@@ -62,9 +62,11 @@ export default function CustomHowItWorks() {
 
       <div className="relative max-w-6xl mx-auto">
         {/* Badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full mb-8 mx-auto block w-fit">
-          <span className="w-2 h-2 bg-black rounded-full"></span>
-          <span className="text-sm text-gray-700">A era da intenção</span>
+        <div className="flex justify-center mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full">
+            <span className="w-2 h-2 bg-black rounded-full"></span>
+            <span className="text-sm text-gray-700">A era da intenção</span>
+          </div>
         </div>
 
         {/* Title */}

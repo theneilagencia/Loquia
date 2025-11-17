@@ -48,9 +48,11 @@ export default function CustomEra() {
 
       <div className="relative max-w-6xl mx-auto">
         {/* Badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full mb-8">
-          <span className="w-2 h-2 bg-black rounded-full"></span>
-          <span className="text-sm text-gray-700">O modelo antigo quebrou</span>
+        <div className="flex justify-center mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full">
+            <span className="w-2 h-2 bg-black rounded-full"></span>
+            <span className="text-sm text-gray-700">O modelo antigo quebrou</span>
+          </div>
         </div>
 
         {/* Title */}
@@ -58,12 +60,8 @@ export default function CustomEra() {
           O fim de uma era
         </h2>
 
-        <p className="text-xl text-gray-700 mb-4 max-w-3xl mx-auto text-center">
-          Antes as pessoas buscavam na internet. Agora elas perguntam e a IA responde
-        </p>
-        
         <p className="text-xl text-gray-700 mb-16 max-w-3xl mx-auto text-center">
-          Pare de competir por cliques, comece a ser recomendada pelas IAs que o mundo inteiro usa todos os dias.
+          Antes as pessoas buscavam na internet, agora elas perguntam e a IA responde
         </p>
 
         {/* Comparison Cards */}
@@ -127,9 +125,11 @@ export default function CustomEra() {
 
         {/* Use cases section */}
         <div className="mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full mb-8">
-            <span className="w-2 h-2 bg-black rounded-full"></span>
-            <span className="text-sm text-gray-700">O uso da IA no dia a dia</span>
+          <div className="flex justify-center mb-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full">
+              <span className="w-2 h-2 bg-black rounded-full"></span>
+              <span className="text-sm text-gray-700">O uso da IA no dia a dia</span>
+            </div>
           </div>
 
           <h2 className="text-4xl md:text-5xl font-bold text-black mb-4 text-center">
