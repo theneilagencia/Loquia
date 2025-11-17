@@ -1,101 +1,187 @@
 "use client";
+
 import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
-import { H2, Body } from "../components/ui/Typography";
-import Button from "../components/ui/Button";
-import Image from "next/image";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { signUp } from "@/lib/supabase";
 
 export default function SignupPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
 
-  async function handleSignup(e: any) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     setLoading(true);
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
-      },
-    });
+    console.log("📝 Attempting signup...", { email });
 
-    if (error) {
-      setMessage(error.message);
-      setLoading(false);
-      return;
-    }
+    try {
+      const { data, error: signUpError } = await signUp(email, password);
 
-    // Se o usuário foi criado e está autenticado, redireciona
-    if (data.user && data.session) {
-      window.location.href = "/dashboard";
-    } else {
-      setMessage("Conta criada! Verifique seu e-mail para confirmar.");
+      if (signUpError) {
+        console.error("❌ Signup error:", signUpError);
+        setError(signUpError.message);
+        setLoading(false);
+        return;
+      }
+
+      if (data.session) {
+        console.log("✅ Signup successful with session!", data.user?.email);
+        router.push("/dashboard");
+      } else {
+        console.log("⚠️ Signup successful but no session (email confirmation required)");
+        setError("Conta criada! Verifique seu e-mail para confirmar.");
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error("❌ Unexpected error:", err);
+      setError("Erro inesperado ao criar conta");
       setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f9fafb] px-4">
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       {/* Logo */}
-      <Link href="/" className="mb-8">
-        <Image
-          src="/images/logo-black.png"
-          alt="Loquia"
-          width={150}
-          height={40}
-          className="hover:opacity-80 transition-opacity"
-          priority
-        />
-      </Link>
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <Link href="/" className="flex justify-center">
+          <img
+            src="/logo.png"
+            alt="Loquia"
+            className="h-10 w-auto hover:opacity-80 transition-opacity"
+          />
+        </Link>
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          Criar sua conta
+        </h2>
+      </div>
 
-      <div className="bg-white rounded-2xl shadow-lg p-10 w-full max-w-md border border-[#e0e0e0]">
-        <h1 className="text-3xl font-bold text-[#22223b] text-center mb-2">Criar conta</h1>
-        <p className="text-center text-gray-600 mb-6">Preencha os campos abaixo</p>
+      {/* Form */}
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            {/* Email */}
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Email
+              </label>
+              <div className="mt-1">
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm"
+                  placeholder="seu@email.com"
+                />
+              </div>
+            </div>
 
-        <form onSubmit={handleSignup} className="space-y-6">
+            {/* Password */}
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Senha
+              </label>
+              <div className="mt-1">
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm"
+                  placeholder="••••••••"
+                  minLength={6}
+                />
+              </div>
+              <p className="mt-2 text-sm text-gray-500">
+                Mínimo de 6 caracteres
+              </p>
+            </div>
 
-        <input
-          type="email"
-          placeholder="Seu e-mail"
-          className="w-full border p-3 rounded-lg"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
+            {/* Error Message */}
+            {error && (
+              <div className="rounded-md bg-yellow-50 p-4">
+                <div className="flex">
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-yellow-800">
+                      {error}
+                    </h3>
+                  </div>
+                </div>
+              </div>
+            )}
 
-        <input
-          type="password"
-          placeholder="Senha"
-          className="w-full border p-3 rounded-lg"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+            {/* Submit Button */}
+            <div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-black bg-yellow-400 hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <span className="flex items-center">
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-black"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Criando conta...
+                  </span>
+                ) : (
+                  "Criar conta"
+                )}
+              </button>
+            </div>
+          </form>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-[#ffe066] hover:bg-[#ffd43b] text-black font-semibold p-3 rounded-lg transition"
-          >
-            {loading ? "Criando..." : "Criar conta"}
-          </button>
-
-          {message && (
-            <p className="text-center text-sm text-gray-700 mt-4">{message}</p>
-          )}
-
-          <p className="text-center text-sm text-gray-600 mt-4">
-            Já tem conta?{" "}
-            <a href="/login" className="text-blue-600 underline">
-              Fazer login
-            </a>
-          </p>
-        </form>
+          {/* Links */}
+          <div className="mt-6">
+            <div className="relative">
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">
+                  Já tem uma conta?{" "}
+                  <Link
+                    href="/login"
+                    className="font-medium text-yellow-600 hover:text-yellow-500"
+                  >
+                    Entrar
+                  </Link>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
