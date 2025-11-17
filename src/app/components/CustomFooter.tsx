@@ -11,6 +11,20 @@ export default function CustomFooter() {
       </div>
 
       <div className="relative max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
+        {/* Logo and description */}
+        <div>
+          <Image
+            src="/images/logo-black.png"
+            alt="Loquia"
+            width={120}
+            height={32}
+            className="mb-4"
+          />
+          <p className="text-sm text-gray-600">
+            Sua empresa precisa existir na era da IA. Conectamos sua marca ao OpenAI Search, Perplexity, Claude e SGE.
+          </p>
+        </div>
+
         {/* Produto */}
         <div>
           <h3 className="text-sm font-semibold text-black mb-4">Produto</h3>
@@ -48,14 +62,6 @@ export default function CustomFooter() {
               </Link>
             </li>
           </ul>
-        </div>
-
-        {/* Loquia */}
-        <div>
-          <h3 className="text-sm font-semibold text-black mb-4">Loquia</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Sua empresa precisa existir na era da IA. Conectamos sua marca ao OpenAI Search, Perplexity, Claude e SGE.
-          </p>
         </div>
       </div>
 
