@@ -1,21 +1,23 @@
-import Hero from "./components/Hero";
-import Era from "./components/Era";
-import SeoEnded from "./components/SeoEnded";
-import IntentionEra from "./components/IntentionEra";
-import HowItWorks from "./components/HowItWorks";
-import DashboardPreview from "./components/DashboardPreview";
-import Plans from "./components/Plans";
+import CustomNavbar from "./components/CustomNavbar";
+import CustomHero from "./components/CustomHero";
+import CustomEra from "./components/CustomEra";
+import CustomPaidAds from "./components/CustomPaidAds";
+import CustomPlans from "./components/CustomPlans";
+import CustomFinal from "./components/CustomFinal";
+import CustomFooter from "./components/CustomFooter";
 
 export default function Home() {
   return (
-    <main>
-      <Hero />
-      <Era />
-      <SeoEnded />
-      <IntentionEra />
-      <HowItWorks />
-      <DashboardPreview />
-      <Plans />
-    </main>
+    <>
+      <CustomNavbar />
+      <main>
+        <CustomHero />
+        <CustomEra />
+        <CustomPaidAds />
+        <CustomPlans />
+        <CustomFinal />
+      </main>
+      <CustomFooter />
+    </>
   );
 }
