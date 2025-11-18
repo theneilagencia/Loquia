@@ -37,7 +37,7 @@ export default function PrivateHeader({
   }
 
   return (
-    <header className="w-full border-b border-gray-200 bg-white shadow-sm">
+    <header className="dashboard-header w-full border-b border-gray-200 bg-white">
       <nav className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
         
         {/* Logo */}

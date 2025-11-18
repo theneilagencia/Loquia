@@ -24,3 +24,20 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Dashboard Header Visibility Control */
+.dashboard-header {
+  display: none !important;
+  position: relative !important;
+}
+
+.logged-in .dashboard-header {
+  display: block !important;
+}
+
+/* Remove any sticky/fixed positioning from dashboard header on public pages */
+.logged-out .dashboard-header {
+  position: static !important;
+  top: auto !important;
+  z-index: auto !important;
+}

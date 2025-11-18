@@ -71,7 +71,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <html lang="pt-BR">
-      <body className="bg-white text-gray-900">
+      <body className={`bg-white text-gray-900 ${user ? 'logged-in' : 'logged-out'}`}>
         <ToastProvider>
           {isPublicRoute ? (
             <>
@@ -81,11 +81,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </>
           ) : (
             <>
-              <PrivateHeader 
-                userEmail={user?.email} 
-                isSuperAdmin={isSuperAdmin}
-                onOpenOnboarding={handleOpenOnboarding}
-              />
+              {user && (
+                <PrivateHeader 
+                  userEmail={user?.email} 
+                  isSuperAdmin={isSuperAdmin}
+                  onOpenOnboarding={handleOpenOnboarding}
+                />
+              )}
               {children}
               {showOnboarding && (
                 <Onboarding onComplete={handleCompleteOnboarding} />
