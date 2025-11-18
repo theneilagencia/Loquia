@@ -57,6 +57,9 @@ export default function PrivateHeader({
           <Link href="/feeds" className="text-gray-700 hover:text-gray-900 text-base">
             Feeds
           </Link>
+          <Link href="/intent-proof" className="text-yellow-600 hover:text-yellow-700 text-base font-semibold">
+            Intent Proof™
+          </Link>
           
           {/* User Info */}
           <div className="flex items-center gap-4 ml-4 pl-4 border-l border-gray-300">
@@ -68,14 +71,13 @@ export default function PrivateHeader({
                 onClick={onOpenOnboarding}
                 variant="ghost"
                 size="sm"
-                className="flex items-center gap-2"
+                className="text-gray-700 hover:text-gray-900"
               >
-                <Play size={16} />
-                Onboarding
+                <Play className="w-4 h-4" />
               </Button>
             )}
             
-            {/* Botão Admin */}
+            {/* Botão ADMIN */}
             {isSuperAdmin && (
               <Button 
                 onClick={() => router.push("/admin")} 
@@ -91,78 +93,97 @@ export default function PrivateHeader({
               onClick={handleLogout}
               variant="ghost"
               size="sm"
-              className="flex items-center gap-2 text-red-600 hover:text-red-700"
+              className="text-gray-700 hover:text-red-600"
             >
-              <LogOut size={16} />
-              Sair
+              <LogOut className="w-4 h-4" />
             </Button>
           </div>
         </div>
 
-        {/* Mobile Button */}
+        {/* Mobile Menu Button */}
         <button
-          className="md:hidden text-gray-700"
           onClick={() => setOpen(!open)}
-          aria-label="Menu"
+          className="md:hidden p-2 text-gray-700 hover:text-gray-900"
         >
-          {open ? <X size={28} /> : <Menu size={28} />}
+          {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
       </nav>
 
       {/* Mobile Menu */}
       {open && (
-        <div className="md:hidden bg-white border-t border-gray-200 px-6 py-4 flex flex-col gap-4">
-          <div className="pb-4 border-b border-gray-200">
-            <p className="text-sm text-gray-600">{userEmail}</p>
+        <div className="md:hidden border-t border-gray-200 bg-white">
+          <div className="px-6 py-4 space-y-3">
+            <Link
+              href="/dashboard"
+              className="block text-gray-700 hover:text-gray-900 py-2"
+              onClick={() => setOpen(false)}
+            >
+              Dashboard
+            </Link>
+            <Link
+              href="/catalog"
+              className="block text-gray-700 hover:text-gray-900 py-2"
+              onClick={() => setOpen(false)}
+            >
+              Catálogo
+            </Link>
+            <Link
+              href="/intent"
+              className="block text-gray-700 hover:text-gray-900 py-2"
+              onClick={() => setOpen(false)}
+            >
+              Intenções
+            </Link>
+            <Link
+              href="/feeds"
+              className="block text-gray-700 hover:text-gray-900 py-2"
+              onClick={() => setOpen(false)}
+            >
+              Feeds
+            </Link>
+            <Link
+              href="/intent-proof"
+              className="block text-yellow-600 hover:text-yellow-700 py-2 font-semibold"
+              onClick={() => setOpen(false)}
+            >
+              Intent Proof™
+            </Link>
+            
+            <div className="border-t border-gray-200 pt-3 mt-3">
+              <p className="text-sm text-gray-600 mb-3">{userEmail}</p>
+              
+              {onOpenOnboarding && (
+                <button
+                  onClick={() => {
+                    onOpenOnboarding();
+                    setOpen(false);
+                  }}
+                  className="block w-full text-left text-gray-700 hover:text-gray-900 py-2"
+                >
+                  Onboarding
+                </button>
+              )}
+              
+              {isSuperAdmin && (
+                <button
+                  onClick={() => {
+                    router.push("/admin");
+                    setOpen(false);
+                  }}
+                  className="block w-full text-left bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded mt-2"
+                >
+                  ADMIN
+                </button>
+              )}
+              
+              <button
+                onClick={handleLogout}
+                className="block w-full text-left text-red-600 hover:text-red-700 py-2 mt-2"
+              >
+                Sair
+              </button>
+            </div>
           </div>
-          
-          <Link href="/dashboard" className="text-gray-700 text-base" onClick={() => setOpen(false)}>
-            Dashboard
-          </Link>
-          <Link href="/catalog" className="text-gray-700 text-base" onClick={() => setOpen(false)}>
-            Catálogo
-          </Link>
-          <Link href="/intent" className="text-gray-700 text-base" onClick={() => setOpen(false)}>
-            Intenções
-          </Link>
-          <Link href="/feeds" className="text-gray-700 text-base" onClick={() => setOpen(false)}>
-            Feeds
-          </Link>
-          
-          {onOpenOnboarding && (
-            <Button
-              onClick={() => {
-                onOpenOnboarding();
-                setOpen(false);
-              }}
-              variant="ghost"
-              className="flex items-center gap-2 justify-start"
-            >
-              <Play size={16} />
-              Iniciar Onboarding
-            </Button>
-          )}
-          
-          {isSuperAdmin && (
-            <Button 
-              onClick={() => {
-                router.push("/admin");
-                setOpen(false);
-              }}
-              className="bg-yellow-400 hover:bg-yellow-500 text-black font-bold"
-            >
-              ADMIN
-            </Button>
-          )}
-          
-          <Button
-            onClick={handleLogout}
-            variant="ghost"
-            className="flex items-center gap-2 justify-start text-red-600"
-          >
-            <LogOut size={16} />
-            Sair
-          </Button>
         </div>
       )}
     </header>
