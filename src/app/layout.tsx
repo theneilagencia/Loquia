@@ -1,8 +1,5 @@
-
 import "./globals.css";
 import type { Metadata } from "next";
-
-import Navbar from "./components/ui/Navbar";
 import { ToastProvider } from "./contexts/ToastContext";
 
 export const metadata: Metadata = {
@@ -15,7 +12,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-BR">
       <body className="bg-white text-gray-900">
         <ToastProvider>
-          <Navbar />
           {children}
         </ToastProvider>
       </body>

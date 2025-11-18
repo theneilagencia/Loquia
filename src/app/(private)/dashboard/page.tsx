@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import Button from "../components/ui/Button";
-import { useToast } from "../contexts/ToastContext";
-import Onboarding from "../components/ui/Onboarding";
+import Button from "../../components/ui/Button";
+import { useToast } from "../../contexts/ToastContext";
+
 
 
 interface Stats {
@@ -38,26 +38,14 @@ export default function Dashboard() {
   const [recentFeeds, setRecentFeeds] = useState<Feed[]>([]);
   const [loading, setLoading] = useState(true);
   const [optimizing, setOptimizing] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
 
   useEffect(() => {
     checkUser();
     loadDashboardData();
-    checkFirstTime();
   }, []);
 
-  function checkFirstTime() {
-    const hasSeenOnboarding = localStorage.getItem("loquia_onboarding_completed");
-    if (!hasSeenOnboarding) {
-      setShowOnboarding(true);
-    }
-  }
 
-  function completeOnboarding() {
-    localStorage.setItem("loquia_onboarding_completed", "true");
-    setShowOnboarding(false);
-  }
 
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -66,12 +54,6 @@ export default function Dashboard() {
       return;
     }
     setUser(user);
-    
-    // Verificar se é superadmin (por email)
-    const adminEmails = ['admin@loquia.com'];
-    if (user.email && adminEmails.includes(user.email)) {
-      setIsSuperAdmin(true);
-    }
   }
 
   async function loadDashboardData() {
@@ -168,31 +150,7 @@ export default function Dashboard() {
   }
 
   return (
-    <>
-      {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
-      <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-gray-900">Loquia Dashboard</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">{user?.email}</span>
-            {isSuperAdmin && (
-              <Button 
-                onClick={() => router.push("/admin")} 
-                className="bg-yellow-400 hover:bg-yellow-500 text-black font-bold border-2 border-black"
-              >
-                ADMIN
-              </Button>
-            )}
-            <Button onClick={logout} className="bg-gray-900 hover:bg-gray-800">
-              Sair
-            </Button>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gray-50">
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
@@ -351,6 +309,5 @@ export default function Dashboard() {
         </div>
       </main>
     </div>
-    </>
   );
 }
