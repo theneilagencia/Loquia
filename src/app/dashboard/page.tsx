@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import Button from "../../components/ui/Button";
-import { useToast } from "../../contexts/ToastContext";
+import Button from "../components/ui/Button";
+import { useToast } from "../contexts/ToastContext";
 
 
 
