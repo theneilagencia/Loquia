@@ -24,7 +24,15 @@ export default function LoginPage() {
 
       if (signInError) {
         console.error("❌ Login error:", signInError);
-        setError(signInError.message);
+        const errorMessage = signInError.message || 'Erro ao fazer login';
+        setError(errorMessage);
+        setLoading(false);
+        return;
+      }
+
+      if (!data) {
+        console.error("❌ No data returned");
+        setError("Erro ao fazer login - sem resposta do servidor");
         setLoading(false);
         return;
       }
