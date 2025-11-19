@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { STRIPE_PRODUCTS, PLAN_FEATURES } from '@/lib/stripe';
+import Image from 'next/image';
 
 export default function PricingPage() {
   const router = useRouter();
@@ -14,15 +14,6 @@ export default function PricingPage() {
     setLoading(planName);
 
     try {
-      // Verificar se usuário está logado
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        // Redirecionar para login
-        router.push(`/login?redirect=/pricing&plan=${planName}`);
-        return;
-      }
-
       // Obter priceId correto
       const priceId = STRIPE_PRODUCTS[planName][billingInterval].priceId;
 
@@ -32,34 +23,11 @@ export default function PricingPage() {
         return;
       }
 
-      // Criar checkout session
-      const response = await fetch('/api/stripe/create-checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          priceId,
-          customerEmail: user.email,
-          userId: user.id,
-          planName,
-          billingInterval,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.error) {
-        alert(data.error);
-        setLoading(null);
-        return;
-      }
-
-      // Redirecionar para checkout
-      window.location.href = data.checkoutUrl;
+      // Redirecionar para login com o plano selecionado
+      router.push(`/login?redirect=/pricing&plan=${planName}&billing=${billingInterval}`);
     } catch (error: any) {
-      console.error('Erro ao criar checkout:', error);
-      alert('Erro ao processar pagamento. Tente novamente.');
+      console.error('Erro ao selecionar plano:', error);
+      alert('Erro ao processar. Tente novamente.');
       setLoading(null);
     }
   }
@@ -86,16 +54,16 @@ export default function PricingPage() {
             {/* AI Logos */}
             <div className="flex items-center justify-center gap-8 md:gap-12 flex-wrap">
               <div className="flex items-center gap-3 opacity-80 hover:opacity-100 transition-opacity duration-300">
-                <img src="/images/ai-logos/chatgpt.png" alt="ChatGPT" className="h-8 w-auto" />
+                <Image src="/images/ai-logos/chatgpt.png" alt="ChatGPT" width={120} height={32} className="h-8 w-auto" />
               </div>
               <div className="flex items-center gap-3 opacity-80 hover:opacity-100 transition-opacity duration-300">
-                <img src="/images/ai-logos/gemini.png" alt="Gemini" className="h-8 w-auto" />
+                <Image src="/images/ai-logos/gemini.png" alt="Gemini" width={120} height={32} className="h-8 w-auto" />
               </div>
               <div className="flex items-center gap-3 opacity-80 hover:opacity-100 transition-opacity duration-300">
-                <img src="/images/ai-logos/claude.png" alt="Claude" className="h-8 w-auto" />
+                <Image src="/images/ai-logos/claude.png" alt="Claude" width={120} height={32} className="h-8 w-auto" />
               </div>
               <div className="flex items-center gap-3 opacity-80 hover:opacity-100 transition-opacity duration-300">
-                <img src="/images/ai-logos/perplexity.png" alt="Perplexity" className="h-8 w-auto" />
+                <Image src="/images/ai-logos/perplexity.png" alt="Perplexity" width={120} height={32} className="h-8 w-auto" />
               </div>
             </div>
           </div>
