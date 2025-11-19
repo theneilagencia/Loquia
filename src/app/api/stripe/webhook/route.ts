@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
-
 export async function POST(request: NextRequest) {
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
   const body = await request.text();
   const signature = request.headers.get('stripe-signature');
 
@@ -44,24 +43,24 @@ export async function POST(request: NextRequest) {
   try {
     switch (event.type) {
       case 'checkout.session.completed':
-        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+        await handleCheckoutCompleted(supabaseAdmin, event.data.object as Stripe.Checkout.Session);
         break;
 
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
-        await handleSubscriptionChange(event.data.object as Stripe.Subscription);
+        await handleSubscriptionChange(supabaseAdmin, event.data.object as Stripe.Subscription);
         break;
 
       case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+        await handleSubscriptionDeleted(supabaseAdmin, event.data.object as Stripe.Subscription);
         break;
 
       case 'invoice.payment_succeeded':
-        await handlePaymentSucceeded(event.data.object as Stripe.Invoice);
+        await handlePaymentSucceeded(supabaseAdmin, event.data.object as Stripe.Invoice);
         break;
 
       case 'invoice.payment_failed':
-        await handlePaymentFailed(event.data.object as Stripe.Invoice);
+        await handlePaymentFailed(supabaseAdmin, event.data.object as Stripe.Invoice);
         break;
 
       default:
@@ -94,7 +93,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+async function handleCheckoutCompleted(supabaseAdmin: SupabaseClient, session: Stripe.Checkout.Session) {
   const userId = session.metadata?.userId;
   const planName = session.metadata?.planName;
   const billingInterval = session.metadata?.billingInterval;
@@ -106,10 +105,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Buscar subscription criada
   const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
 
-  await upsertSubscription(subscription, userId, planName, billingInterval);
+  await upsertSubscription(supabaseAdmin, subscription, userId, planName, billingInterval);
 }
 
-async function handleSubscriptionChange(subscription: Stripe.Subscription) {
+async function handleSubscriptionChange(supabaseAdmin: SupabaseClient, subscription: Stripe.Subscription) {
   const userId = subscription.metadata?.userId;
   const planName = subscription.metadata?.planName;
   const billingInterval = subscription.metadata?.billingInterval;
@@ -119,10 +118,10 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
     return;
   }
 
-  await upsertSubscription(subscription, userId, planName, billingInterval);
+  await upsertSubscription(supabaseAdmin, subscription, userId, planName, billingInterval);
 }
 
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+async function handleSubscriptionDeleted(supabaseAdmin: SupabaseClient, subscription: Stripe.Subscription) {
   await supabaseAdmin
     .from('subscriptions')
     .update({
@@ -132,7 +131,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     .eq('stripe_subscription_id', subscription.id);
 }
 
-async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
+async function handlePaymentSucceeded(supabaseAdmin: SupabaseClient, invoice: Stripe.Invoice) {
   const subscriptionId = (invoice as any).subscription as string | null;
   if (!subscriptionId) return;
 
@@ -164,7 +163,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   });
 }
 
-async function handlePaymentFailed(invoice: Stripe.Invoice) {
+async function handlePaymentFailed(supabaseAdmin: SupabaseClient, invoice: Stripe.Invoice) {
   const subscriptionId = (invoice as any).subscription as string | null;
   if (!subscriptionId) return;
 
@@ -177,6 +176,7 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 }
 
 async function upsertSubscription(
+  supabaseAdmin: SupabaseClient,
   subscription: Stripe.Subscription,
   userId: string,
   planName?: string,
