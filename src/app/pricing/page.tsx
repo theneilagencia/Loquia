@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { STRIPE_PRODUCTS, PLAN_FEATURES } from '@/lib/stripe';
+import { STRIPE_PRODUCTS, PLAN_FEATURES } from '@/lib/stripe-client';
 import Image from 'next/image';
 
 export default function PricingPage() {
