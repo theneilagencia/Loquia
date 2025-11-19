@@ -41,49 +41,53 @@ export default function IntentProofDashboard() {
           </p>
         </div>
 
-        {/* AI Logos */}
-        <div className="flex flex-wrap items-center justify-center gap-12 md:gap-16">
+        {/* AI Logos - Padronizadas */}
+        <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
           {/* ChatGPT */}
-          <div className="flex items-center opacity-80 hover:opacity-100 transition-opacity">
+          <div className="flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
             <Image
               src="/logos/chatgpt.png"
               alt="ChatGPT"
-              width={180}
-              height={50}
-              className="h-12 w-auto"
+              width={160}
+              height={40}
+              className="h-10 w-auto object-contain"
+              style={{ maxHeight: '40px' }}
             />
           </div>
 
           {/* Claude */}
-          <div className="flex items-center opacity-80 hover:opacity-100 transition-opacity">
+          <div className="flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
             <Image
               src="/logos/claude.png"
               alt="Claude"
-              width={180}
-              height={50}
-              className="h-12 w-auto"
+              width={160}
+              height={40}
+              className="h-10 w-auto object-contain"
+              style={{ maxHeight: '40px' }}
             />
           </div>
 
           {/* Gemini */}
-          <div className="flex items-center opacity-80 hover:opacity-100 transition-opacity">
+          <div className="flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
             <Image
               src="/logos/gemini.png"
               alt="Gemini"
-              width={180}
-              height={50}
-              className="h-12 w-auto"
+              width={160}
+              height={40}
+              className="h-10 w-auto object-contain"
+              style={{ maxHeight: '40px' }}
             />
           </div>
 
           {/* Perplexity */}
-          <div className="flex items-center opacity-80 hover:opacity-100 transition-opacity">
+          <div className="flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
             <Image
               src="/logos/perplexity.png"
               alt="Perplexity"
-              width={180}
-              height={50}
-              className="h-12 w-auto"
+              width={160}
+              height={40}
+              className="h-10 w-auto object-contain"
+              style={{ maxHeight: '40px' }}
             />
           </div>
         </div>
