@@ -1,16 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "@/lib/supabase";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Capturar parâmetros de plano da URL
+  const redirect = searchParams.get('redirect');
+  const plan = searchParams.get('plan');
+  const billing = searchParams.get('billing');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,8 +59,16 @@ export default function LoginPage() {
         console.log("🍪 Cookies saved!");
       }
       
-      // Force reload to ensure middleware picks up the cookies
-      window.location.href = "/dashboard";
+      // Se há um plano selecionado, redirecionar para checkout
+      if (plan && billing && data.user) {
+        console.log("🛒 Redirecting to checkout...", { plan, billing });
+        window.location.href = `/billing/checkout?plan=${plan}&billing=${billing}`;
+        return;
+      }
+
+      // Caso contrário, redirecionar para dashboard ou URL especificada
+      const redirectUrl = redirect || '/dashboard';
+      window.location.href = redirectUrl;
     } catch (err) {
       console.error("❌ Unexpected error:", err);
       setError("Erro inesperado ao fazer login");
@@ -76,6 +90,11 @@ export default function LoginPage() {
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
           Entrar na sua conta
         </h2>
+        {plan && (
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Você selecionou o plano <span className="font-semibold text-yellow-600">{plan.toUpperCase()}</span>
+          </p>
+        )}
       </div>
 
       {/* Form */}
@@ -173,7 +192,7 @@ export default function LoginPage() {
                     Entrando...
                   </span>
                 ) : (
-                  "Entrar"
+                  plan ? "Entrar e continuar para checkout" : "Entrar"
                 )}
               </button>
             </div>
@@ -186,7 +205,7 @@ export default function LoginPage() {
                 <span className="px-2 bg-white text-gray-500">
                   Ainda não tem conta?{" "}
                   <Link
-                    href="/signup"
+                    href={plan && billing ? `/signup?plan=${plan}&billing=${billing}` : "/signup"}
                     className="font-medium text-yellow-600 hover:text-yellow-500"
                   >
                     Criar conta
@@ -208,5 +227,20 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 // Supabase configuration
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -41,7 +41,7 @@ const customStorage = {
 }
 
 // Create a single supabase client for interacting with your database
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -145,4 +145,9 @@ export async function getSession() {
 export async function getUser() {
   const { data: { user }, error } = await supabase.auth.getUser()
   return { user, error }
+}
+
+// Export function to create client (for compatibility)
+export function createClient() {
+  return supabase
 }
