@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { STRIPE_PRODUCTS } from '@/lib/stripe-client';
 
 export default function CheckoutPage() {
@@ -24,7 +24,6 @@ export default function CheckoutPage() {
 
       try {
         // Obter usuário autenticado
-        const supabase = createClient();
         const { data: { user }, error: userError } = await supabase.auth.getUser();
 
         if (userError || !user) {
