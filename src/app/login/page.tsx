@@ -68,7 +68,30 @@ function LoginForm() {
         return;
       }
 
-      // Verificar se usuário tem subscription ativa
+      // Verificar role do usuário
+      console.log("🔍 Checking user role...");
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError) {
+        console.error("❌ Error fetching user profile:", profileError);
+      }
+
+      const userRole = profileData?.role || 'user';
+      console.log("👤 User role:", userRole);
+
+      // Admin e superadmin não precisam de subscription
+      if (userRole === 'admin' || userRole === 'superadmin') {
+        console.log("✅ Admin/Superadmin user, skipping subscription check");
+        const redirectUrl = redirect || '/dashboard';
+        window.location.href = redirectUrl;
+        return;
+      }
+
+      // Verificar se usuário tem subscription ativa (apenas para role 'user')
       console.log("🔍 Checking subscription status...");
       const { data: subscriptionData, error: subError } = await supabase
         .from('subscriptions')

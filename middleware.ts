@@ -13,7 +13,7 @@ const protectedRoutes = [
   '/admin',
 ];
 
-// Rotas que requerem plano ativo
+// Rotas que requerem plano ativo (exceto para admin/superadmin)
 const subscriptionRequiredRoutes = [
   '/dashboard',
   '/intent',
@@ -61,9 +61,24 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // Se está autenticado, verificar se precisa de plano ativo
+    // Se está autenticado, verificar role e subscription
     if (user && subscriptionRequiredRoutes.some(route => pathname.startsWith(route))) {
-      // Verificar se tem subscription ativa
+      // Verificar role do usuário
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      const userRole = profile?.role || 'user';
+
+      // Admin e superadmin não precisam de subscription
+      if (userRole === 'admin' || userRole === 'superadmin') {
+        console.log('✅ Admin/Superadmin user, skipping subscription check');
+        return NextResponse.next();
+      }
+
+      // Verificar se tem subscription ativa (apenas para role 'user')
       const { data: subscription } = await supabase
         .from('subscriptions')
         .select('status, plan_name')
