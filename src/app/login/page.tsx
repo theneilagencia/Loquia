@@ -64,7 +64,9 @@ function LoginForm() {
       // Se há um plano selecionado, redirecionar para checkout
       if (plan && billing && data.user) {
         console.log("🛒 Redirecting to checkout...", { plan, billing });
-        router.push(`/billing/checkout?plan=${plan}&billing=${billing}`);
+        setTimeout(() => {
+          window.location.href = `/billing/checkout?plan=${plan}&billing=${billing}`;
+        }, 500);
         return;
       }
 
@@ -88,16 +90,13 @@ function LoginForm() {
       // Admin e superadmin não precisam de subscription
       if (userRole === 'admin' || userRole === 'superadmin') {
         console.log("✅ Admin/Superadmin user, skipping subscription check");
-        console.log("🚀 Redirecting to:", redirect || '/dashboard');
-        
-        // Usar router.push ao invés de window.location.href
         const redirectUrl = redirect || '/dashboard';
-        router.push(redirectUrl);
+        console.log("🚀 Redirecting to:", redirectUrl);
         
-        // Aguardar um pouco antes de resetar loading
+        // Aguardar cookies serem salvos antes de redirecionar
         setTimeout(() => {
-          setLoading(false);
-        }, 1000);
+          window.location.href = redirectUrl;
+        }, 500);
         return;
       }
 
@@ -124,12 +123,11 @@ function LoginForm() {
       // Caso contrário, redirecionar para dashboard ou URL especificada
       const redirectUrl = redirect || '/dashboard';
       console.log("🚀 Redirecting to:", redirectUrl);
-      router.push(redirectUrl);
       
-      // Aguardar um pouco antes de resetar loading
+      // Aguardar cookies serem salvos antes de redirecionar
       setTimeout(() => {
-        setLoading(false);
-      }, 1000);
+        window.location.href = redirectUrl;
+      }, 500);
     } catch (err) {
       console.error("❌ Unexpected error:", err);
       setError("Erro inesperado ao fazer login");
