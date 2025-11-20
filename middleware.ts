@@ -13,15 +13,6 @@ const protectedRoutes = [
   '/admin',
 ];
 
-// Rotas que requerem plano ativo (exceto para admin/superadmin)
-const subscriptionRequiredRoutes = [
-  '/dashboard',
-  '/intent',
-  '/intent-proof',
-  '/feeds',
-  '/catalog',
-];
-
 // Rotas públicas (não requerem autenticação)
 const publicRoutes = [
   '/',
@@ -49,57 +40,34 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  try {
-    const supabase = createClient(request);
-    const { data: { user }, error } = await supabase.auth.getUser();
+  // Verificar autenticação apenas para rotas protegidas
+  if (protectedRoutes.some(route => pathname.startsWith(route))) {
+    try {
+      const supabase = createClient(request);
+      const { data: { user }, error } = await supabase.auth.getUser();
 
-    // Se não está autenticado e a rota é protegida, redirecionar para login
-    if (!user && protectedRoutes.some(route => pathname.startsWith(route))) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/login';
-      url.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(url);
-    }
-
-    // Se está autenticado, verificar role e subscription
-    if (user && subscriptionRequiredRoutes.some(route => pathname.startsWith(route))) {
-      // Verificar role do usuário
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      const userRole = profile?.role || 'user';
-
-      // Admin e superadmin não precisam de subscription
-      if (userRole === 'admin' || userRole === 'superadmin') {
-        console.log('✅ Admin/Superadmin user, skipping subscription check');
-        return NextResponse.next();
-      }
-
-      // Verificar se tem subscription ativa (apenas para role 'user')
-      const { data: subscription } = await supabase
-        .from('subscriptions')
-        .select('status, plan_name')
-        .eq('user_id', user.id)
-        .single();
-
-      // Se não tem subscription ativa, redirecionar para pricing
-      if (!subscription || subscription.status !== 'active') {
+      // Se não está autenticado, redirecionar para login
+      if (!user || error) {
+        console.log('❌ Middleware: User not authenticated, redirecting to login');
         const url = request.nextUrl.clone();
-        url.pathname = '/pricing';
-        url.searchParams.set('message', 'subscription_required');
+        url.pathname = '/login';
+        url.searchParams.set('redirect', pathname);
         return NextResponse.redirect(url);
       }
-    }
 
-    return NextResponse.next();
-  } catch (error) {
-    console.error('Middleware error:', error);
-    // Em caso de erro, permitir acesso (fail-open)
-    return NextResponse.next();
+      console.log('✅ Middleware: User authenticated:', user.email);
+      
+      // IMPORTANTE: Não verificar subscription no middleware
+      // A verificação de subscription será feita no lado do cliente
+      return NextResponse.next();
+    } catch (error) {
+      console.error('❌ Middleware error:', error);
+      // Em caso de erro, permitir acesso (fail-open)
+      return NextResponse.next();
+    }
   }
+
+  return NextResponse.next();
 }
 
 export const config = {
