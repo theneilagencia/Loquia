@@ -25,6 +25,12 @@ interface Plan {
   price: number;
 }
 
+// Interface para rastrear mudanças pendentes
+interface PendingChanges {
+  role?: UserRole;
+  plan_id?: string;
+}
+
 export default function UsersPage() {
   return (
     <RequireRole role="superadmin">
@@ -41,6 +47,10 @@ function UsersManagement() {
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
+  
+  // Rastrear mudanças pendentes por usuário
+  const [pendingChanges, setPendingChanges] = useState<Record<string, PendingChanges>>({});
+  const [savingUsers, setSavingUsers] = useState<Set<string>>(new Set());
   
   // Form state
   const [newUser, setNewUser] = useState({
@@ -123,6 +133,72 @@ function UsersManagement() {
     }
   }
 
+  // Atualizar mudança pendente de role
+  function handleRoleChange(userId: string, newRole: UserRole) {
+    setPendingChanges(prev => ({
+      ...prev,
+      [userId]: {
+        ...prev[userId],
+        role: newRole
+      }
+    }));
+  }
+
+  // Atualizar mudança pendente de plano
+  function handlePlanChange(userId: string, planId: string) {
+    setPendingChanges(prev => ({
+      ...prev,
+      [userId]: {
+        ...prev[userId],
+        plan_id: planId
+      }
+    }));
+  }
+
+  // Salvar alterações de um usuário
+  async function handleSaveChanges(userId: string) {
+    const changes = pendingChanges[userId];
+    if (!changes) return;
+
+    setSavingUsers(prev => new Set(prev).add(userId));
+
+    try {
+      const promises: Promise<any>[] = [];
+
+      // Atualizar role se mudou
+      if (changes.role !== undefined) {
+        promises.push(changeUserRole(userId, changes.role));
+      }
+
+      // Atualizar plano se mudou
+      if (changes.plan_id !== undefined) {
+        promises.push(assignPlanToUser(userId, changes.plan_id));
+      }
+
+      await Promise.all(promises);
+
+      showSuccess('Alterações salvas com sucesso!');
+      
+      // Limpar mudanças pendentes deste usuário
+      setPendingChanges(prev => {
+        const newChanges = { ...prev };
+        delete newChanges[userId];
+        return newChanges;
+      });
+
+      // Recarregar dados
+      await loadData();
+    } catch (error) {
+      showError('Erro ao salvar alterações');
+    } finally {
+      setSavingUsers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(userId);
+        return newSet;
+      });
+    }
+  }
+
   async function handleToggleStatus(userId: string, currentStatus: boolean) {
     try {
       await toggleUserStatus(userId, !currentStatus);
@@ -130,26 +206,6 @@ function UsersManagement() {
       await loadData();
     } catch (error) {
       showError('Erro ao alterar status do usuário');
-    }
-  }
-
-  async function handleChangeRole(userId: string, newRole: UserRole) {
-    try {
-      await changeUserRole(userId, newRole);
-      showSuccess('Role alterado com sucesso');
-      await loadData();
-    } catch (error) {
-      showError('Erro ao alterar role do usuário');
-    }
-  }
-
-  async function handleChangePlan(userId: string, planId: string) {
-    try {
-      await assignPlanToUser(userId, planId);
-      showSuccess('Plano atribuído com sucesso');
-      await loadData();
-    } catch (error) {
-      showError('Erro ao atribuir plano');
     }
   }
 
@@ -282,75 +338,92 @@ function UsersManagement() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredUsers.map((user) => (
-                <tr key={user.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {user.email}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {user.full_name || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <select
-                      value={user.role}
-                      onChange={(e) => handleChangeRole(user.id, e.target.value as UserRole)}
-                      className="border border-gray-300 rounded px-2 py-1 text-sm"
-                    >
-                      <option value="user">User</option>
-                      <option value="admin">Admin</option>
-                      <option value="superadmin">Superadmin</option>
-                    </select>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <select
-                      value={user.plan_id || ''}
-                      onChange={(e) => handleChangePlan(user.id, e.target.value)}
-                      className="border border-gray-300 rounded px-2 py-1 text-sm"
-                    >
-                      <option value="">Sem plano</option>
-                      {plans.map((plan) => (
-                        <option key={plan.id} value={plan.id}>
-                          {plan.name} - R$ {plan.price}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        user.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {user.is_active ? 'Ativo' : 'Inativo'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                    <button
-                      onClick={() => handleToggleStatus(user.id, user.is_active)}
-                      className="text-blue-600 hover:text-blue-900"
-                      title={user.is_active ? 'Desativar' : 'Ativar'}
-                    >
-                      {user.is_active ? 'Desativar' : 'Ativar'}
-                    </button>
-                    <button
-                      onClick={() => handleResetPassword(user.email)}
-                      className="text-yellow-600 hover:text-yellow-900"
-                      title="Resetar senha"
-                    >
-                      Reset Senha
-                    </button>
-                    <button
-                      onClick={() => handleDeleteUser(user.id, user.email)}
-                      className="text-red-600 hover:text-red-900"
-                      title="Excluir usuário"
-                    >
-                      Excluir
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {filteredUsers.map((user) => {
+                const hasPendingChanges = !!pendingChanges[user.id];
+                const isSaving = savingUsers.has(user.id);
+                const currentRole = pendingChanges[user.id]?.role ?? user.role;
+                const currentPlanId = pendingChanges[user.id]?.plan_id ?? user.plan_id ?? '';
+
+                return (
+                  <tr key={user.id} className={hasPendingChanges ? 'bg-yellow-50' : ''}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {user.email}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {user.full_name || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <select
+                        value={currentRole}
+                        onChange={(e) => handleRoleChange(user.id, e.target.value as UserRole)}
+                        className="border border-gray-300 rounded px-2 py-1 text-sm"
+                      >
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                        <option value="superadmin">Superadmin</option>
+                      </select>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <select
+                        value={currentPlanId}
+                        onChange={(e) => handlePlanChange(user.id, e.target.value)}
+                        className="border border-gray-300 rounded px-2 py-1 text-sm"
+                      >
+                        <option value="">Sem plano</option>
+                        {plans.map((plan) => (
+                          <option key={plan.id} value={plan.id}>
+                            {plan.name} - R$ {plan.price}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          user.is_active
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {user.is_active ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                      {hasPendingChanges && (
+                        <button
+                          onClick={() => handleSaveChanges(user.id)}
+                          disabled={isSaving}
+                          className="text-green-600 hover:text-green-900 font-semibold disabled:opacity-50"
+                          title="Salvar alterações"
+                        >
+                          {isSaving ? '...' : '💾 Salvar'}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleToggleStatus(user.id, user.is_active)}
+                        className="text-blue-600 hover:text-blue-900"
+                        title={user.is_active ? 'Desativar' : 'Ativar'}
+                      >
+                        {user.is_active ? 'Desativar' : 'Ativar'}
+                      </button>
+                      <button
+                        onClick={() => handleResetPassword(user.email)}
+                        className="text-yellow-600 hover:text-yellow-900"
+                        title="Resetar senha"
+                      >
+                        Reset Senha
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUser(user.id, user.email)}
+                        className="text-red-600 hover:text-red-900"
+                        title="Excluir usuário"
+                      >
+                        Excluir
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           
