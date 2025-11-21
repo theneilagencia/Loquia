@@ -68,11 +68,11 @@ function LoginForm() {
         return;
       }
 
-      // Verificar role do usuário
-      console.log("🔍 Checking user role...");
+      // Verificar role e plano do usuário
+      console.log("🔍 Checking user role and plan...");
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
-        .select('role')
+        .select('role, plan_id')
         .eq('id', data.user.id)
         .single();
 
@@ -83,7 +83,9 @@ function LoginForm() {
       }
 
       const userRole = profileData?.role || 'user';
+      const userPlanId = profileData?.plan_id;
       console.log("👤 User role:", userRole);
+      console.log("📋 User plan_id:", userPlanId);
 
       // Admin e superadmin não precisam de subscription
       if (userRole === 'admin' || userRole === 'superadmin') {
@@ -96,8 +98,19 @@ function LoginForm() {
         return;
       }
 
-      // Verificar se usuário tem subscription ativa (apenas para role 'user')
-      console.log("🔍 Checking subscription status...");
+      // Verificar se usuário tem plano (manual ou via Stripe)
+      console.log("🔍 Checking plan status...");
+      
+      // Opção 1: Plano atribuído manualmente pelo admin (plan_id em user_profiles)
+      if (userPlanId) {
+        console.log("✅ User has manual plan assigned:", userPlanId);
+        const redirectUrl = redirect || '/dashboard';
+        console.log("🚀 Redirecting to:", redirectUrl);
+        window.location.replace(redirectUrl);
+        return;
+      }
+      
+      // Opção 2: Subscription ativa via Stripe
       const { data: subscriptionData, error: subError } = await supabase
         .from('subscriptions')
         .select('*')
@@ -105,23 +118,21 @@ function LoginForm() {
         .eq('status', 'active')
         .single();
 
-      if (subError || !subscriptionData) {
-        console.log("⚠️ No active subscription found");
-        setSubscriptionWarning(
-          "Você não possui um plano ativo. Para acessar a plataforma Loquia, é necessário assinar um de nossos planos."
-        );
-        setLoading(false);
+      if (subscriptionData) {
+        console.log("✅ Active Stripe subscription found:", subscriptionData.plan_name);
+        const redirectUrl = redirect || '/dashboard';
+        console.log("🚀 Redirecting to:", redirectUrl);
+        window.location.replace(redirectUrl);
         return;
       }
 
-      console.log("✅ Active subscription found:", subscriptionData.plan_name);
-
-      // Caso contrário, redirecionar para dashboard ou URL especificada
-      const redirectUrl = redirect || '/dashboard';
-      console.log("🚀 Redirecting to:", redirectUrl);
-      
-      // Usar replace para forçar redirecionamento
-      window.location.replace(redirectUrl);
+      // Nenhum plano encontrado
+      console.log("⚠️ No plan or active subscription found");
+      setSubscriptionWarning(
+        "Você não possui um plano ativo. Para acessar a plataforma Loquia, é necessário assinar um de nossos planos."
+      );
+      setLoading(false);
+      return;
     } catch (err) {
       console.error("❌ Unexpected error:", err);
       setError("Erro inesperado ao fazer login");
