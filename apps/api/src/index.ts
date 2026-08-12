@@ -1,11 +1,17 @@
-/**
- * @loquia/api — SCAFFOLDING ONLY (Milestone 1).
- *
- * The real backend (Fastify, Postgres/Drizzle, queue, STT/LLM) is Milestone 2
- * and is intentionally NOT implemented here. This module only re-exports the
- * shared service contracts so the future API implements the same interfaces the
- * MockAdapter satisfies today — guaranteeing a drop-in ApiAdapter later.
- */
-export type { Services } from '@loquia/contracts';
+import { buildApp } from './app';
+import { createDb } from './db/client';
+import { loadEnv } from './env';
 
-export const API_STATUS = 'not-implemented-milestone-1' as const;
+async function main(): Promise<void> {
+  const env = loadEnv();
+  const { db } = createDb(env.DATABASE_URL);
+  const app = await buildApp({ env, db });
+  await app.listen({ host: env.API_HOST, port: env.API_PORT });
+  app.log.info(`Loquia API listening on ${env.API_HOST}:${env.API_PORT}`);
+}
+
+main().catch((err) => {
+  // eslint-disable-next-line no-console
+  console.error('failed to start API', err);
+  process.exit(1);
+});

@@ -1,0 +1,79 @@
+import { and, eq, gt, isNull } from 'drizzle-orm';
+import type { FastifyReply } from 'fastify';
+import type { Database } from '../db/client';
+import { sessions, users } from '../db/schema';
+import type { Env } from '../env';
+import { isProd } from '../env';
+import { generateToken, hashToken } from '../lib/crypto';
+
+export const SESSION_COOKIE = 'loquia_session';
+const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
+
+export type DbUser = typeof users.$inferSelect;
+
+export interface AuthContext {
+  user: DbUser;
+  sessionTokenHash: string;
+}
+
+export async function createSession(
+  db: Database,
+  userId: string,
+  userAgent?: string,
+): Promise<{ token: string; expiresAt: Date }> {
+  const token = generateToken();
+  const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+  await db.insert(sessions).values({
+    tokenHash: hashToken(token),
+    userId,
+    expiresAt,
+    userAgent: userAgent?.slice(0, 256),
+  });
+  return { token, expiresAt };
+}
+
+export async function loadAuth(db: Database, token: string): Promise<AuthContext | null> {
+  const tokenHash = hashToken(token);
+  const now = new Date();
+  const row = await db
+    .select()
+    .from(sessions)
+    .where(and(eq(sessions.tokenHash, tokenHash), isNull(sessions.revokedAt), gt(sessions.expiresAt, now)))
+    .limit(1);
+  const session = row[0];
+  if (!session) return null;
+  const userRow = await db.select().from(users).where(eq(users.id, session.userId)).limit(1);
+  const user = userRow[0];
+  if (!user || user.status === 'suspended' || user.status === 'deactivated') return null;
+  return { user, sessionTokenHash: tokenHash };
+}
+
+export async function revokeSessionByToken(db: Database, token: string): Promise<void> {
+  await db
+    .update(sessions)
+    .set({ revokedAt: new Date() })
+    .where(eq(sessions.tokenHash, hashToken(token)));
+}
+
+export function setSessionCookie(
+  reply: FastifyReply,
+  token: string,
+  expiresAt: Date,
+  env: Env,
+): void {
+  reply.setCookie(SESSION_COOKIE, token, {
+    httpOnly: true,
+    secure: isProd(env),
+    sameSite: 'lax',
+    path: '/',
+    expires: expiresAt,
+    ...(env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {}),
+  });
+}
+
+export function clearSessionCookie(reply: FastifyReply, env: Env): void {
+  reply.clearCookie(SESSION_COOKIE, {
+    path: '/',
+    ...(env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {}),
+  });
+}
