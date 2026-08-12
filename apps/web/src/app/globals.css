@@ -4,23 +4,27 @@
 
 @import '@loquia/config/tokens';
 
-:root {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
-}
-
 @layer base {
   * {
-    border-color: hsl(var(--border));
+    border-color: rgb(var(--border));
   }
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    font-family: var(--font-sans);
+    background-color: rgb(var(--canvas));
+    color: rgb(var(--ink));
+    font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
   ::selection {
-    background-color: hsl(var(--primary) / 0.2);
+    background-color: rgb(var(--iris) / 0.18);
+  }
+  /* Mono for timestamps, JSON and system labels (Geist Mono per brandbook). */
+  .font-mono,
+  code,
+  pre,
+  kbd {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    letter-spacing: 0.01em;
   }
 }
 

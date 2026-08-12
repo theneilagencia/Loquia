@@ -1,121 +1,103 @@
 /*
- * Loquia design tokens.
- *
- * NOTE (Milestone 1): docs/design-tokens.md and the prototype were absent from
- * the handoff, so this token system is a reconstruction. It follows a semantic,
- * shadcn-compatible scale (HSL channels) with light/dark themes. Swap these
- * values when the real brand tokens arrive — component code references only the
- * semantic names, so nothing else needs to change.
+ * Loquia design tokens — reconciled with the validated handoff
+ * (docs/design-tokens.md). Values are the canonical palette; stored as
+ * "R G B" channel triplets so Tailwind's <alpha-value> opacity modifiers work
+ * (e.g. bg-iris/10). Dark is a real theme (purple-tinted surfaces, brighter
+ * accents), never an inversion. `color-scheme` is declared in both themes.
  */
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 224 24% 12%;
+  --canvas: 247 245 241; /* #F7F5F1 */
+  --canvas-blur: 247 245 241; /* used with /0.86 for sticky header */
+  --surface: 255 255 255; /* #FFFFFF */
+  --track: 241 239 234; /* #F1EFEA */
+  --ink: 29 25 38; /* #1D1926 */
+  --ink-hover: 46 40 57; /* #2E2839 */
+  --muted: 112 106 120; /* #706A78 */
+  --faint: 162 156 168; /* #A29CA8 */
+  --dim: 201 196 206; /* #C9C4CE */
+  --disabled: 180 175 186; /* #B4AFBA */
+  --border: 228 224 231; /* #E4E0E7 */
+  --border-strong: 216 211 220; /* #D8D3DC */
+  --inverse-surface: 29 25 38; /* #1D1926 */
+  --inverse-fg: 247 245 241; /* #F7F5F1 */
+  --iris: 91 74 230; /* #5B4AE6 */
+  --iris-strong: 71 55 196; /* #4737C4 */
+  --iris-soft: 236 233 255; /* #ECE9FF */
+  --iris-line: 198 189 245; /* #C6BDF5 */
+  --iris-tint: 251 250 255; /* #FBFAFF */
+  --sage: 51 121 101; /* #337965 */
+  --sage-soft: 240 246 244; /* #F0F6F4 */
+  --amber: 154 100 22; /* #9A6416 */
+  --amber-soft: 251 246 238; /* #FBF6EE */
+  --amber-ink: 122 79 18; /* #7A4F12 */
+  --danger: 177 61 76; /* #B13D4C */
+  --danger-soft: 253 244 244; /* #FDF4F4 */
 
-  --card: 0 0% 100%;
-  --card-foreground: 224 24% 12%;
-
-  --popover: 0 0% 100%;
-  --popover-foreground: 224 24% 12%;
-
-  --primary: 245 66% 56%;
-  --primary-foreground: 0 0% 100%;
-
-  --secondary: 220 20% 96%;
-  --secondary-foreground: 224 24% 20%;
-
-  --muted: 220 20% 96%;
-  --muted-foreground: 220 10% 44%;
-
-  --accent: 190 82% 44%;
-  --accent-foreground: 0 0% 100%;
-
-  --destructive: 0 72% 51%;
-  --destructive-foreground: 0 0% 100%;
-
-  --success: 152 60% 40%;
-  --success-foreground: 0 0% 100%;
-
-  --warning: 38 92% 50%;
-  --warning-foreground: 30 40% 12%;
-
-  --border: 220 16% 88%;
-  --input: 220 16% 88%;
-  --ring: 245 66% 56%;
-
-  --radius: 0.75rem;
+  --radius: 1rem;
+  color-scheme: light;
 }
 
+/* Dark theme: prototype default is [data-loq-theme="dark"]; the app uses
+   [data-theme="dark"] and (for system) prefers-color-scheme. */
 :root:not([data-theme='light']) {
   @media (prefers-color-scheme: dark) {
-    --background: 224 32% 8%;
-    --foreground: 210 20% 96%;
-
-    --card: 224 28% 11%;
-    --card-foreground: 210 20% 96%;
-
-    --popover: 224 28% 11%;
-    --popover-foreground: 210 20% 96%;
-
-    --primary: 245 72% 66%;
-    --primary-foreground: 224 40% 8%;
-
-    --secondary: 224 20% 18%;
-    --secondary-foreground: 210 20% 92%;
-
-    --muted: 224 20% 18%;
-    --muted-foreground: 220 12% 62%;
-
-    --accent: 190 82% 52%;
-    --accent-foreground: 224 40% 8%;
-
-    --destructive: 0 62% 52%;
-    --destructive-foreground: 0 0% 100%;
-
-    --success: 152 52% 46%;
-    --success-foreground: 224 40% 8%;
-
-    --warning: 38 92% 56%;
-    --warning-foreground: 30 40% 12%;
-
-    --border: 224 18% 22%;
-    --input: 224 18% 22%;
-    --ring: 245 72% 66%;
+    --canvas: 19 17 24; /* #131118 */
+    --canvas-blur: 19 17 24; /* /0.88 */
+    --surface: 27 24 35; /* #1B1823 */
+    --track: 38 33 48; /* #262130 */
+    --ink: 244 242 247; /* #F4F2F7 */
+    --ink-hover: 227 222 236; /* #E3DEEC */
+    --muted: 163 156 175; /* #A39CAF */
+    --faint: 124 117 137; /* #7C7589 */
+    --dim: 81 74 94; /* #514A5E */
+    --disabled: 106 100 120; /* #6A6478 */
+    --border: 50 44 61; /* #322C3D */
+    --border-strong: 68 60 82; /* #443C52 */
+    --inverse-surface: 14 12 19; /* #0E0C13 */
+    --inverse-fg: 244 242 247; /* #F4F2F7 */
+    --iris: 142 130 238; /* #8E82EE */
+    --iris-strong: 179 168 255; /* #B3A8FF */
+    --iris-soft: 36 30 61; /* #241E3D */
+    --iris-line: 59 50 102; /* #3B3266 */
+    --iris-tint: 30 26 43; /* #1E1A2B */
+    --sage: 95 191 160; /* #5FBFA0 */
+    --sage-soft: 21 37 31; /* #15251F */
+    --amber: 217 162 74; /* #D9A24A */
+    --amber-soft: 37 28 16; /* #251C10 */
+    --amber-ink: 229 190 126; /* #E5BE7E */
+    --danger: 230 121 138; /* #E6798A */
+    --danger-soft: 42 20 24; /* #2A1418 */
+    color-scheme: dark;
   }
 }
 
 :root[data-theme='dark'] {
-  --background: 224 32% 8%;
-  --foreground: 210 20% 96%;
-
-  --card: 224 28% 11%;
-  --card-foreground: 210 20% 96%;
-
-  --popover: 224 28% 11%;
-  --popover-foreground: 210 20% 96%;
-
-  --primary: 245 72% 66%;
-  --primary-foreground: 224 40% 8%;
-
-  --secondary: 224 20% 18%;
-  --secondary-foreground: 210 20% 92%;
-
-  --muted: 224 20% 18%;
-  --muted-foreground: 220 12% 62%;
-
-  --accent: 190 82% 52%;
-  --accent-foreground: 224 40% 8%;
-
-  --destructive: 0 62% 52%;
-  --destructive-foreground: 0 0% 100%;
-
-  --success: 152 52% 46%;
-  --success-foreground: 224 40% 8%;
-
-  --warning: 38 92% 56%;
-  --warning-foreground: 30 40% 12%;
-
-  --border: 224 18% 22%;
-  --input: 224 18% 22%;
-  --ring: 245 72% 66%;
+  --canvas: 19 17 24;
+  --canvas-blur: 19 17 24;
+  --surface: 27 24 35;
+  --track: 38 33 48;
+  --ink: 244 242 247;
+  --ink-hover: 227 222 236;
+  --muted: 163 156 175;
+  --faint: 124 117 137;
+  --dim: 81 74 94;
+  --disabled: 106 100 120;
+  --border: 50 44 61;
+  --border-strong: 68 60 82;
+  --inverse-surface: 14 12 19;
+  --inverse-fg: 244 242 247;
+  --iris: 142 130 238;
+  --iris-strong: 179 168 255;
+  --iris-soft: 36 30 61;
+  --iris-line: 59 50 102;
+  --iris-tint: 30 26 43;
+  --sage: 95 191 160;
+  --sage-soft: 21 37 31;
+  --amber: 217 162 74;
+  --amber-soft: 37 28 16;
+  --amber-ink: 229 190 126;
+  --danger: 230 121 138;
+  --danger-soft: 42 20 24;
+  color-scheme: dark;
 }
