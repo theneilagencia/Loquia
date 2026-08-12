@@ -1,100 +1,130 @@
-import type { Id, ISODateString, LanguageTag } from './common';
+import type { LanguageTag } from './common';
 
 /**
- * AI Pack — structured, evidence-linked context extracted from a transcript.
+ * AI Pack — reconciled with the validated handoff (docs/ai-pack-spec.md and the
+ * prototype `packData`/`packPlan`/`packMarkdown`). A single plan generates every
+ * format: meeting + preset + size + sections + format + language → pack → render.
  *
- * NOTE (Milestone 1): the canonical `docs/ai-pack-spec.md` was absent from the
- * handoff. The 14 canonical section keys below are a reconstruction that honours
- * the invariants the task DID specify (§29–§30):
- *   - never invent: every item cites evidence;
- *   - explicit ≠ inferred: `origin` distinguishes them;
- *   - uncertainty preserved: `confidence` + `uncertain`;
- *   - evidence links to TranscriptSegment and keeps its ORIGINAL language;
- *   - an empty section does not render;
- *   - the structured AI Pack is the SOURCE OF TRUTH, never parsed back from Markdown.
+ * Section titles are the canonical English headers the prototype emits; the
+ * synthesized LINE text is rendered in the output language, while important
+ * statements, evidence quotes and the transcript always keep the original
+ * spoken language.
  */
 
-export type AIPackSectionKey =
-  | 'overview'
+export type PackSectionKey =
+  | 'instructions'
+  | 'metadata'
   | 'participants'
-  | 'agenda'
-  | 'key_points'
-  | 'decisions'
-  | 'action_items'
-  | 'open_questions'
-  | 'risks'
-  | 'commitments'
-  | 'metrics'
-  | 'references'
-  | 'sentiment'
-  | 'glossary'
-  | 'next_steps';
+  | 'purpose'
+  | 'executiveContext'
+  | 'topics'
+  | 'importantStatements'
+  | 'explicitDecisions'
+  | 'openPoints'
+  | 'questions'
+  | 'numbersAndDates'
+  | 'ambiguities'
+  | 'evidence'
+  | 'transcript';
 
-/** Canonical order used for rendering and export. */
-export const AI_PACK_SECTION_KEYS: readonly AIPackSectionKey[] = [
-  'overview',
+/** Canonical order (docs/ai-pack-spec.md §Seções). */
+export const PACK_SECTION_KEYS: readonly PackSectionKey[] = [
+  'instructions',
+  'metadata',
   'participants',
-  'agenda',
-  'key_points',
-  'decisions',
-  'action_items',
-  'open_questions',
-  'risks',
-  'commitments',
-  'metrics',
-  'references',
-  'sentiment',
-  'glossary',
-  'next_steps',
+  'purpose',
+  'executiveContext',
+  'topics',
+  'importantStatements',
+  'explicitDecisions',
+  'openPoints',
+  'questions',
+  'numbersAndDates',
+  'ambiguities',
+  'evidence',
+  'transcript',
 ];
 
-/** Whether a statement was said outright or inferred from context. */
-export type ItemOrigin = 'explicit' | 'inferred';
+/** English canonical section headers (as emitted by the prototype). */
+export const PACK_SECTION_TITLE: Record<PackSectionKey, string> = {
+  instructions: 'Instructions for the AI',
+  metadata: 'Meeting',
+  participants: 'Participants',
+  purpose: 'Meeting purpose',
+  executiveContext: 'Executive context',
+  topics: 'Topics',
+  importantStatements: 'Important statements',
+  explicitDecisions: 'Explicit decisions',
+  openPoints: 'Open points',
+  questions: 'Questions raised',
+  numbersAndDates: 'Numbers and dates',
+  ambiguities: 'Ambiguities',
+  evidence: 'Evidence',
+  transcript: 'Full transcript',
+};
 
-export interface Evidence {
-  /** The cited TranscriptSegment. */
-  segmentId: Id;
-  /** Verbatim quote — MUST stay in the segment's original language. */
-  quote: string;
-  language: LanguageTag;
-  startSeconds: number;
-}
+/**
+ * Required sections show an explicit negative phrase when empty; optional
+ * sections are omitted entirely (docs/ai-pack-spec.md, decisions §8).
+ */
+export const PACK_SECTION_REQUIRED: Record<PackSectionKey, boolean> = {
+  instructions: false,
+  metadata: true,
+  participants: true,
+  // purpose/topics are normally present but omitted when empty (no phrase).
+  purpose: false,
+  executiveContext: false,
+  topics: false,
+  importantStatements: false,
+  explicitDecisions: true,
+  openPoints: true,
+  questions: false,
+  numbersAndDates: false,
+  ambiguities: false,
+  evidence: false,
+  transcript: false,
+};
 
-export interface AIPackItem {
-  id: Id;
-  /** Structured text in the AI Pack's `language` (export/structured language). */
+/** Bilingual negative phrase for a required section that came back empty. */
+export const PACK_SECTION_EMPTY_PHRASE: Partial<
+  Record<PackSectionKey, { 'pt-BR': string; 'en-US': string }>
+> = {
+  participants: { 'pt-BR': 'Participantes não identificados.', 'en-US': 'Participants not identified.' },
+  explicitDecisions: { 'pt-BR': 'Nenhuma decisão explícita.', 'en-US': 'No explicit decisions.' },
+  openPoints: { 'pt-BR': 'Nenhum ponto aberto.', 'en-US': 'No open points.' },
+};
+
+/** Confidence marker attached to a section (explicit vs inferred vs uncertain). */
+export type SectionConfidence = 'explicit' | 'inferred' | 'uncertain';
+
+export interface AIPackLine {
+  /** Rendered text (synthesized → output language; statements → original). */
   text: string;
-  origin: ItemOrigin;
-  /** 0–1. Preserved end-to-end; low confidence is never silently dropped. */
-  confidence: number;
-  /** Explicitly flags residual uncertainty for the reader. */
-  uncertain: boolean;
-  /** At least one evidence link — items without evidence are not produced. */
-  evidence: Evidence[];
-  /** Optional owner/assignee for action items & commitments. */
-  assignee?: string;
-  dueLabel?: string;
+  /** Optional evidence/seek pointer, in seconds. */
+  atSeconds?: number;
 }
 
 export interface AIPackSection {
-  key: AIPackSectionKey;
-  items: AIPackItem[];
+  key: PackSectionKey;
+  title: string;
+  required: boolean;
+  confidence: SectionConfidence;
+  lines: AIPackLine[];
 }
 
+/** A resolved AI Pack (already in the chosen output language). */
 export interface AIPack {
-  meetingId: Id;
-  /** Language of the STRUCTURED text (may differ from transcript/evidence). */
+  meetingId: string;
   language: LanguageTag;
+  /** Body sections in canonical order (metadata…ambiguities). */
   sections: AIPackSection[];
-  generatedAt: ISODateString;
-  model: string;
-  version: number;
 }
 
-/** Sections that actually have content (empty sections do not render). */
-export function nonEmptySections(pack: AIPack): AIPackSection[] {
-  const byKey = new Map(pack.sections.map((s) => [s.key, s]));
-  return AI_PACK_SECTION_KEYS.map((key) => byKey.get(key)).filter(
-    (s): s is AIPackSection => Boolean(s && s.items.length > 0),
-  );
+/**
+ * On-screen rendering rule: a section renders when it has lines, OR it is
+ * required (then it shows its negative phrase). Optional empty sections never
+ * render (no decorative placeholder).
+ */
+export function visibleSections(pack: AIPack): AIPackSection[] {
+  return pack.sections.filter((s) => s.lines.length > 0 || s.required);
 }

@@ -1,151 +1,160 @@
 import { describe, expect, it } from 'vitest';
-import { runExport, formatTimestamp, speakerName } from './engine';
-import { makeAIPack, makeMeeting, makeTranscript } from './fixtures';
-import type { ExportInput } from './engine';
-import type { ExportOptions } from '@loquia/domain';
+import { runExport, buildFilename, formatTimestamp } from './engine';
+import { makeInput, makePack } from './fixtures';
+import type { ExportConfig, ExportSections } from '@loquia/domain';
 
-function input(over?: Partial<ExportInput>): ExportInput {
+const allOn: ExportSections = { instructions: false, transcript: false, evidence: true, ambiguities: true };
+
+function cfg(over?: Partial<ExportConfig>): ExportConfig {
   return {
-    meeting: makeMeeting(),
-    aiPack: makeAIPack(),
-    transcript: makeTranscript(),
+    meetingId: 'm1',
+    preset: 'ai',
+    size: 'standard',
+    format: 'md',
+    sections: allOn,
+    outputLanguage: 'en-US',
     ...over,
   };
 }
 
-const base: ExportOptions = {
-  preset: 'ai_pack',
-  size: 'standard',
-  format: 'md',
-  language: 'en-US',
-  includeEvidence: true,
-};
-
 describe('formatTimestamp', () => {
-  it('formats mm:ss and hh:mm:ss', () => {
+  it('formats mm:ss', () => {
     expect(formatTimestamp(0)).toBe('00:00');
-    expect(formatTimestamp(65)).toBe('01:05');
-    expect(formatTimestamp(3661)).toBe('01:01:01');
+    expect(formatTimestamp(252)).toBe('04:12');
+    expect(formatTimestamp(1122)).toBe('18:42');
   });
 });
 
-describe('speakerName', () => {
-  it('prefers displayName, falls back to diarization label', () => {
-    expect(speakerName({ id: 's', diarizationLabel: 'Speaker 1', color: '#000' })).toBe('Speaker 1');
-    expect(
-      speakerName({ id: 's', diarizationLabel: 'Speaker 1', displayName: 'Ana', color: '#000' }),
-    ).toBe('Ana');
+describe('canonical section titles + order (Markdown)', () => {
+  it('emits English canonical headers in canonical order', () => {
+    const md = runExport(makeInput(), cfg()).content;
+    for (const h of ['# Meeting', '# Participants', '# Meeting purpose', '# Topics', '# Explicit decisions', '# Open points']) {
+      expect(md).toContain(h);
+    }
+    expect(md.indexOf('# Meeting purpose')).toBeLessThan(md.indexOf('# Topics'));
+    expect(md.indexOf('# Explicit decisions')).toBeLessThan(md.indexOf('# Open points'));
   });
 });
 
-describe('runExport — JSON', () => {
-  it('produces valid parseable JSON', () => {
-    const res = runExport(input(), { ...base, format: 'json' });
-    expect(res.format).toBe('json');
-    expect(res.mimeType).toContain('application/json');
-    const parsed = JSON.parse(res.content);
-    expect(parsed.meeting.title).toBe('Roadmap Q3');
-    expect(Array.isArray(parsed.aiPack)).toBe(true);
-  });
-
-  it('keeps evidence in its original language', () => {
-    const res = runExport(input(), { ...base, format: 'json', includeEvidence: true });
-    const parsed = JSON.parse(res.content);
-    const overview = parsed.aiPack.find((s: { key: string }) => s.key === 'overview');
-    expect(overview.items[0].evidence[0].language).toBe('pt-BR');
-    expect(overview.items[0].evidence[0].quote).toContain('roadmap do trimestre');
-  });
-});
-
-describe('runExport — Markdown', () => {
-  it('renders AI Pack section headings for the export language', () => {
-    const res = runExport(input(), { ...base, format: 'md', language: 'en-US' });
-    expect(res.content).toContain('## AI Pack');
-    expect(res.content).toContain('### Overview');
-    expect(res.content).toContain('### Metrics');
-  });
-
-  it('localizes headings to Portuguese', () => {
-    const res = runExport(input(), { ...base, format: 'md', language: 'pt-BR' });
-    expect(res.content).toContain('### Resumo executivo');
-  });
-
-  it('never renders empty sections', () => {
-    const res = runExport(input(), { ...base, format: 'md' });
-    expect(res.content).not.toContain('Glossary');
-    expect(res.content).not.toContain('Glossário');
-  });
-
-  it('flags inferred and uncertain items', () => {
-    const res = runExport(input(), { ...base, format: 'md', size: 'full' });
-    expect(res.content).toContain('_inferred_');
-    expect(res.content).toContain('_uncertain_');
+describe('evidence language rule', () => {
+  it('important statements keep the original spoken language even when exporting in English', () => {
+    const md = runExport(makeInput(), cfg({ format: 'md', outputLanguage: 'en-US' })).content;
+    expect(md).toContain('# Important statements');
+    expect(md).toContain('Sem a integração'); // pt-BR quote preserved
   });
 });
 
 describe('presets', () => {
-  it('clean_transcript emits transcript and no AI Pack', () => {
-    const res = runExport(input(), { ...base, preset: 'clean_transcript', format: 'md' });
-    expect(res.content).toContain('## Transcript');
-    expect(res.content).not.toContain('## AI Pack');
+  it('transcript preset is transcript-only', () => {
+    const md = runExport(makeInput(), cfg({ preset: 'transcript', format: 'md' })).content;
+    expect(md).toContain('# Full transcript');
+    expect(md).not.toContain('# Explicit decisions');
   });
-
-  it('full_fidelity includes transcript, timestamps and evidence', () => {
-    const res = runExport(input(), { ...base, preset: 'full_fidelity', format: 'md' });
-    expect(res.content).toContain('## AI Pack');
-    expect(res.content).toContain('## Transcript');
-    expect(res.content).toMatch(/\[00:00\]/);
-    expect(res.content).toContain('Evidence');
+  it('full preset includes the transcript', () => {
+    const md = runExport(makeInput(), cfg({ preset: 'full', format: 'md' })).content;
+    expect(md).toContain('# Explicit decisions');
+    expect(md).toContain('# Full transcript');
   });
-
-  it('custom preset honours explicit section selection in canonical order', () => {
-    const res = runExport(input(), {
-      ...base,
-      preset: 'custom',
-      sections: ['metrics', 'overview'],
-      format: 'md',
-    });
-    const overviewIdx = res.content.indexOf('Overview');
-    const metricsIdx = res.content.indexOf('Metrics');
-    expect(overviewIdx).toBeGreaterThan(-1);
-    expect(metricsIdx).toBeGreaterThan(-1);
-    // Overview comes before Metrics in canonical order.
-    expect(overviewIdx).toBeLessThan(metricsIdx);
+  it('analysis preset includes the transcript', () => {
+    const md = runExport(makeInput(), cfg({ preset: 'analysis', format: 'md' })).content;
+    expect(md).toContain('# Full transcript');
   });
 });
 
 describe('sizes', () => {
-  it('compact drops inferred items', () => {
-    const res = runExport(input(), { ...base, size: 'compact', format: 'md', preset: 'full_fidelity' });
-    // The only inferred item is the risk; risks section should disappear.
-    expect(res.content).not.toContain('### Risks');
+  it('compact removes Questions raised and Numbers and dates', () => {
+    const md = runExport(makeInput(), cfg({ size: 'compact', format: 'md' })).content;
+    expect(md).not.toContain('# Questions raised');
+    expect(md).not.toContain('# Numbers and dates');
   });
-
-  it('full keeps inferred items', () => {
-    const res = runExport(input(), { ...base, size: 'full', format: 'md', preset: 'full_fidelity' });
-    expect(res.content).toContain('### Risks');
-  });
-});
-
-describe('speaker rename propagation', () => {
-  it('renamed speaker appears in transcript export', () => {
-    const transcript = makeTranscript();
-    const s1 = transcript.speakers.find((s) => s.id === 'sp1');
-    if (s1) s1.displayName = 'Rafael';
-    const res = runExport(input({ transcript }), {
-      ...base,
-      preset: 'full_fidelity',
-      format: 'txt',
-    });
-    expect(res.content).toContain('Rafael:');
-    expect(res.content).not.toContain('Speaker 1:');
+  it('standard keeps them', () => {
+    const md = runExport(makeInput(), cfg({ size: 'standard', format: 'md' })).content;
+    expect(md).toContain('# Questions raised');
+    expect(md).toContain('# Numbers and dates');
   });
 });
 
-describe('filename + bytes', () => {
-  it('builds a slugged filename and byte count', () => {
-    const res = runExport(input(), { ...base, format: 'json' });
-    expect(res.filename).toBe('roadmap-q3-ai_pack-standard.json');
-    expect(res.bytes).toBeGreaterThan(0);
+describe('section toggles', () => {
+  it('evidence off removes Important statements', () => {
+    const md = runExport(
+      makeInput(),
+      cfg({ sections: { ...allOn, evidence: false }, format: 'md' }),
+    ).content;
+    expect(md).not.toContain('# Important statements');
+  });
+  it('ambiguities off removes Ambiguities', () => {
+    const md = runExport(
+      makeInput(),
+      cfg({ sections: { ...allOn, ambiguities: false }, format: 'md' }),
+    ).content;
+    expect(md).not.toContain('# Ambiguities');
+  });
+  it('instructions on prepends the instruction block', () => {
+    const md = runExport(
+      makeInput(),
+      cfg({ sections: { ...allOn, instructions: true }, format: 'md' }),
+    ).content;
+    expect(md.startsWith('# Instructions for the AI')).toBe(true);
+  });
+});
+
+describe('required empty sections show the negative phrase', () => {
+  it('empty explicit decisions renders "No explicit decisions."', () => {
+    const pack = makePack('en-US');
+    pack.sections.find((s) => s.key === 'explicitDecisions')!.lines = [];
+    const md = runExport(makeInput({ pack }), cfg({ format: 'md' })).content;
+    expect(md).toContain('# Explicit decisions');
+    expect(md).toContain('No explicit decisions.');
+  });
+  it('uses the Portuguese phrase for a pt output pack', () => {
+    const pack = makePack('pt-BR');
+    pack.sections.find((s) => s.key === 'openPoints')!.lines = [];
+    const md = runExport(makeInput({ pack }), cfg({ format: 'md', outputLanguage: 'pt-BR' })).content;
+    expect(md).toContain('Nenhum ponto aberto.');
+  });
+});
+
+describe('JSON', () => {
+  it('is valid and uses the canonical keys', () => {
+    const res = runExport(makeInput(), cfg({ format: 'json' }));
+    const parsed = JSON.parse(res.content);
+    expect(parsed.meeting.title).toBe('Commercial meeting with Atlas');
+    expect(Array.isArray(parsed.participants)).toBe(true);
+    expect(parsed.context.purpose).toContain('pilot');
+    for (const k of ['topics', 'important_statements', 'decisions', 'open_points', 'questions', 'numbers_and_dates', 'ambiguities', 'transcript']) {
+      expect(k in parsed).toBe(true);
+    }
+  });
+  it('skipped sections become empty arrays, not absent', () => {
+    const res = runExport(makeInput(), cfg({ format: 'json', size: 'compact' }));
+    const parsed = JSON.parse(res.content);
+    expect(parsed.questions).toEqual([]);
+    expect(parsed.numbers_and_dates).toEqual([]);
+  });
+  it('important_statements carry timestamp + text', () => {
+    const res = runExport(makeInput(), cfg({ format: 'json' }));
+    const parsed = JSON.parse(res.content);
+    expect(parsed.important_statements[0].timestamp).toBe('18:42');
+    expect(parsed.important_statements[0].text).toContain('Sem a integração');
+  });
+});
+
+describe('txt', () => {
+  it('strips markdown headers and bold', () => {
+    const txt = runExport(makeInput(), cfg({ format: 'txt' })).content;
+    expect(txt).not.toContain('# ');
+    expect(txt).not.toContain('**');
+    expect(txt).toContain('Meeting purpose');
+  });
+});
+
+describe('filename', () => {
+  it('builds loquia-<slug>-<kind>.<ext>', () => {
+    expect(buildFilename('Commercial meeting with Atlas', cfg({ format: 'md' }))).toBe(
+      'loquia-commercial-meeting-with-atlas-ai-pack.md',
+    );
+    expect(buildFilename('Reunião com Atlas', cfg({ format: 'json', preset: 'transcript' }))).toBe(
+      'loquia-reuniao-com-atlas-transcript.json',
+    );
   });
 });

@@ -1,4 +1,4 @@
-import type { ExportFormat, ExportPreset, ExportSize } from './export';
+import type { ExportFormat, PackSize, PresetId } from './export';
 import type { Id, LanguageTag, Locale, Theme } from './common';
 
 export interface GeneralSettings {
@@ -17,8 +17,8 @@ export interface RecordingSettings {
 }
 
 export interface ExportSettings {
-  defaultPreset: ExportPreset;
-  defaultSize: ExportSize;
+  defaultPreset: PresetId;
+  defaultSize: PackSize;
   defaultFormat: ExportFormat;
   /** Structured/export language default. */
   exportLanguage: LanguageTag;

@@ -1,7 +1,7 @@
 import { setRequestLocale } from 'next-intl/server';
 import { useTranslations } from 'next-intl';
 import { Card, CardHeader, CardTitle } from '@loquia/ui';
-import { AI_PACK_SECTION_KEYS } from '@loquia/domain';
+import { PACK_SECTION_KEYS, PACK_SECTION_TITLE } from '@loquia/domain';
 import { MarketingShell } from '@/components/marketing/marketing-shell';
 
 export default async function ProductPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -25,10 +25,10 @@ function Product() {
       </header>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {AI_PACK_SECTION_KEYS.map((key) => (
+        {PACK_SECTION_KEYS.map((key) => (
           <Card key={key}>
             <CardHeader className="p-4">
-              <CardTitle className="text-sm capitalize">{key.replace(/_/g, ' ')}</CardTitle>
+              <CardTitle className="text-sm">{PACK_SECTION_TITLE[key]}</CardTitle>
             </CardHeader>
           </Card>
         ))}

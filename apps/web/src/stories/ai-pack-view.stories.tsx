@@ -1,54 +1,56 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import type { AIPack } from '@loquia/domain';
+import { PACK_SECTION_REQUIRED, PACK_SECTION_TITLE, type AIPack } from '@loquia/domain';
 import { AIPackView } from '@/components/product/ai-pack-view';
 
-const pack: AIPack = {
-  meetingId: 'm1',
-  language: 'en-US',
-  generatedAt: '2026-08-12T13:05:00.000Z',
-  model: 'mock-1',
-  version: 1,
-  sections: [
-    {
-      key: 'decisions',
-      items: [
-        {
-          id: 'd1',
-          text: 'Prioritize the Acme integration before the end of August.',
-          origin: 'explicit',
-          confidence: 0.92,
-          uncertain: false,
-          evidence: [{ segmentId: 's3', quote: 'priorizar a integração da Acme', language: 'pt-BR', startSeconds: 22 }],
-        },
-      ],
-    },
-    {
-      key: 'risks',
-      items: [
-        {
-          id: 'r1',
-          text: 'Delivery timeline may be tight given the data dependency.',
-          origin: 'inferred',
-          confidence: 0.45,
-          uncertain: true,
-          evidence: [{ segmentId: 's4', quote: 'se a equipe de dados não entregar', language: 'pt-BR', startSeconds: 34 }],
-        },
-      ],
-    },
-    { key: 'glossary', items: [] },
-  ],
-};
+function pack(language: string): AIPack {
+  return {
+    meetingId: 'm1',
+    language,
+    sections: [
+      {
+        key: 'purpose',
+        title: PACK_SECTION_TITLE.purpose,
+        required: PACK_SECTION_REQUIRED.purpose,
+        confidence: 'inferred',
+        lines: [{ text: 'Discuss pilot scope, integration requirements and commercial conditions.' }],
+      },
+      {
+        key: 'explicitDecisions',
+        title: PACK_SECTION_TITLE.explicitDecisions,
+        required: PACK_SECTION_REQUIRED.explicitDecisions,
+        confidence: 'explicit',
+        lines: [{ text: 'The pilot will start with one business unit.' }],
+      },
+      {
+        key: 'importantStatements',
+        title: PACK_SECTION_TITLE.importantStatements,
+        required: PACK_SECTION_REQUIRED.importantStatements,
+        confidence: 'explicit',
+        lines: [
+          { text: 'João Silva: “Sem a integração, não acho que a gente consiga rodar o piloto direito.”', atSeconds: 1122 },
+        ],
+      },
+      {
+        key: 'ambiguities',
+        title: PACK_SECTION_TITLE.ambiguities,
+        required: PACK_SECTION_REQUIRED.ambiguities,
+        confidence: 'uncertain',
+        lines: [{ text: 'The final launch date was discussed but not formally confirmed.' }],
+      },
+    ],
+  };
+}
 
 const meta: Meta<typeof AIPackView> = {
   title: 'Product/AIPackView',
   component: AIPackView,
-  args: { pack, locale: 'en-US' },
+  args: { pack: pack('en-US') },
 };
 export default meta;
 type Story = StoryObj<typeof AIPackView>;
 
 export const Default: Story = {};
-export const Portuguese: Story = { args: { locale: 'pt-BR' } };
+export const Portuguese: Story = { args: { pack: pack('pt-BR') } };
 export const Empty: Story = {
-  args: { pack: { ...pack, sections: [{ key: 'glossary', items: [] }] } },
+  args: { pack: { meetingId: 'm1', language: 'en-US', sections: [] } },
 };

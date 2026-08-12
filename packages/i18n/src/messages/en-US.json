@@ -216,18 +216,25 @@
     "copy": "Copy to clipboard",
     "download": "Download",
     "presets": {
-      "ai_pack": "AI Pack",
-      "clean_transcript": "Clean Transcript",
+      "ai": "AI Pack",
+      "transcript": "Clean Transcript",
       "analysis": "Analysis",
       "writing": "Writing",
-      "full_fidelity": "Full Fidelity",
-      "custom": "Custom"
+      "full": "Full Fidelity"
     },
     "sizes": {
       "compact": "Compact",
       "standard": "Standard",
       "full": "Full"
     },
+    "toggles": {
+      "instructions": "AI instructions",
+      "transcript": "Transcript",
+      "evidence": "Evidence",
+      "ambiguities": "Ambiguities"
+    },
+    "writingGoal": "Writing goal",
+    "writingGoalPlaceholder": "e.g. a follow-up email to the client",
     "history": "Export history",
     "copied": "Copied to clipboard"
   },

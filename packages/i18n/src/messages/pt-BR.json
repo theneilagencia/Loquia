@@ -216,18 +216,25 @@
     "copy": "Copiar para a área de transferência",
     "download": "Baixar",
     "presets": {
-      "ai_pack": "AI Pack",
-      "clean_transcript": "Transcrição Limpa",
+      "ai": "AI Pack",
+      "transcript": "Transcrição Limpa",
       "analysis": "Análise",
       "writing": "Escrita",
-      "full_fidelity": "Fidelidade Total",
-      "custom": "Personalizado"
+      "full": "Fidelidade Total"
     },
     "sizes": {
       "compact": "Compacto",
       "standard": "Padrão",
       "full": "Completo"
     },
+    "toggles": {
+      "instructions": "Instruções para a IA",
+      "transcript": "Transcrição",
+      "evidence": "Evidência",
+      "ambiguities": "Ambiguidades"
+    },
+    "writingGoal": "Objetivo do texto",
+    "writingGoalPlaceholder": "ex.: um e-mail de follow-up para o cliente",
     "history": "Histórico de exportações",
     "copied": "Copiado para a área de transferência"
   },

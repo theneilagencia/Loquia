@@ -2,8 +2,8 @@ import type {
   AccessRequest,
   AIPack,
   AuditEvent,
+  ExportConfig,
   ExportHistoryEntry,
-  ExportOptions,
   ExportResult,
   Id,
   Invitation,
@@ -93,7 +93,8 @@ export interface MeetingService {
   /** Advance the mock pipeline one tick; returns the updated job. */
   tickProcessing(meetingId: Id): Promise<ProcessingJob | null>;
   retryProcessing(meetingId: Id): Promise<Result<ProcessingJob>>;
-  getAIPack(meetingId: Id): Promise<AIPack | null>;
+  /** Resolved AI Pack in the requested output language (synthesized content). */
+  getAIPack(meetingId: Id, outputLanguage: string): Promise<AIPack | null>;
 }
 
 export interface CreateMeetingInput {
@@ -123,10 +124,10 @@ export interface TranscriptService {
 }
 
 export interface ExportService {
-  /** Pure render of a meeting/AI Pack into a target format. */
-  render(meetingId: Id, options: ExportOptions): Promise<Result<ExportResult>>;
-  download(meetingId: Id, options: ExportOptions): Promise<Result<ExportResult>>;
-  copyToClipboard(meetingId: Id, options: ExportOptions): Promise<Result<ExportResult>>;
+  /** Single engine (preview = clipboard = download); md/txt/json from one pack. */
+  render(config: ExportConfig): Promise<Result<ExportResult>>;
+  download(config: ExportConfig): Promise<Result<ExportResult>>;
+  copyToClipboard(config: ExportConfig): Promise<Result<ExportResult>>;
   history(meetingId?: Id): Promise<ExportHistoryEntry[]>;
 }
 

@@ -1,323 +1,250 @@
 import {
-  nonEmptySections,
+  MIME_BY_FORMAT,
+  PACK_SECTION_EMPTY_PHRASE,
+  PACK_SECTION_TITLE,
   type AIPack,
-  type AIPackItem,
-  type AIPackSection,
-  type ExportFormat,
-  type ExportOptions,
+  type AIPackLine,
+  type ExportConfig,
   type ExportResult,
-  type Meeting,
-  type Speaker,
-  type Transcript,
-  type TranscriptSegment,
+  type PackSectionKey,
 } from '@loquia/domain';
-import { stringsFor, type EngineStrings } from './labels';
-import {
-  presetBehaviour,
-  resolveSections,
-  sizeItemCap,
-  sizeKeepsInferred,
-} from './presets';
 
-export interface ExportInput {
-  meeting: Meeting;
-  aiPack: AIPack;
-  transcript: Transcript;
+/** Meeting metadata the engine needs (language-neutral facts). */
+export interface ExportMeetingMeta {
+  title: string;
+  date: string;
+  duration: string;
+  language: string;
+  source: string;
+  status: string;
 }
 
-const MIME: Record<ExportFormat, string> = {
-  md: 'text/markdown;charset=utf-8',
-  txt: 'text/plain;charset=utf-8',
-  json: 'application/json;charset=utf-8',
-};
+export interface ExportTranscriptLine {
+  stamp: string;
+  speaker: string;
+  text: string;
+  atSeconds: number;
+}
+
+export interface ExportInput {
+  meeting: ExportMeetingMeta;
+  participants: string[];
+  /** Resolved pack (synthesized lines already in `pack.language`). */
+  pack: AIPack;
+  transcript: ExportTranscriptLine[];
+}
+
+const INSTRUCTIONS_BLOCK =
+  '# Instructions for the AI\n\n' +
+  'Use the meeting material below as the primary source of truth.\n\n' +
+  '* Do not invent facts not supported by the meeting.\n' +
+  '* Distinguish explicit statements from inference.\n' +
+  '* Preserve names, numbers, dates and commitments exactly.\n' +
+  '* Use timestamps when citing important claims.\n' +
+  '* If information is unclear or missing, state that explicitly.\n';
 
 export function formatTimestamp(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
-  const hh = Math.floor(s / 3600);
-  const mm = Math.floor((s % 3600) / 60);
+  const mm = Math.floor(s / 60);
   const ss = s % 60;
   const pad = (n: number) => n.toString().padStart(2, '0');
-  return hh > 0 ? `${pad(hh)}:${pad(mm)}:${pad(ss)}` : `${pad(mm)}:${pad(ss)}`;
+  return `${pad(mm)}:${pad(ss)}`;
 }
 
-/** Speaker display name, honouring rename (falls back to diarization label). */
-export function speakerName(speaker: Speaker | undefined): string {
-  if (!speaker) return 'Unknown';
-  return speaker.displayName?.trim() ? speaker.displayName : speaker.diarizationLabel;
+function isPt(lang: string): boolean {
+  return lang.toLowerCase().startsWith('pt');
 }
 
-function safeFilename(title: string): string {
+interface Plan {
+  transcriptOnly: boolean;
+  includeTranscript: boolean;
+  skip: Set<PackSectionKey>;
+}
+
+function buildPlan(config: ExportConfig, status: string): Plan {
+  if (status !== 'ready') {
+    return { transcriptOnly: true, includeTranscript: true, skip: new Set() };
+  }
+  if (config.preset === 'transcript') {
+    return { transcriptOnly: true, includeTranscript: true, skip: new Set() };
+  }
+  const skip = new Set<PackSectionKey>();
+  if (!config.sections.evidence) skip.add('importantStatements');
+  if (!config.sections.ambiguities) skip.add('ambiguities');
+  if (config.size === 'compact') {
+    skip.add('numbersAndDates');
+    skip.add('questions');
+  }
+  const includeTranscript =
+    !!config.sections.transcript ||
+    config.size === 'full' ||
+    config.preset === 'analysis' ||
+    config.preset === 'full';
+  return { transcriptOnly: false, includeTranscript, skip };
+}
+
+/** Resolve a section's lines, injecting the negative phrase for required-empty. */
+function linesForKey(pack: AIPack, key: PackSectionKey): AIPackLine[] {
+  const section = pack.sections.find((s) => s.key === key);
+  if (section && section.lines.length > 0) return section.lines;
+  const phrase = PACK_SECTION_EMPTY_PHRASE[key];
+  if (section && section.required && phrase) {
+    return [{ text: isPt(pack.language) ? phrase['pt-BR'] : phrase['en-US'] }];
+  }
+  return [];
+}
+
+/** Body sections in render order (metadata … ambiguities). */
+const BODY_ORDER: PackSectionKey[] = [
+  'metadata',
+  'participants',
+  'purpose',
+  'executiveContext',
+  'topics',
+  'importantStatements',
+  'explicitDecisions',
+  'openPoints',
+  'questions',
+  'numbersAndDates',
+  'ambiguities',
+];
+
+function renderTranscriptBlock(lines: ExportTranscriptLine[]): string {
+  return lines.map((l) => `[${l.stamp}] ${l.speaker}:\n${l.text}`).join('\n\n');
+}
+
+function renderMarkdown(input: ExportInput, config: ExportConfig, plan: Plan): string {
+  const pt = isPt(pack_language(input));
+  let out = '';
+  if (config.sections.instructions) out += INSTRUCTIONS_BLOCK + '\n';
+  if (config.preset === 'writing' && config.writingGoal) {
+    out += `# Writing context\n\n${pt ? 'Objetivo: ' : 'Goal: '}${config.writingGoal}\n\n`;
+  }
+  if (plan.transcriptOnly) {
+    return (
+      (config.sections.instructions ? INSTRUCTIONS_BLOCK + '\n' : '') +
+      '# Full transcript\n\n' +
+      renderTranscriptBlock(input.transcript)
+    ).trim();
+  }
+  for (const key of BODY_ORDER) {
+    if (plan.skip.has(key)) continue;
+    const lines = linesForKey(input.pack, key);
+    if (lines.length === 0) continue;
+    out += `# ${PACK_SECTION_TITLE[key]}\n\n`;
+    for (const l of lines) {
+      out += (l.atSeconds != null ? `[${formatTimestamp(l.atSeconds)}] ` : '') + l.text + '\n';
+    }
+    out += '\n';
+  }
+  if (plan.includeTranscript) {
+    out += '# Full transcript\n\n';
+    for (const l of input.transcript) {
+      out += `[${l.stamp}] ${l.speaker}:\n${l.text}\n\n`;
+    }
+  }
+  return out.trim();
+}
+
+function pack_language(input: ExportInput): string {
+  return input.pack.language;
+}
+
+function renderText(input: ExportInput, config: ExportConfig, plan: Plan): string {
+  return renderMarkdown(input, config, plan)
+    .replace(/^#+\s*/gm, '')
+    .replace(/^\*\s+/gm, '- ')
+    .replace(/\*\*/g, '');
+}
+
+function renderJson(input: ExportInput, plan: Plan): string {
+  const { meeting, participants, transcript, pack } = input;
+  const base = {
+    meeting: {
+      title: meeting.title,
+      date: meeting.date,
+      duration: meeting.duration,
+      language: meeting.language,
+      source: meeting.source,
+      status: meeting.status,
+    },
+    participants,
+  };
+  const transcriptJson = transcript.map((l) => ({
+    timestamp: l.stamp,
+    speaker: l.speaker,
+    text: l.text,
+  }));
+  if (plan.transcriptOnly) {
+    return JSON.stringify({ ...base, transcript: transcriptJson }, null, 2) + '\n';
+  }
+  const sec = (key: PackSectionKey): string[] =>
+    plan.skip.has(key) ? [] : linesForKey(pack, key).map((l) => l.text);
+  const purpose = linesForKey(pack, 'purpose')[0]?.text ?? null;
+  const importantStatements = plan.skip.has('importantStatements')
+    ? []
+    : linesForKey(pack, 'importantStatements').map((l) => ({
+        timestamp: l.atSeconds != null ? formatTimestamp(l.atSeconds) : null,
+        text: l.text,
+      }));
   return (
-    title
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .replace(/[^a-zA-Z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .toLowerCase() || 'meeting'
+    JSON.stringify(
+      {
+        ...base,
+        context: { purpose },
+        topics: sec('topics'),
+        important_statements: importantStatements,
+        decisions: sec('explicitDecisions'),
+        open_points: sec('openPoints'),
+        questions: sec('questions'),
+        numbers_and_dates: sec('numbersAndDates'),
+        ambiguities: sec('ambiguities'),
+        transcript: plan.includeTranscript ? transcriptJson : [],
+      },
+      null,
+      2,
+    ) + '\n'
   );
 }
 
-interface ResolvedPlan {
-  sections: AIPackSection[];
-  includeTranscript: boolean;
-  includeEvidence: boolean;
-  includeTimestamps: boolean;
-  itemCap: number;
-  keepInferred: boolean;
+export function buildFilename(title: string, config: ExportConfig): string {
+  const slug =
+    (title || 'reuniao')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 44) || 'reuniao';
+  const kind = config.preset === 'transcript' ? 'transcript' : 'ai-pack';
+  return `loquia-${slug}-${kind}.${config.format}`;
 }
 
-function plan(input: ExportInput, options: ExportOptions): ResolvedPlan {
-  const behaviour = presetBehaviour(options.preset);
-  const wantedKeys = new Set(resolveSections(options.preset, options.sections));
-  const available = nonEmptySections(input.aiPack).filter((s) => wantedKeys.has(s.key));
-  const keepInferred = sizeKeepsInferred(options.size);
-  const itemCap = sizeItemCap(options.size);
-
-  const sections = available
-    .map((section) => trimSection(section, itemCap, keepInferred))
-    .filter((s) => s.items.length > 0);
-
-  return {
-    sections,
-    includeTranscript: options.includeTranscript ?? behaviour.includeTranscript,
-    includeEvidence: options.includeEvidence ?? behaviour.includeEvidence,
-    includeTimestamps: options.includeTimestamps ?? behaviour.includeTimestamps,
-    itemCap,
-    keepInferred,
-  };
-}
-
-function trimSection(
-  section: AIPackSection,
-  itemCap: number,
-  keepInferred: boolean,
-): AIPackSection {
-  let items = section.items;
-  if (!keepInferred) {
-    items = items.filter((i) => i.origin === 'explicit');
-  }
-  // Highest confidence first, stable for equal confidence.
-  items = [...items].sort((a, b) => b.confidence - a.confidence);
-  if (Number.isFinite(itemCap)) {
-    items = items.slice(0, itemCap);
-  }
-  return { key: section.key, items };
-}
-
-function speakerMap(transcript: Transcript): Map<string, Speaker> {
-  return new Map(transcript.speakers.map((s) => [s.id, s]));
-}
-
-// ---------------------------------------------------------------------------
-// Markdown
-// ---------------------------------------------------------------------------
-
-function renderItemMd(
-  item: AIPackItem,
-  strings: EngineStrings,
-  includeEvidence: boolean,
-): string {
-  const tags: string[] = [];
-  if (item.origin === 'inferred') tags.push(`_${strings.inferred}_`);
-  if (item.uncertain) tags.push(`_${strings.uncertain}_`);
-  const meta: string[] = [];
-  if (item.assignee) meta.push(`${strings.assignee}: ${item.assignee}`);
-  if (item.dueLabel) meta.push(`${strings.due}: ${item.dueLabel}`);
-
-  let line = `- ${item.text}`;
-  if (tags.length) line += ` (${tags.join(', ')})`;
-  const lines = [line];
-  if (meta.length) lines.push(`  - ${meta.join(' · ')}`);
-  if (includeEvidence) {
-    for (const ev of item.evidence) {
-      lines.push(`  - ${strings.evidence} [${formatTimestamp(ev.startSeconds)}]: "${ev.quote}"`);
-    }
-  }
-  return lines.join('\n');
-}
-
-function renderMarkdown(input: ExportInput, options: ExportOptions, p: ResolvedPlan): string {
-  const s = stringsFor(options.language);
-  const out: string[] = [];
-  out.push(`# ${input.meeting.title}`);
-  out.push('');
-  out.push(`> ${s.language}: ${options.language} · ${s.generatedAt}: ${input.aiPack.generatedAt}`);
-  out.push('');
-
-  if (p.sections.length > 0) {
-    out.push(`## ${s.aiPack}`);
-    out.push('');
-    for (const section of p.sections) {
-      out.push(`### ${s.sections[section.key]}`);
-      out.push('');
-      for (const item of section.items) {
-        out.push(renderItemMd(item, s, p.includeEvidence));
-      }
-      out.push('');
-    }
-  }
-
-  if (p.includeTranscript) {
-    const speakers = speakerMap(input.transcript);
-    out.push(`## ${s.transcript}`);
-    out.push('');
-    for (const seg of input.transcript.segments) {
-      out.push(renderSegmentLine(seg, speakers.get(seg.speakerId), p.includeTimestamps));
-    }
-    out.push('');
-  }
-
-  return out.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
-}
-
-function renderSegmentLine(
-  seg: TranscriptSegment,
-  speaker: Speaker | undefined,
-  includeTimestamps: boolean,
-): string {
-  const name = speakerName(speaker);
-  const ts = includeTimestamps ? `[${formatTimestamp(seg.startSeconds)}] ` : '';
-  return `${ts}**${name}:** ${seg.text}`;
-}
-
-// ---------------------------------------------------------------------------
-// Plain text
-// ---------------------------------------------------------------------------
-
-function renderText(input: ExportInput, options: ExportOptions, p: ResolvedPlan): string {
-  const s = stringsFor(options.language);
-  const out: string[] = [];
-  out.push(input.meeting.title.toUpperCase());
-  out.push(`${s.language}: ${options.language}`);
-  out.push('');
-
-  if (p.sections.length > 0) {
-    out.push(s.aiPack.toUpperCase());
-    out.push('');
-    for (const section of p.sections) {
-      out.push(`${s.sections[section.key]}`);
-      for (const item of section.items) {
-        const tag =
-          item.origin === 'inferred' || item.uncertain
-            ? ` (${[item.origin === 'inferred' ? s.inferred : '', item.uncertain ? s.uncertain : '']
-                .filter(Boolean)
-                .join(', ')})`
-            : '';
-        out.push(`  - ${item.text}${tag}`);
-        if (p.includeEvidence) {
-          for (const ev of item.evidence) {
-            out.push(`      ${s.evidence} [${formatTimestamp(ev.startSeconds)}]: "${ev.quote}"`);
-          }
-        }
-      }
-      out.push('');
-    }
-  }
-
-  if (p.includeTranscript) {
-    const speakers = speakerMap(input.transcript);
-    out.push(s.transcript.toUpperCase());
-    out.push('');
-    for (const seg of input.transcript.segments) {
-      const name = speakerName(speakers.get(seg.speakerId));
-      const ts = p.includeTimestamps ? `[${formatTimestamp(seg.startSeconds)}] ` : '';
-      out.push(`${ts}${name}: ${seg.text}`);
-    }
-    out.push('');
-  }
-
-  return out.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
-}
-
-// ---------------------------------------------------------------------------
-// JSON
-// ---------------------------------------------------------------------------
-
-function renderJson(input: ExportInput, options: ExportOptions, p: ResolvedPlan): string {
-  const speakers = speakerMap(input.transcript);
-  const payload = {
-    meeting: {
-      id: input.meeting.id,
-      title: input.meeting.title,
-      meetingLanguage: input.meeting.meetingLanguage,
-      durationSeconds: input.meeting.durationSeconds,
-    },
-    export: {
-      preset: options.preset,
-      size: options.size,
-      language: options.language,
-      generatedAt: input.aiPack.generatedAt,
-    },
-    aiPack: p.sections.map((section) => ({
-      key: section.key,
-      items: section.items.map((item) => ({
-        text: item.text,
-        origin: item.origin,
-        confidence: item.confidence,
-        uncertain: item.uncertain,
-        assignee: item.assignee ?? null,
-        dueLabel: item.dueLabel ?? null,
-        evidence: p.includeEvidence
-          ? item.evidence.map((ev) => ({
-              segmentId: ev.segmentId,
-              startSeconds: ev.startSeconds,
-              language: ev.language,
-              quote: ev.quote,
-            }))
-          : [],
-      })),
-    })),
-    transcript: p.includeTranscript
-      ? {
-          language: input.transcript.language,
-          segments: input.transcript.segments.map((seg) => ({
-            id: seg.id,
-            speaker: speakerName(speakers.get(seg.speakerId)),
-            startSeconds: seg.startSeconds,
-            endSeconds: seg.endSeconds,
-            text: seg.text,
-            language: seg.language,
-          })),
-        }
-      : null,
-  };
-  return JSON.stringify(payload, null, 2) + '\n';
-}
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
-/**
- * The single ExportEngine used for preview, clipboard and download (spec §31).
- * Pure and deterministic: same input + options ⇒ same output.
- */
-export function runExport(input: ExportInput, options: ExportOptions): ExportResult {
-  const p = plan(input, options);
+/** Single engine for preview, clipboard and download (decisions §14). */
+export function runExport(input: ExportInput, config: ExportConfig): ExportResult {
+  const plan = buildPlan(config, input.meeting.status);
   let content: string;
-  switch (options.format) {
+  switch (config.format) {
     case 'md':
-      content = renderMarkdown(input, options, p);
+      content = renderMarkdown(input, config, plan);
       break;
     case 'txt':
-      content = renderText(input, options, p);
+      content = renderText(input, config, plan);
       break;
     case 'json':
-      content = renderJson(input, options, p);
+      content = renderJson(input, plan);
       break;
     default: {
-      const exhaustive: never = options.format;
+      const exhaustive: never = config.format;
       throw new Error(`Unsupported format: ${String(exhaustive)}`);
     }
   }
-
-  const base = safeFilename(input.meeting.title);
-  const filename = `${base}-${options.preset}-${options.size}.${options.format}`;
+  const filename = buildFilename(input.meeting.title, config);
   return {
     filename,
-    mimeType: MIME[options.format],
+    mimeType: MIME_BY_FORMAT[config.format],
     content,
-    format: options.format,
+    format: config.format,
     bytes: new TextEncoder().encode(content).length,
   };
 }

@@ -1,4 +1,5 @@
-import type { AIPack, Transcript } from '@loquia/domain';
+import type { Transcript } from '@loquia/domain';
+import type { PackSource } from './pack-source';
 
 /**
  * Deterministic demo content produced when a mock ProcessingJob reaches the
@@ -7,7 +8,7 @@ import type { AIPack, Transcript } from '@loquia/domain';
 export function generateDemoContent(
   meetingId: string,
   meetingLanguage: string,
-): { transcript: Transcript; aiPack: AIPack } {
+): { transcript: Transcript; packSource: PackSource } {
   const now = new Date().toISOString();
   const isPt = meetingLanguage.toLowerCase().startsWith('pt');
 
@@ -34,8 +35,8 @@ export function generateDemoContent(
     language: meetingLanguage,
     updatedAt: now,
     speakers: [
-      { id: `${meetingId}_sp1`, diarizationLabel: 'Speaker 1', color: '#4f46e5' },
-      { id: `${meetingId}_sp2`, diarizationLabel: 'Speaker 2', color: '#0ea5e9' },
+      { id: `${meetingId}_sp1`, diarizationLabel: 'Speaker 1', color: '#5B4AE6' },
+      { id: `${meetingId}_sp2`, diarizationLabel: 'Speaker 2', color: '#337965' },
     ],
     segments: lines.map((text, i) => ({
       id: `${meetingId}_s${i + 1}`,
@@ -48,83 +49,43 @@ export function generateDemoContent(
     })),
   };
 
-  const evidenceLang = meetingLanguage;
-  const aiPack: AIPack = {
+  const packSource: PackSource = {
     meetingId,
-    language: 'en-US',
-    generatedAt: now,
-    model: 'mock-1',
-    version: 1,
     sections: [
-      {
-        key: 'overview',
-        items: [
-          {
-            id: `${meetingId}_o1`,
-            text: 'Project status review; discovery complete with three opportunities identified.',
-            origin: 'explicit',
-            confidence: 0.9,
-            uncertain: false,
-            evidence: [{ segmentId: `${meetingId}_s2`, quote: lines[1] ?? '', language: evidenceLang, startSeconds: 15 }],
-          },
-        ],
-      },
-      {
-        key: 'decisions',
-        items: [
-          {
-            id: `${meetingId}_d1`,
-            text: 'Focus on the first opportunity in the next sprint.',
-            origin: 'explicit',
-            confidence: 0.88,
-            uncertain: false,
-            evidence: [{ segmentId: `${meetingId}_s3`, quote: lines[2] ?? '', language: evidenceLang, startSeconds: 30 }],
-          },
-        ],
-      },
-      {
-        key: 'action_items',
-        items: [
-          {
-            id: `${meetingId}_a1`,
-            text: 'Prepare the requirements document.',
-            origin: 'explicit',
-            confidence: 0.86,
-            uncertain: false,
-            assignee: 'Ana',
-            dueLabel: isPt ? 'Sexta-feira' : 'Friday',
-            evidence: [{ segmentId: `${meetingId}_s5`, quote: lines[4] ?? '', language: evidenceLang, startSeconds: 60 }],
-          },
-        ],
-      },
-      {
-        key: 'risks',
-        items: [
-          {
-            id: `${meetingId}_r1`,
-            text: 'Dependency risk with the external vendor.',
-            origin: 'explicit',
-            confidence: 0.82,
-            uncertain: false,
-            evidence: [{ segmentId: `${meetingId}_s4`, quote: lines[3] ?? '', language: evidenceLang, startSeconds: 45 }],
-          },
-        ],
-      },
-      {
-        key: 'next_steps',
-        items: [
-          {
-            id: `${meetingId}_n1`,
-            text: 'Reconvene next week to review progress.',
-            origin: 'explicit',
-            confidence: 0.85,
-            uncertain: false,
-            evidence: [{ segmentId: `${meetingId}_s6`, quote: lines[5] ?? '', language: evidenceLang, startSeconds: 75 }],
-          },
-        ],
-      },
+      { key: 'metadata', confidence: 'explicit', lines: [
+        { pt: 'Reunião · ' + meetingLanguage, en: 'Meeting · ' + meetingLanguage },
+      ] },
+      { key: 'participants', confidence: 'explicit', lines: [
+        { text: 'Speaker 1' },
+        { text: 'Speaker 2' },
+      ] },
+      { key: 'purpose', confidence: 'inferred', lines: [
+        { pt: 'Revisar o status do projeto e as oportunidades da descoberta.',
+          en: 'Review project status and the discovery opportunities.' },
+      ] },
+      { key: 'topics', confidence: 'explicit', lines: [
+        { pt: 'Status do projeto · 00:00', en: 'Project status · 00:00', atSeconds: 0 },
+        { pt: 'Oportunidades · 00:15', en: 'Opportunities · 00:15', atSeconds: 15 },
+      ] },
+      { key: 'importantStatements', confidence: 'explicit', lines: [
+        { text: lines[3] ?? '', atSeconds: 45 },
+      ] },
+      { key: 'explicitDecisions', confidence: 'explicit', lines: [
+        { pt: 'Focar na primeira oportunidade no próximo sprint.',
+          en: 'Focus on the first opportunity in the next sprint.' },
+      ] },
+      { key: 'openPoints', confidence: 'explicit', lines: [
+        { pt: 'Dependência com o fornecedor externo em aberto.',
+          en: 'Dependency with the external vendor is open.' },
+      ] },
+      { key: 'questions', confidence: 'explicit', lines: [
+        { pt: 'Quem valida os requisitos?', en: 'Who validates the requirements?' },
+      ] },
+      { key: 'numbersAndDates', confidence: 'explicit', lines: [
+        { pt: 'Sexta-feira', en: 'Friday' },
+      ] },
     ],
   };
 
-  return { transcript, aiPack };
+  return { transcript, packSource };
 }

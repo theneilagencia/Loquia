@@ -34,8 +34,8 @@ export default function MeetingDetailPage({
     queryFn: () => services.meetings.get(meetingId),
   });
   const aiPackQ = useQuery({
-    queryKey: ['aiPack', meetingId],
-    queryFn: () => services.meetings.getAIPack(meetingId),
+    queryKey: ['aiPack', meetingId, locale],
+    queryFn: () => services.meetings.getAIPack(meetingId, locale),
   });
   const transcriptQ = useQuery({
     queryKey: ['transcript', meetingId],
@@ -114,7 +114,7 @@ export default function MeetingDetailPage({
 
         <TabsContent value="aiPack">
           {aiPackQ.data ? (
-            <AIPackView pack={aiPackQ.data} locale={locale} onSeek={setSeekTo} />
+            <AIPackView pack={aiPackQ.data} onSeek={setSeekTo} />
           ) : (
             <p className="py-8 text-center text-sm text-muted-foreground">
               {aiPackT('empty')}

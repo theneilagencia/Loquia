@@ -1,129 +1,79 @@
-import type { AIPack, Meeting, Transcript } from '@loquia/domain';
+import {
+  PACK_SECTION_REQUIRED,
+  PACK_SECTION_TITLE,
+  type AIPack,
+  type AIPackSection,
+  type PackSectionKey,
+  type SectionConfidence,
+} from '@loquia/domain';
+import type { ExportInput } from './engine';
 
-/** Deterministic fixtures for engine tests and demos. */
-
-export function makeTranscript(overrides?: Partial<Transcript>): Transcript {
-  return {
-    meetingId: 'm1',
-    language: 'pt-BR',
-    updatedAt: '2026-08-12T13:00:00.000Z',
-    speakers: [
-      { id: 'sp1', diarizationLabel: 'Speaker 1', color: '#4f46e5' },
-      { id: 'sp2', diarizationLabel: 'Speaker 2', displayName: 'Marina', color: '#0ea5e9' },
-    ],
-    segments: [
-      {
-        id: 'seg1',
-        speakerId: 'sp1',
-        startSeconds: 0,
-        endSeconds: 8,
-        text: 'Bom dia, vamos revisar o roadmap do trimestre.',
-        edited: false,
-        language: 'pt-BR',
-      },
-      {
-        id: 'seg2',
-        speakerId: 'sp2',
-        startSeconds: 8,
-        endSeconds: 20,
-        text: 'Fechamos o contrato com a Acme por R$ 120 mil.',
-        edited: false,
-        language: 'pt-BR',
-      },
-    ],
-    ...overrides,
-  };
+function section(
+  key: PackSectionKey,
+  confidence: SectionConfidence,
+  lines: AIPackSection['lines'],
+): AIPackSection {
+  return { key, title: PACK_SECTION_TITLE[key], required: PACK_SECTION_REQUIRED[key], confidence, lines };
 }
 
-export function makeAIPack(overrides?: Partial<AIPack>): AIPack {
+/** Resolved AI Pack (English output) mirroring the prototype's m1 (Atlas). */
+export function makePack(language = 'en-US'): AIPack {
   return {
     meetingId: 'm1',
-    language: 'en-US',
-    generatedAt: '2026-08-12T13:05:00.000Z',
-    model: 'mock-1',
-    version: 1,
+    language,
     sections: [
-      {
-        key: 'overview',
-        items: [
-          {
-            id: 'i1',
-            text: 'Quarterly roadmap review; Acme contract signed.',
-            origin: 'explicit',
-            confidence: 0.95,
-            uncertain: false,
-            evidence: [
-              {
-                segmentId: 'seg1',
-                quote: 'vamos revisar o roadmap do trimestre',
-                language: 'pt-BR',
-                startSeconds: 0,
-              },
-            ],
-          },
-        ],
-      },
-      {
-        key: 'metrics',
-        items: [
-          {
-            id: 'i2',
-            text: 'Acme contract value: BRL 120,000.',
-            origin: 'explicit',
-            confidence: 0.9,
-            uncertain: false,
-            evidence: [
-              {
-                segmentId: 'seg2',
-                quote: 'Fechamos o contrato com a Acme por R$ 120 mil',
-                language: 'pt-BR',
-                startSeconds: 8,
-              },
-            ],
-          },
-        ],
-      },
-      {
-        key: 'risks',
-        items: [
-          {
-            id: 'i3',
-            text: 'Delivery timeline may be tight given the new contract.',
-            origin: 'inferred',
-            confidence: 0.45,
-            uncertain: true,
-            evidence: [
-              {
-                segmentId: 'seg1',
-                quote: 'roadmap do trimestre',
-                language: 'pt-BR',
-                startSeconds: 0,
-              },
-            ],
-          },
-        ],
-      },
-      // Empty section — must never render.
-      { key: 'glossary', items: [] },
+      section('metadata', 'explicit', [
+        { text: 'Commercial meeting with Atlas · Aug 10, 2026 · 42:18 · pt-BR · Browser recording' },
+      ]),
+      section('participants', 'explicit', [
+        { text: 'Rafael Martins — Northstar' },
+        { text: 'João Silva — Atlas' },
+      ]),
+      section('purpose', 'inferred', [
+        { text: 'Discuss pilot scope, integration requirements and commercial conditions.' },
+      ]),
+      section('executiveContext', 'inferred', [
+        { text: 'Atlas is evaluating a pilot deployment.' },
+      ]),
+      section('topics', 'explicit', [
+        { text: 'Pilot scope · 04:12', atSeconds: 252 },
+        { text: 'Integration · 11:36', atSeconds: 696 },
+      ]),
+      // Evidence quotes stay in the ORIGINAL spoken language (pt-BR).
+      section('importantStatements', 'explicit', [
+        { text: 'João Silva: “Sem a integração, não acho que a gente consiga rodar o piloto direito.”', atSeconds: 1122 },
+      ]),
+      section('explicitDecisions', 'explicit', [
+        { text: 'The pilot will start with one business unit.' },
+      ]),
+      section('openPoints', 'explicit', [
+        { text: 'Final integration scope remains undefined.' },
+      ]),
+      section('questions', 'explicit', [{ text: 'Who will own the integration?' }]),
+      section('numbersAndDates', 'explicit', [{ text: 'R$ 120.000' }, { text: 'October 2026' }]),
+      section('ambiguities', 'uncertain', [
+        { text: 'The final launch date was discussed but not formally confirmed.' },
+      ]),
     ],
-    ...overrides,
   };
 }
 
-export function makeMeeting(overrides?: Partial<Meeting>): Meeting {
+export function makeInput(over?: Partial<ExportInput>): ExportInput {
   return {
-    id: 'm1',
-    workspaceId: 'w1',
-    ownerId: 'u1',
-    title: 'Roadmap Q3',
-    source: 'recording',
-    status: 'ready',
-    meetingLanguage: 'pt-BR',
-    durationSeconds: 1200,
-    participantCount: 2,
-    createdAt: '2026-08-12T12:40:00.000Z',
-    updatedAt: '2026-08-12T13:05:00.000Z',
-    recordingId: 'r1',
-    ...overrides,
+    meeting: {
+      title: 'Commercial meeting with Atlas',
+      date: 'Aug 10, 2026',
+      duration: '42:18',
+      language: 'pt-BR',
+      source: 'Browser recording',
+      status: 'ready',
+    },
+    participants: ['Rafael Martins — Northstar', 'João Silva — Atlas'],
+    pack: makePack(),
+    transcript: [
+      { stamp: '04:12', speaker: 'Rafael Martins', text: 'A ideia é começar o piloto com uma unidade de negócio só.', atSeconds: 252 },
+      { stamp: '18:42', speaker: 'João Silva', text: 'Sem a integração, não acho que a gente consiga rodar o piloto direito.', atSeconds: 1122 },
+    ],
+    ...over,
   };
 }

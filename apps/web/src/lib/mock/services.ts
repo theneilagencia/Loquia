@@ -6,17 +6,18 @@ import {
   type AccessRequest,
   type AuditAction,
   type AuditEvent,
+  type ExportConfig,
   type ExportHistoryEntry,
+  type ExportResult,
   type Id,
   type Invitation,
   type Marker,
-  type ExportOptions,
-  type ExportResult,
   type Meeting,
   type Result,
   type Session,
   type Settings,
   type Speaker,
+  type Transcript,
   type TranscriptSegment,
   type User,
 } from '@loquia/domain';
@@ -31,10 +32,12 @@ import type {
   RequestAccessInput,
   Services,
 } from '@loquia/contracts';
-import { runExport } from '@loquia/export-engine';
+import { runExport, type ExportInput } from '@loquia/export-engine';
 import { MockStore } from './db';
 import { newId, nowIso } from './id';
 import { generateDemoContent } from './generate';
+import { resolvePack } from './pack-source';
+import type { MockDB } from './seed';
 
 export interface MockDeps {
   store: MockStore;
@@ -462,7 +465,7 @@ export function createMockServices(deps: MockDeps): Services {
         }
         const updated = store.write((d) => {
           const m = d.meetings.find((x) => x.id === id)!;
-          m.status = d.aiPacks.some((p) => p.meetingId === id) ? 'ready' : 'draft';
+          m.status = d.packSources.some((p) => p.meetingId === id) ? 'ready' : 'draft';
           m.archivedAt = undefined;
           m.updatedAt = nowIso();
           return m;
@@ -504,12 +507,12 @@ export function createMockServices(deps: MockDeps): Services {
                 m.updatedAt = nowIso();
               }
               if (!d.transcripts.some((t) => t.meetingId === meetingId)) {
-                const { transcript, aiPack } = generateDemoContent(
+                const { transcript, packSource } = generateDemoContent(
                   meetingId,
                   m?.meetingLanguage ?? 'pt-BR',
                 );
                 d.transcripts.push(transcript);
-                d.aiPacks.push(aiPack);
+                d.packSources.push(packSource);
               }
             }
           } else {
@@ -546,8 +549,9 @@ export function createMockServices(deps: MockDeps): Services {
         });
         return ok(updated);
       },
-      async getAIPack(meetingId) {
-        return store.read().aiPacks.find((p) => p.meetingId === meetingId) ?? null;
+      async getAIPack(meetingId, outputLanguage) {
+        const source = store.read().packSources.find((p) => p.meetingId === meetingId);
+        return source ? resolvePack(source, outputLanguage) : null;
       },
     },
 
@@ -607,36 +611,31 @@ export function createMockServices(deps: MockDeps): Services {
 
     // ------------------------------------------------------------- Exports
     exports: {
-      async render(meetingId, options: ExportOptions): Promise<Result<ExportResult>> {
-        const db = store.read();
-        const meeting = db.meetings.find((m) => m.id === meetingId);
-        const aiPack = db.aiPacks.find((p) => p.meetingId === meetingId);
-        const transcript = db.transcripts.find((t) => t.meetingId === meetingId);
-        if (!meeting || !aiPack || !transcript) {
-          return err({ code: 'not_ready', message: 'aiPack.empty' });
-        }
-        return ok(runExport({ meeting, aiPack, transcript }, options));
+      async render(config: ExportConfig): Promise<Result<ExportResult>> {
+        const input = buildExportInput(store.read(), config);
+        if (!input) return err({ code: 'not_ready', message: 'aiPack.empty' });
+        return ok(runExport(input, config));
       },
-      async download(meetingId, options) {
-        const rendered = await this.render(meetingId, options);
+      async download(config) {
+        const rendered = await this.render(config);
         if (!rendered.ok) return rendered;
         download.download(rendered.value.filename, rendered.value.content, rendered.value.mimeType);
-        recordExport(store, meetingId, options, rendered.value, 'download');
+        recordExport(store, config, rendered.value, 'downloaded');
         logAudit(store, 'export.created', currentActor(), { type: 'export', id: rendered.value.filename, label: rendered.value.filename });
         return rendered;
       },
-      async copyToClipboard(meetingId, options) {
-        const rendered = await this.render(meetingId, options);
+      async copyToClipboard(config) {
+        const rendered = await this.render(config);
         if (!rendered.ok) return rendered;
         await clipboard.writeText(rendered.value.content);
-        recordExport(store, meetingId, options, rendered.value, 'clipboard');
+        recordExport(store, config, rendered.value, 'copied');
         return rendered;
       },
       async history(meetingId?: Id): Promise<ExportHistoryEntry[]> {
         const db = store.read();
         return db.exportHistory
           .filter((e) => (meetingId ? e.meetingId === meetingId : true))
-          .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+          .sort((a, b) => b.at.localeCompare(a.at));
       },
     },
 
@@ -677,28 +676,94 @@ export function createMockServices(deps: MockDeps): Services {
   };
 }
 
+function sourceLabel(source: Meeting['source'], pt: boolean): string {
+  if (source === 'recording') return pt ? 'Gravação no navegador' : 'Browser recording';
+  return pt ? 'Upload de arquivo' : 'File upload';
+}
+
+function durationString(totalSeconds: number): string {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const mm = Math.floor(s / 60);
+  const ss = s % 60;
+  return `${mm.toString().padStart(2, '0')}:${ss.toString().padStart(2, '0')}`;
+}
+
+/** Build the engine input from stored meeting/transcript/pack for a config. */
+function buildExportInput(db: MockDB, config: ExportConfig): ExportInput | null {
+  const meeting = db.meetings.find((m) => m.id === config.meetingId);
+  const source = db.packSources.find((p) => p.meetingId === config.meetingId);
+  const transcript: Transcript | undefined = db.transcripts.find(
+    (t) => t.meetingId === config.meetingId,
+  );
+  if (!meeting || !source || !transcript) return null;
+
+  const outputLanguage =
+    config.outputLanguage === 'preserve' ? meeting.meetingLanguage : config.outputLanguage;
+  const pt = outputLanguage.toLowerCase().startsWith('pt');
+  const pack = resolvePack(source, outputLanguage);
+
+  const participants =
+    pack.sections.find((s) => s.key === 'participants')?.lines.map((l) => l.text) ?? [];
+
+  const speakerName = (id: string) => {
+    const sp = transcript.speakers.find((s) => s.id === id);
+    return sp?.displayName?.trim() ? sp.displayName : (sp?.diarizationLabel ?? 'Speaker');
+  };
+
+  let date = meeting.createdAt;
+  try {
+    date = new Intl.DateTimeFormat(outputLanguage, { dateStyle: 'medium' }).format(
+      new Date(meeting.createdAt),
+    );
+  } catch {
+    /* keep ISO */
+  }
+
+  return {
+    meeting: {
+      title: meeting.title,
+      date,
+      duration: durationString(meeting.durationSeconds),
+      language: meeting.meetingLanguage,
+      source: sourceLabel(meeting.source, pt),
+      status: meeting.status,
+    },
+    participants,
+    pack,
+    transcript: transcript.segments.map((seg) => ({
+      stamp: durationString(seg.startSeconds),
+      speaker: speakerName(seg.speakerId),
+      text: seg.text,
+      atSeconds: seg.startSeconds,
+    })),
+  };
+}
+
 function recordExport(
   store: MockStore,
-  meetingId: Id,
-  options: ExportOptions,
+  config: ExportConfig,
   result: ExportResult,
-  channel: 'download' | 'clipboard',
+  action: 'downloaded' | 'copied',
 ): void {
   const db = store.read();
-  const meeting = db.meetings.find((m) => m.id === meetingId);
+  const meeting = db.meetings.find((m) => m.id === config.meetingId);
+  const outputLanguage =
+    config.outputLanguage === 'preserve'
+      ? (meeting?.meetingLanguage ?? 'pt-BR')
+      : config.outputLanguage;
   store.write((d) => {
     d.exportHistory.unshift({
       id: newId('ex'),
-      meetingId,
-      meetingTitle: meeting?.title ?? meetingId,
-      preset: options.preset,
-      size: options.size,
-      format: options.format,
-      language: options.language,
+      meetingId: config.meetingId,
+      meetingTitle: meeting?.title ?? config.meetingId,
+      at: nowIso(),
+      action,
+      preset: config.preset,
+      size: config.size,
+      format: config.format,
+      language: outputLanguage,
       filename: result.filename,
       bytes: result.bytes,
-      createdAt: nowIso(),
-      channel,
     });
   });
 }

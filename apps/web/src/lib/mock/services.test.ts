@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { runExport } from '@loquia/export-engine';
 import { createBrowserStorage } from '../adapters/browser-storage';
 import { MockStore } from './db';
 import { createMockServices } from './services';
@@ -110,9 +109,10 @@ describe('processing pipeline', () => {
       guard += 1;
     }
     expect(job?.status).toBe('completed');
-    const aiPack = await services.meetings.getAIPack(meeting.id);
+    const aiPack = await services.meetings.getAIPack(meeting.id, 'en-US');
     const transcript = await services.transcripts.get(meeting.id);
     expect(aiPack).not.toBeNull();
+    expect(aiPack!.sections.length).toBeGreaterThan(0);
     expect(transcript?.segments.length).toBeGreaterThan(0);
   });
 
@@ -125,21 +125,22 @@ describe('processing pipeline', () => {
 });
 
 describe('speaker rename propagation', () => {
-  it('rename flows into the export because names resolve via speakerId', async () => {
-    const { services, store } = freshServices();
-    await services.transcripts.renameSpeaker('m1', 'm1_sp3', 'Carlos');
+  it('rename flows into the export transcript (single source of truth for names)', async () => {
+    const { services } = freshServices();
+    await services.transcripts.renameSpeaker('m1', 'm1_sp1', 'Rafael M.');
 
-    const db = store.read();
-    const meeting = db.meetings.find((m) => m.id === 'm1')!;
-    const aiPack = db.aiPacks.find((p) => p.meetingId === 'm1')!;
-    const transcript = db.transcripts.find((t) => t.meetingId === 'm1')!;
-
-    const result = runExport(
-      { meeting, aiPack, transcript },
-      { preset: 'full_fidelity', size: 'full', format: 'txt', language: 'en-US' },
-    );
-    expect(result.content).toContain('Carlos:');
-    expect(result.content).not.toContain('Speaker 3:');
+    const result = await services.exports.render({
+      meetingId: 'm1',
+      preset: 'full',
+      size: 'full',
+      format: 'txt',
+      sections: { instructions: false, transcript: true, evidence: true, ambiguities: true },
+      outputLanguage: 'en-US',
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.content).toContain('Rafael M.:');
+    expect(result.value.content).not.toContain('Rafael Martins:');
   });
 });
 
@@ -161,13 +162,32 @@ describe('settings persistence', () => {
 describe('export history', () => {
   it('records a download in history', async () => {
     const { services } = freshServices();
-    await services.exports.download('m1', {
-      preset: 'ai_pack',
+    await services.exports.download({
+      meetingId: 'm1',
+      preset: 'ai',
       size: 'standard',
       format: 'json',
-      language: 'en-US',
+      sections: { instructions: false, transcript: false, evidence: true, ambiguities: true },
+      outputLanguage: 'en-US',
     });
     const history = await services.exports.history('m1');
-    expect(history.some((h) => h.format === 'json' && h.channel === 'download')).toBe(true);
+    expect(history.some((h) => h.format === 'json' && h.action === 'downloaded')).toBe(true);
+  });
+
+  it('JSON export parses and evidence stays in the original language', async () => {
+    const { services } = freshServices();
+    const res = await services.exports.render({
+      meetingId: 'm1',
+      preset: 'ai',
+      size: 'standard',
+      format: 'json',
+      sections: { instructions: false, transcript: false, evidence: true, ambiguities: true },
+      outputLanguage: 'en-US',
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const parsed = JSON.parse(res.value.content);
+    expect(parsed.important_statements[0].text).toContain('Sem a integração');
+    expect(parsed.decisions[0]).toContain('pilot');
   });
 });

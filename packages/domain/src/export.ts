@@ -1,52 +1,56 @@
-import type { AIPackSectionKey } from './ai-pack';
-import type { Id, ISODateString, LanguageTag } from './common';
-
-/** Export presets (task spec §31). */
-export type ExportPreset =
-  | 'ai_pack'
-  | 'clean_transcript'
-  | 'analysis'
-  | 'writing'
-  | 'full_fidelity'
-  | 'custom';
-
-export const EXPORT_PRESETS: readonly ExportPreset[] = [
-  'ai_pack',
-  'clean_transcript',
-  'analysis',
-  'writing',
-  'full_fidelity',
-  'custom',
-];
-
-/** Export sizes (task spec §31). */
-export type ExportSize = 'compact' | 'standard' | 'full';
-
-export const EXPORT_SIZES: readonly ExportSize[] = ['compact', 'standard', 'full'];
-
-/** Output formats (task spec §32). */
-export type ExportFormat = 'md' | 'txt' | 'json';
-
-export const EXPORT_FORMATS: readonly ExportFormat[] = ['md', 'txt', 'json'];
+import type { Id, ISODateString, LanguageTag, Locale } from './common';
 
 /**
- * A fully-resolved export request. The single ExportEngine consumes this for
- * preview, clipboard and download alike.
+ * Export contracts — reconciled with the handoff (docs/ai-pack-spec.md,
+ * docs/domain-types.md). A single engine renders md/txt/json from one pack.
  */
-export interface ExportOptions {
-  preset: ExportPreset;
-  size: ExportSize;
+
+export type PresetId = 'ai' | 'transcript' | 'analysis' | 'writing' | 'full' | `custom:${string}`;
+
+export const BASE_PRESETS: readonly Exclude<PresetId, `custom:${string}`>[] = [
+  'ai',
+  'transcript',
+  'analysis',
+  'writing',
+  'full',
+];
+
+export type PackSize = 'compact' | 'standard' | 'full';
+export const PACK_SIZES: readonly PackSize[] = ['compact', 'standard', 'full'];
+
+export type ExportFormat = 'md' | 'txt' | 'json';
+export const EXPORT_FORMATS: readonly ExportFormat[] = ['md', 'txt', 'json'];
+
+/** Optional-block toggles (docs/domain-types.md ExportPreset.sections). */
+export interface ExportSections {
+  instructions: boolean;
+  transcript: boolean;
+  evidence: boolean;
+  ambiguities: boolean;
+}
+
+export interface ExportConfig {
+  meetingId: Id;
+  preset: PresetId;
+  size: PackSize;
   format: ExportFormat;
-  /** Language of the STRUCTURED output. Evidence keeps its original language. */
-  language: LanguageTag;
-  /** Explicit section selection; required when preset === 'custom'. */
-  sections?: AIPackSectionKey[];
-  /** Include the raw transcript body. */
-  includeTranscript?: boolean;
-  /** Include evidence quotes under AI Pack items. */
-  includeEvidence?: boolean;
-  /** Include timestamps in transcript output. */
-  includeTimestamps?: boolean;
+  sections: ExportSections;
+  /** `preserve` keeps the meeting's language for synthesized content too. */
+  outputLanguage: Locale | 'preserve';
+  writingGoal?: string;
+}
+
+export interface ExportPreset {
+  id: string;
+  name: string;
+  description: string;
+  basePreset: PresetId;
+  size: PackSize;
+  format: ExportFormat;
+  sections: ExportSections;
+  includeTimestamps: boolean;
+  includeSpeakers: boolean;
+  isDefault: boolean;
 }
 
 export interface ExportResult {
@@ -61,13 +65,18 @@ export interface ExportHistoryEntry {
   id: Id;
   meetingId: Id;
   meetingTitle: string;
-  preset: ExportPreset;
-  size: ExportSize;
+  at: ISODateString;
+  action: 'copied' | 'downloaded';
+  preset: string;
+  size: PackSize;
   format: ExportFormat;
   language: LanguageTag;
-  filename: string;
+  filename?: string;
   bytes: number;
-  createdAt: ISODateString;
-  /** How the export left the app. */
-  channel: 'download' | 'clipboard';
 }
+
+export const MIME_BY_FORMAT: Record<ExportFormat, string> = {
+  md: 'text/markdown;charset=utf-8',
+  txt: 'text/plain;charset=utf-8',
+  json: 'application/json;charset=utf-8',
+};
