@@ -122,6 +122,22 @@ describe('processing pipeline', () => {
     expect(retried.ok && retried.value.status).toBe('queued');
     expect(retried.ok && retried.value.errorCode).toBeUndefined();
   });
+
+  it('reports AI Pack status and regenerates the pack (mock generation)', async () => {
+    const { services } = freshServices();
+    // Seeded meeting m1 already has a pack.
+    const s1 = await services.meetings.getAIPackStatus('m1');
+    expect(s1.status).toBe('ready');
+    expect(s1.hasCurrent).toBe(true);
+
+    const before = await services.meetings.getAIPack('m1', 'pt-BR');
+    const regen = await services.meetings.regenerateAIPack('m1');
+    expect(regen.ok).toBe(true);
+    const after = await services.meetings.getAIPack('m1', 'pt-BR');
+    expect(after).not.toBeNull();
+    expect(after!.sections.length).toBeGreaterThan(0);
+    expect(before).not.toBeNull();
+  });
 });
 
 describe('speaker rename propagation', () => {

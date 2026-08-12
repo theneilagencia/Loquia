@@ -91,8 +91,27 @@ test('upload → queue → worker → transcript segments (mock providers)', asy
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page).toHaveURL(/\/pt-BR\/app$/);
 
+  // 7. AI Pack generates automatically (worker chains an ai_pack job after the
+  //    transcript). Wait for it, then confirm the real pack — not the pending
+  //    message — is rendered.
+  const api2 = await login();
+  await expect
+    .poll(
+      async () => (await (await api2.get(`/api/meetings/${meetingId}/ai-pack/status`)).json()).status as string,
+      { timeout: 45_000, intervals: [500, 1000, 2000] },
+    )
+    .toBe('ready');
+  const packRes = await api2.get(`/api/meetings/${meetingId}/aipack`);
+  const pack = (await packRes.json()).source;
+  expect(pack).toBeTruthy();
+  expect(Array.isArray(pack.sections)).toBeTruthy();
+  expect(pack.sections.length).toBeGreaterThan(1);
+  await api2.dispose();
+
   await page.goto(`/pt-BR/app/meetings/${meetingId}`);
-  await expect(page.getByText('Transcrição concluída. AI Pack ainda não processado.')).toBeVisible();
+  // The AI Pack tab shows the real pack (Meeting section title), not "pending".
+  await expect(page.getByText('Transcrição concluída. AI Pack ainda não processado.')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Regenerar' })).toBeVisible();
 
   // The transcript tab renders the persisted segments.
   await page.getByRole('tab', { name: 'Transcrição' }).click();

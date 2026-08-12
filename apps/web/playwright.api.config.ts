@@ -18,6 +18,7 @@ const MEDIA_MOCK_DIR = '/tmp/loquia-e2e-media';
 const mediaEnv = {
   STORAGE_PROVIDER: 'mock',
   TRANSCRIPTION_PROVIDER: 'mock',
+  AI_PACK_PROVIDER: 'mock',
   MEDIA_MOCK_DIR,
   REDIS_URL,
   PUBLIC_API_URL: apiUrl,

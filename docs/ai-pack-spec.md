@@ -53,3 +53,24 @@ Exemplo obrigatório: UI en-US + meeting pt-BR + export en-US → seções em in
 
 ## Nome de arquivo
 `loquia-<slug-do-titulo>-<ai-pack|transcript>.<md|txt|json>` — slug sem acento, minúsculo, hífen, máx. 44 caracteres.
+
+## Geração real (Milestone 4)
+A partir da M4 o AI Pack é **gerado de verdade** a partir do transcript, sem nunca
+nascer como Markdown. O fluxo canônico é `TranscriptSegment[] → AIPackGenerator →
+candidato estruturado → validação de schema (Zod) → validação de evidência →
+AIPack persistido (versionado) → ExportEngine`. Detalhes de implementação
+(abstração de provider, versionamento de prompt/schema, chunking, consolidação,
+evidência ancorada em `segmentId`, idempotência e regeneração) em
+`docs/ai-pack-pipeline.md`.
+
+Regras desta especificação preservadas na geração real:
+- As 14 seções canônicas, sua ordem, obrigatoriedade e comportamento vazio.
+- Idioma: conteúdo sintetizado no `outputLanguage`; statements, evidência,
+  números e transcript permanecem no idioma original.
+- Seção vazia não é renderizada com placeholder; seções obrigatórias usam a frase
+  negativa.
+- Toda evidência aponta para um `TranscriptSegment` real; timestamps derivam do
+  segmento, nunca do modelo; citações mostram o texto original (nunca uma "quote"
+  reconstruída).
+- Fatos são classificados em `explicit` / `inferred` / `uncertain`; o modelo
+  nunca eleva `inferred` para `explicit`.

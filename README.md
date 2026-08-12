@@ -50,7 +50,7 @@ packages/
   domain/         domain types incl. ProcessingJob & AI Pack model
   contracts/      service interfaces, Zod schemas, browser-adapter ports
   export-engine/  single md/txt/json engine (preview = clipboard = download)
-  pipeline/       storage + transcription providers, segmentation, queue (M3)
+  pipeline/       storage + transcription + AI Pack providers, segmentation, queue (M3/M4)
   i18n/           locale config + pt-BR/en-US message bundles
   ui/             design-system primitives (Button, Card, Badge, …)
   config/         design tokens (CSS vars) + Tailwind preset
@@ -119,9 +119,24 @@ production**. See [`docs/media-pipeline.md`](docs/media-pipeline.md),
 [`docs/transcription-provider.md`](docs/transcription-provider.md), and
 [`docs/processing-jobs.md`](docs/processing-jobs.md).
 
-**No AI Pack / LLM generation happens yet.** When the transcript is ready the UI
-honestly shows *"Transcrição concluída. AI Pack ainda não processado."* Still
-mock by design: AI-Pack content and email. FFmpeg normalization is deferred.
+## AI Pack generation (Milestone 4)
+
+The transcript now generates a **real, structured AI Pack**:
+`TranscriptSegment[] → AIPackGenerator → structured candidate → schema + evidence
+validation → versioned AIPack → frontend → ExportEngine`. It runs as its own
+async job, is idempotent and versioned (regeneration keeps the current pack until
+the new one lands), classifies facts as explicit / inferred / uncertain, and
+anchors evidence to real segment ids — hallucinated ids are rejected and
+timestamps come from the transcript, never the model. The generator sits behind
+an interface and is env-selected (**Anthropic** `AI_PACK_PROVIDER=anthropic|mock`)
+with a deterministic mock for dev/tests and **no silent mock fallback in
+production**. Markdown/TXT/JSON are only ever a render of the validated pack. See
+[`docs/ai-pack-pipeline.md`](docs/ai-pack-pipeline.md).
+
+Still mock by design: **email**. STT/diarization and AI Pack generation run
+through the mock providers in this environment (no R2/Deepgram/Anthropic
+credentials); the real adapters are selected in production. FFmpeg normalization
+is deferred.
 
 ### Run the backend locally
 
@@ -175,19 +190,19 @@ Built with the `@storybook/react-vite` framework and intl+theme toolbar globals.
 Stories cover UI primitives and key product components (ProcessingTimeline,
 AIPackView, Waveform) across light/dark and pt-BR/en-US.
 
-## Limitations (by design, through Milestone 3)
+## Limitations (by design, through Milestone 4)
 
-- **AI Pack content / LLM generation** is not implemented — after a real
-  transcript the UI shows the honest "AI Pack not processed yet" state.
 - **Email** (invitations/reset) is not sent; activation tokens are surfaced via
   the approve API response.
-- **STT/diarization** run through the mock providers in this environment (no
-  R2/Deepgram credentials); the real adapters are implemented and selected in
-  production. Live R2/Deepgram smokes are marked *NOT RUN* when credentials are
-  absent. **FFmpeg** audio normalization is deferred.
+- **STT/diarization** and **AI Pack generation** run through the mock providers
+  in this environment (no R2/Deepgram/Anthropic credentials); the real adapters
+  are implemented and selected in production. Live R2/Deepgram/Anthropic smokes
+  are marked *NOT RUN* when credentials are absent. **FFmpeg** audio
+  normalization is deferred.
 - Planned locales (es/fr/de) are routable but fall back to en-US messages.
 
 ## Next milestone
 
-Real **AI Pack generation** (LLM) over the persisted transcript — evidence-backed
-canonical sections. Intentionally **not** started here.
+Beyond the core loop (record → transcribe → structure → export): richer AI Pack
+editing, cost controls and retention workflows — intentionally **not** started
+here.

@@ -27,3 +27,21 @@
 20. Tema `system` observa `prefers-color-scheme` via `matchMedia` e reage a mudanças.
 21. Locale na URL fica para a versão Next.js; no protótipo a preferência é persistida.
 22. Layout responsivo por `clamp()` e `repeat(auto-fit,minmax())`; tabelas de admin são listas de cartões.
+
+## Milestone 4 — geração do AI Pack
+23. Nunca `Transcript → LLM → Markdown` como fonte de verdade. A fonte é o AIPack
+    canônico validado; Markdown/TXT/JSON são só renderizações.
+24. Provider de geração é abstraído (`AIPackGenerator`), substituível por env
+    (`AI_PACK_PROVIDER=anthropic|mock`), sem fallback silencioso para mock em
+    produção. Model default `claude-sonnet-5`, configurável via `AI_PACK_MODEL`.
+25. Saída do modelo é estruturada (structured output) e **revalidada** com Zod;
+    candidato inválido não é persistido e passa por retry controlado
+    (`AI_PACK_MAX_RETRIES`).
+26. Evidência referencia `TranscriptSegment.id`; timestamp/speaker/excerpt são
+    resolvidos do banco, nunca do LLM. IDs alucinados são rejeitados.
+27. Geração é um `ProcessingJob` assíncrono (`type=ai_pack`), idempotente
+    (`generation_key`), com versionamento — uma única versão `current` por
+    reunião; regeneração mantém a atual até a nova concluir. Falha preserva o
+    transcript.
+28. Prompt e schema são versionados (`promptVersion`/`schemaVersion`) e persistidos
+    para reprodução.

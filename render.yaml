@@ -1,4 +1,4 @@
-# Loquia — Render Blueprint (Milestone 3: media pipeline).
+# Loquia — Render Blueprint (Milestone 4: media pipeline + AI Pack generation).
 # Structurally validated only; no deploy is performed in this milestone.
 # Secrets are never committed — they are injected by Render (generateValue /
 # sync:false / fromDatabase / fromService). R2 and Deepgram credentials are set
@@ -60,6 +60,15 @@ services:
         sync: false
       - key: DEEPGRAM_MODEL
         value: nova-2
+      # --- AI Pack generation (real; no silent mock fallback in prod) ---
+      - key: AI_PACK_PROVIDER
+        value: anthropic
+      - key: AI_PACK_MODEL
+        value: claude-sonnet-5
+      - key: AI_PACK_MAX_RETRIES
+        value: "2"
+      - key: ANTHROPIC_API_KEY
+        sync: false
 
   # ---- Web (Next.js), talking to the API ----
   - type: web
@@ -116,6 +125,15 @@ services:
         sync: false
       - key: DEEPGRAM_MODEL
         value: nova-2
+      # --- AI Pack generation (real; no silent mock fallback in prod) ---
+      - key: AI_PACK_PROVIDER
+        value: anthropic
+      - key: AI_PACK_MODEL
+        value: claude-sonnet-5
+      - key: AI_PACK_MAX_RETRIES
+        value: "2"
+      - key: ANTHROPIC_API_KEY
+        sync: false
 
   # ---- Key Value (Redis-compatible) backing the BullMQ queue ----
   - type: keyvalue

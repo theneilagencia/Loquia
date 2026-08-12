@@ -121,24 +121,36 @@ with **no silent mock fallback in production**. **No AI Pack / LLM generation is
 implemented** — once the transcript is ready the UI honestly shows *"AI Pack
 ainda não processado."*
 
-## What remains mock (by design, through Milestone 3)
+## AI Pack generation (Milestone 4)
 
-- **AI Pack content** — still demo/deterministic (no LLM). The bilingual AI Pack
-  source is stored as JSONB so the shared engine can render it. No endpoint
-  claims a real pack was generated; after a real transcript the UI shows the
-  honest "AI Pack not processed yet" state.
+AI Pack generation is now **real**: `TranscriptSegment[] → AIPackGenerator →
+structured candidate → schema + evidence validation → versioned AIPack →
+frontend → ExportEngine`. It runs as its own async `ProcessingJob`
+(`type: 'ai_pack'`, enqueued after the transcript), is idempotent and
+version-aware (one current version per meeting, regeneration keeps the old one
+until the new lands), and anchors every fact's evidence to a real
+`TranscriptSegment.id` — hallucinated ids are rejected and timestamps come from
+the segments, never the model. Providers are env-selected
+(`AI_PACK_PROVIDER=anthropic|mock`) with **no silent mock fallback in
+production**. See `docs/ai-pack-pipeline.md`.
+
+## What remains mock (by design, through Milestone 4)
+
+- **AI Pack content** runs through the **mock generator** in this environment
+  (no `ANTHROPIC_API_KEY`); the real Anthropic adapter is implemented and
+  selected in production. **STT/diarization** likewise run through the mock
+  providers here; the real R2/Deepgram adapters are selected in production.
 - **Email** (invitations/reset) — not sent; activation tokens are surfaced via
   the approve API response for now.
-- **STT/diarization** run through the **mock providers** in this environment
-  (no R2/Deepgram credentials); the real R2/Deepgram adapters are implemented
-  and selected in production. FFmpeg normalization is deferred.
+- **FFmpeg** audio normalization is deferred.
 
 ## Deploy (Render)
 
 `render.yaml` (Blueprint) defines `loquia-postgres`, `loquia-api`,
-`loquia-web`, `loquia-worker` (the active BullMQ consumer), and `loquia-queue`
-(Key Value / Redis backing the queue). Secrets — including `R2_*` and
-`DEEPGRAM_API_KEY` — are injected by Render (`generateValue` / `fromDatabase` /
+`loquia-web`, `loquia-worker` (the active BullMQ consumer of both
+`media_processing` and `ai_pack` jobs), and `loquia-queue` (Key Value / Redis
+backing the queue). Secrets — including `R2_*`, `DEEPGRAM_API_KEY` and
+`ANTHROPIC_API_KEY` — are injected by Render (`generateValue` / `fromDatabase` /
 `fromService` / `sync:false`) and never committed. Migrations run in the API
 `preDeployCommand`. **No deploy has been performed** — the blueprint is
 structurally validated only.
