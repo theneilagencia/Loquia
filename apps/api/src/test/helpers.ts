@@ -28,6 +28,10 @@ export async function makeTestApp(): Promise<TestApp> {
     DATABASE_URL: TEST_DB_URL,
     NODE_ENV: 'test',
     SESSION_SECRET: 'test-secret-0123456789-abcdef',
+    STORAGE_PROVIDER: 'mock',
+    MEDIA_MOCK_DIR: `/tmp/loquia-media-test`,
+    PUBLIC_API_URL: 'http://localhost:4000',
+    REDIS_URL: process.env.TEST_REDIS_URL ?? 'redis://127.0.0.1:6380',
   });
   const { db, close } = createDb(TEST_DB_URL, { max: 3 });
   const app = await buildApp({ env, db });

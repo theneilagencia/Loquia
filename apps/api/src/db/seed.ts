@@ -80,7 +80,7 @@ export async function seed(databaseUrl: string): Promise<void> {
       .returning();
     await db.insert(transcriptSegments).values(ATLAS_SEGMENTS.map((seg, i) => ({ meetingId: atlas!.id, speakerKey: seg.key, orderIndex: i, startSeconds: seg.s, endSeconds: seg.e, text: seg.t, language: 'pt-BR' })));
     await db.insert(aiPacks).values({ meetingId: atlas!.id, model: 'demo', sourceSections: ATLAS_PACK });
-    await db.insert(processingJobs).values({ workspaceId: ws!.id, meetingId: atlas!.id, type: 'ai_pack', status: 'completed', stage: 'ready', progress: 100, completedAt: new Date() });
+    await db.insert(processingJobs).values({ workspaceId: ws!.id, meetingId: atlas!.id, type: 'ai_pack', status: 'completed', stage: 'ready_for_ai_pack', progress: 100, completedAt: new Date() });
 
     const [proc] = await db.insert(meetings).values({ workspaceId: ws!.id, ownerId: owner!.id, title: 'Revisão de produto Q3', source: 'recording', status: 'processing', meetingLanguage: 'pt-BR', durationSeconds: 3484, participantCount: 3, summaryLine: 'Processando…' }).returning();
     await db.insert(processingJobs).values({ workspaceId: ws!.id, meetingId: proc!.id, type: 'transcription', status: 'running', stage: 'transcribing', progress: 33, startedAt: new Date() });

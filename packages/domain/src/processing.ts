@@ -34,17 +34,20 @@ export type ProcessingStage =
   | 'transcribing'
   | 'identifying_speakers'
   | 'organizing_topics'
-  | 'preparing_ai_pack'
-  | 'ready';
+  | 'ready_for_ai_pack';
 
+/**
+ * Canonical pipeline stages (task §18). The pipeline stops at
+ * `ready_for_ai_pack`: the transcript is ready but the AI Pack is NOT generated
+ * (no LLM in this milestone) — the state is represented honestly.
+ */
 export const PROCESSING_STAGES: readonly ProcessingStage[] = [
   'received',
   'preparing_audio',
   'transcribing',
   'identifying_speakers',
   'organizing_topics',
-  'preparing_ai_pack',
-  'ready',
+  'ready_for_ai_pack',
 ];
 
 export interface ProcessingJob {

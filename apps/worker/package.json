@@ -3,18 +3,25 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Scaffolding only \u2014 the real worker is Milestone 2. No backend logic in Milestone 1.",
+  "description": "Loquia processing worker — BullMQ consumer running the media → STT → transcript pipeline (Milestone 3).",
+  "main": "./src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit",
     "start": "tsx src/index.ts",
-    "dev": "tsx watch src/index.ts"
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
-    "@loquia/contracts": "workspace:*",
+    "@loquia/api": "workspace:*",
     "@loquia/domain": "workspace:*",
+    "@loquia/pipeline": "workspace:*",
+    "bullmq": "5.34.10",
+    "drizzle-orm": "0.38.4",
     "tsx": "4.19.2"
   },
   "devDependencies": {
-    "typescript": "5.7.3"
+    "@types/node": "22.10.5",
+    "typescript": "5.7.3",
+    "vitest": "2.1.8"
   }
 }

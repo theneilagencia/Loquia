@@ -166,6 +166,8 @@ export const meetings = pgTable(
     source: text('source').$type<MeetingSource>().notNull(),
     status: text('status').$type<MeetingStatus>().notNull().default('processing'),
     meetingLanguage: text('meeting_language').notNull().default('pt-BR'),
+    /** Language detected by the transcription provider (may differ from declared). */
+    detectedLanguage: text('detected_language'),
     durationSeconds: integer('duration_seconds').notNull().default(0),
     participantCount: integer('participant_count').notNull().default(0),
     summaryLine: text('summary_line'),
@@ -193,18 +195,58 @@ export const transcriptSegments = pgTable(
   'transcript_segments',
   {
     id: id(),
+    workspaceId: text('workspace_id'),
     meetingId: text('meeting_id')
       .notNull()
       .references(() => meetings.id, { onDelete: 'cascade' }),
     speakerKey: text('speaker_key').notNull(),
     orderIndex: integer('order_index').notNull().default(0),
+    sequence: integer('sequence').notNull().default(0),
     startSeconds: integer('start_seconds').notNull(),
     endSeconds: integer('end_seconds').notNull(),
+    /** Millisecond-precision timestamps from the provider. */
+    startMs: integer('start_ms'),
+    endMs: integer('end_ms'),
     text: text('text').notNull(),
+    confidence: text('confidence'),
     edited: boolean('edited').notNull().default(false),
+    editedAt: timestamp('edited_at', { withTimezone: true }),
+    editedBy: text('edited_by'),
     language: text('language').notNull().default('pt-BR'),
   },
   (t) => ({ meetingIdx: index('segments_meeting_idx').on(t.meetingId) }),
+);
+
+/** Media asset stored in object storage (task §6). */
+export const mediaAssets = pgTable(
+  'media_assets',
+  {
+    id: id(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id),
+    meetingId: text('meeting_id')
+      .notNull()
+      .references(() => meetings.id, { onDelete: 'cascade' }),
+    storageProvider: text('storage_provider').notNull(),
+    bucket: text('bucket').notNull(),
+    objectKey: text('object_key').notNull(),
+    originalFilename: text('original_filename').notNull(),
+    mimeType: text('mime_type').notNull(),
+    sizeBytes: integer('size_bytes'),
+    durationMs: integer('duration_ms'),
+    status: text('status')
+      .$type<'pending_upload' | 'uploaded' | 'processing' | 'ready' | 'failed' | 'deleted'>()
+      .notNull()
+      .default('pending_upload'),
+    sha256: text('sha256'),
+    /** Retention expiry (privacy settings); a cleanup job can act on it. */
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    createdAt: createdAt(),
+    uploadedAt: timestamp('uploaded_at', { withTimezone: true }),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (t) => ({ meetingIdx: index('media_meeting_idx').on(t.meetingId) }),
 );
 
 export const markers = pgTable('markers', {
@@ -293,6 +335,7 @@ export const processingJobs = pgTable(
     meetingId: text('meeting_id')
       .notNull()
       .references(() => meetings.id, { onDelete: 'cascade' }),
+    mediaAssetId: text('media_asset_id'),
     type: text('type').$type<ProcessingJobType>().notNull(),
     status: text('status').$type<ProcessingJobStatus>().notNull().default('queued'),
     stage: text('stage').$type<ProcessingStage>().notNull().default('received'),
@@ -301,6 +344,11 @@ export const processingJobs = pgTable(
     maxAttempts: integer('max_attempts').notNull().default(3),
     errorCode: text('error_code'),
     errorMessage: text('error_message'),
+    /** Provider metadata for debugging/audit (never the meeting content). */
+    provider: text('provider'),
+    providerRequestId: text('provider_request_id'),
+    model: text('model'),
+    metrics: jsonb('metrics').$type<Record<string, number | string>>(),
     createdAt: createdAt(),
     startedAt: timestamp('started_at', { withTimezone: true }),
     completedAt: timestamp('completed_at', { withTimezone: true }),

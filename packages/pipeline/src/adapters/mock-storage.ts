@@ -35,7 +35,7 @@ export class MockStorageAdapter implements ObjectStorageProvider {
 
   async createUploadUrl(input: CreateUploadInput): Promise<PresignedUpload> {
     return {
-      url: `${this.publicBaseUrl}/api/_mock-storage/${encodeURIComponent(input.objectKey)}`,
+      url: `${this.publicBaseUrl}/api/_mock-storage?key=${encodeURIComponent(input.objectKey)}`,
       method: 'PUT',
       headers: { 'content-type': input.contentType },
       expiresAt: new Date(Date.now() + input.ttlSeconds * 1000).toISOString(),
@@ -44,7 +44,7 @@ export class MockStorageAdapter implements ObjectStorageProvider {
 
   async createDownloadUrl(input: { objectKey: string; ttlSeconds: number }): Promise<PresignedDownload> {
     return {
-      url: `${this.publicBaseUrl}/api/_mock-storage/${encodeURIComponent(input.objectKey)}`,
+      url: `${this.publicBaseUrl}/api/_mock-storage?key=${encodeURIComponent(input.objectKey)}`,
       expiresAt: new Date(Date.now() + input.ttlSeconds * 1000).toISOString(),
     };
   }

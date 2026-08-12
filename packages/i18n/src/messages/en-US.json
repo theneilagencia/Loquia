@@ -174,8 +174,7 @@
       "transcribing": "Transcribing",
       "identifying_speakers": "Identifying speakers",
       "organizing_topics": "Organizing topics",
-      "preparing_ai_pack": "Preparing AI Pack",
-      "ready": "Ready"
+      "ready_for_ai_pack": "Ready for AI Pack"
     },
     "status": {
       "queued": "Queued",

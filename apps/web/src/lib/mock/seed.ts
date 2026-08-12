@@ -208,7 +208,7 @@ export function buildSeed(): MockDB {
   ];
 
   const jobs: ProcessingJob[] = [
-    { id: 'j1', workspaceId: 'w1', meetingId: 'm1', type: 'ai_pack', status: 'completed', stage: 'ready', progress: 100, attempt: 1, maxAttempts: 3, createdAt: T.m1, startedAt: T.m1, completedAt: T.m1, updatedAt: T.m1 },
+    { id: 'j1', workspaceId: 'w1', meetingId: 'm1', type: 'ai_pack', status: 'completed', stage: 'ready_for_ai_pack', progress: 100, attempt: 1, maxAttempts: 3, createdAt: T.m1, startedAt: T.m1, completedAt: T.m1, updatedAt: T.m1 },
     { id: 'j2', workspaceId: 'w1', meetingId: 'm2', type: 'transcription', status: 'running', stage: 'transcribing', progress: 33, attempt: 1, maxAttempts: 3, createdAt: T.m2, startedAt: T.m2, updatedAt: T.m2 },
     { id: 'j3', workspaceId: 'w1', meetingId: 'm3', type: 'media_processing', status: 'failed', stage: 'preparing_audio', progress: 12, attempt: 3, maxAttempts: 3, errorCode: 'AUDIO_CORRUPT', errorMessage: 'The uploaded file could not be decoded.', createdAt: T.m3, startedAt: T.m3, updatedAt: T.m3 },
   ];

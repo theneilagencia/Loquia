@@ -3,7 +3,11 @@ import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { ZodError } from 'zod';
+import { Queue } from 'bullmq';
+import { createRedis, createStorageProvider, MEETING_QUEUE } from '@loquia/pipeline';
 import type { AppContext } from './context';
+import type { Database } from './db/client';
+import type { Env } from './env';
 import { isProd } from './env';
 import { ApiError, type ErrorResponseBody } from './lib/errors';
 import { loadAuth, SESSION_COOKIE } from './auth/session';
@@ -16,8 +20,32 @@ import { registerMeetingRoutes } from './routes/meetings';
 import { registerSettingsRoutes } from './routes/settings';
 import { registerPresetRoutes } from './routes/presets';
 import { registerJobRoutes } from './routes/jobs';
+import { registerMediaRoutes } from './routes/media';
 
-export async function buildApp(ctx: AppContext): Promise<FastifyInstance> {
+/** Assemble the app context (storage provider + queue producer) from env+db. */
+export function createContext(env: Env, db: Database): AppContext {
+  const storage = createStorageProvider(env, {
+    dir: env.MEDIA_MOCK_DIR,
+    baseUrl: env.PUBLIC_API_URL ?? `http://localhost:${env.API_PORT}`,
+  });
+
+  let queue: Queue | null = null;
+  const enqueue = async (processingJobId: string): Promise<void> => {
+    if (!env.REDIS_URL) return; // queue disabled (dev without Redis)
+    if (!queue) queue = new Queue(MEETING_QUEUE, { connection: createRedis(env.REDIS_URL) });
+    await queue.add(
+      'process',
+      { processingJobId },
+      { jobId: processingJobId, attempts: 3, backoff: { type: 'exponential', delay: 2000 }, removeOnComplete: 100, removeOnFail: 500 },
+    );
+  };
+
+  return { env, db, storage, enqueue };
+}
+
+export async function buildApp(input: AppContext | { env: Env; db: Database }): Promise<FastifyInstance> {
+  const ctx: AppContext =
+    'storage' in input ? input : createContext(input.env, input.db);
   const app = Fastify({
     genReqId: () => newId(),
     trustProxy: true,
@@ -102,6 +130,7 @@ export async function buildApp(ctx: AppContext): Promise<FastifyInstance> {
   await app.register(registerSettingsRoutes, { prefix: '/api/settings' });
   await app.register(registerPresetRoutes, { prefix: '/api/presets' });
   await app.register(registerJobRoutes, { prefix: '/api/jobs' });
+  await app.register(registerMediaRoutes);
 
   return app;
 }

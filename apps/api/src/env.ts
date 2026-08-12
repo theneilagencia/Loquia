@@ -9,6 +9,22 @@ const schema = z.object({
   API_PORT: z.coerce.number().default(4000),
   COOKIE_DOMAIN: z.string().optional(),
   RATE_LIMIT_MAX: z.coerce.number().default(100),
+
+  // --- Media pipeline (Milestone 3) ---
+  REDIS_URL: z.string().optional(),
+  STORAGE_PROVIDER: z.string().optional(),
+  TRANSCRIPTION_PROVIDER: z.string().optional(),
+  R2_ACCOUNT_ID: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_BUCKET_NAME: z.string().optional(),
+  DEEPGRAM_API_KEY: z.string().optional(),
+  DEEPGRAM_MODEL: z.string().optional(),
+  MEDIA_MOCK_DIR: z.string().default('/tmp/loquia-media'),
+  PUBLIC_API_URL: z.string().optional(),
+  MAX_UPLOAD_SIZE_BYTES: z.coerce.number().default(524288000),
+  MEDIA_UPLOAD_URL_TTL_SECONDS: z.coerce.number().default(900),
+  MEDIA_DOWNLOAD_URL_TTL_SECONDS: z.coerce.number().default(3600),
 });
 
 export type Env = z.infer<typeof schema>;

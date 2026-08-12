@@ -498,7 +498,7 @@ export function createMockServices(deps: MockDeps): Services {
           if (upcoming) {
             j.stage = upcoming;
             j.progress = stageProgress(upcoming);
-            if (upcoming === 'ready') {
+            if (upcoming === 'ready_for_ai_pack') {
               j.status = 'completed';
               j.progress = 100;
               j.completedAt = nowIso();
@@ -516,7 +516,7 @@ export function createMockServices(deps: MockDeps): Services {
               }
             }
           } else {
-            j.stage = 'ready';
+            j.stage = 'ready_for_ai_pack';
             j.progress = 100;
             j.status = 'completed';
           }

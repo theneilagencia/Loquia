@@ -17,7 +17,7 @@ type Story = StoryObj<typeof ProcessingTimeline>;
 
 export const Running: Story = { args: { job: base } };
 export const Completed: Story = {
-  args: { job: { ...base, status: 'completed', stage: 'ready', progress: 100 } },
+  args: { job: { ...base, status: 'completed', stage: 'ready_for_ai_pack', progress: 100 } },
 };
 export const Failed: Story = {
   args: {

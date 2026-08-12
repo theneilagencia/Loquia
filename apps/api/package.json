@@ -5,6 +5,13 @@
   "type": "module",
   "description": "Loquia backend — Fastify + Drizzle + PostgreSQL (Milestone 2 foundation).",
   "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./db": "./src/db/index.ts",
+    "./db/schema": "./src/db/schema.ts",
+    "./env": "./src/env.ts",
+    "./lib/crypto": "./src/lib/crypto.ts"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
@@ -22,6 +29,8 @@
     "@fastify/rate-limit": "10.2.2",
     "@loquia/contracts": "workspace:*",
     "@loquia/domain": "workspace:*",
+    "@loquia/pipeline": "workspace:*",
+    "bullmq": "5.34.10",
     "drizzle-orm": "0.38.4",
     "fastify": "5.2.1",
     "postgres": "3.4.5",

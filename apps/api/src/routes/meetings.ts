@@ -134,7 +134,7 @@ export async function registerMeetingRoutes(app: FastifyInstance): Promise<void>
       let patch: Partial<typeof processingJobs.$inferInsert> = { status: 'running', startedAt: job.startedAt ?? now, updatedAt: now };
       if (upcoming) {
         patch = { ...patch, stage: upcoming, progress: stageProgress(upcoming) };
-        if (upcoming === 'ready') {
+        if (upcoming === 'ready_for_ai_pack') {
           patch = { ...patch, status: 'completed', progress: 100, completedAt: now };
           await tx.update(meetings).set({ status: 'ready', updatedAt: now }).where(eq(meetings.id, meeting.id));
           const existing = await tx.select({ n: sql<number>`count(*)::int` }).from(transcriptSegments).where(eq(transcriptSegments.meetingId, meeting.id));
