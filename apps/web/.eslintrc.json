@@ -1,0 +1,7 @@
+{
+  "extends": ["next/core-web-vitals"],
+  "rules": {
+    "@next/next/no-html-link-for-pages": "off"
+  },
+  "ignorePatterns": ["storybook-static/", ".next/", "playwright-report/", "test-results/"]
+}
