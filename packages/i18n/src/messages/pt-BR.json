@@ -206,6 +206,12 @@
     "evidence": "Evidência",
     "empty": "O AI Pack está sendo preparado.",
     "notProcessed": "Transcrição concluída. AI Pack ainda não processado.",
+    "generate": "Gerar AI Pack",
+    "generating": "Gerando o AI Pack a partir da sua transcrição…",
+    "regenerate": "Regenerar",
+    "regenerating": "Gerando uma nova versão… o AI Pack atual permanece até ficar pronto.",
+    "failed": "Não foi possível preparar o AI Pack. Sua gravação e transcrição foram preservadas. Tente novamente.",
+    "retry": "Tentar novamente",
     "export": "Exportar"
   },
   "export": {

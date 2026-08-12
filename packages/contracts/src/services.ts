@@ -1,6 +1,7 @@
 import type {
   AccessRequest,
   AIPack,
+  AIPackStatus,
   AuditEvent,
   ExportConfig,
   ExportHistoryEntry,
@@ -95,6 +96,21 @@ export interface MeetingService {
   retryProcessing(meetingId: Id): Promise<Result<ProcessingJob>>;
   /** Resolved AI Pack in the requested output language (synthesized content). */
   getAIPack(meetingId: Id, outputLanguage: string): Promise<AIPack | null>;
+  /** Honest AI Pack generation state (not_started/queued/generating/ready/failed). */
+  getAIPackStatus(meetingId: Id): Promise<AIPackStatusInfo>;
+  /** Start AI Pack generation (async). Reuses an in-flight job. */
+  generateAIPack(meetingId: Id): Promise<Result<ProcessingJob>>;
+  /** Regenerate: new version; current stays visible until the new one lands. */
+  regenerateAIPack(meetingId: Id): Promise<Result<ProcessingJob>>;
+}
+
+export interface AIPackStatusInfo {
+  status: AIPackStatus;
+  hasCurrent: boolean;
+  version: number | null;
+  provider: string | null;
+  model: string | null;
+  generatedAt: string | null;
 }
 
 export interface CreateMeetingInput {

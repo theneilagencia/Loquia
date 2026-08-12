@@ -1,9 +1,9 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
-import { Archive, ArrowLeft, Download } from 'lucide-react';
+import { Archive, ArrowLeft, Download, RefreshCw, Sparkles } from 'lucide-react';
 import { Button, buttonVariants, Card, CardContent, Skeleton } from '@loquia/ui';
 import { useServices } from '@/lib/services-context';
 import { Link } from '@/i18n/navigation';
@@ -45,6 +45,36 @@ export default function MeetingDetailPage({
     queryKey: ['audioUrl', meetingId],
     queryFn: () => services.media.getAudioUrl(meetingId),
   });
+  // Honest AI Pack generation state; polls while a job is in flight.
+  const aiPackStatusQ = useQuery({
+    queryKey: ['aiPackStatus', meetingId],
+    queryFn: () => services.meetings.getAIPackStatus(meetingId),
+    refetchInterval: (q) => {
+      const s = q.state.data?.status;
+      return s === 'queued' || s === 'generating' ? 2500 : false;
+    },
+  });
+
+  // When generation finishes, pull in the freshly persisted pack.
+  const aiPackStatus = aiPackStatusQ.data?.status;
+  useEffect(() => {
+    if (aiPackStatus === 'ready') void aiPackQ.refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aiPackStatus]);
+
+  const [busy, setBusy] = useState(false);
+  async function regenerate() {
+    setBusy(true);
+    await services.meetings.regenerateAIPack(meetingId);
+    setBusy(false);
+    void aiPackStatusQ.refetch();
+  }
+  async function generate() {
+    setBusy(true);
+    await services.meetings.generateAIPack(meetingId);
+    setBusy(false);
+    void aiPackStatusQ.refetch();
+  }
 
   const meeting = meetingQ.data;
 
@@ -125,13 +155,51 @@ export default function MeetingDetailPage({
         </TabsList>
 
         <TabsContent value="aiPack">
-          {aiPackQ.data ? (
-            <AIPackView pack={aiPackQ.data} onSeek={setSeekTo} />
-          ) : (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              {transcriptQ.data ? aiPackT('notProcessed') : aiPackT('empty')}
-            </p>
-          )}
+          {(() => {
+            const status = aiPackStatusQ.data?.status;
+            const generating = busy || status === 'queued' || status === 'generating';
+            // Current pack exists → always show it; regeneration keeps it visible.
+            if (aiPackQ.data) {
+              return (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-end gap-3">
+                    {generating && (
+                      <span className="text-xs text-muted-foreground">{aiPackT('regenerating')}</span>
+                    )}
+                    <Button variant="outline" size="sm" disabled={generating} onClick={() => void regenerate()}>
+                      <RefreshCw className="size-3.5" /> {aiPackT('regenerate')}
+                    </Button>
+                  </div>
+                  <AIPackView pack={aiPackQ.data} onSeek={setSeekTo} />
+                </div>
+              );
+            }
+            // No pack yet — reflect the real state honestly.
+            if (generating) {
+              return <p className="py-8 text-center text-sm text-muted-foreground">{aiPackT('generating')}</p>;
+            }
+            if (status === 'failed') {
+              return (
+                <div className="space-y-3 py-8 text-center">
+                  <p className="text-sm text-muted-foreground">{aiPackT('failed')}</p>
+                  <Button variant="outline" size="sm" onClick={() => void generate()}>
+                    <RefreshCw className="size-3.5" /> {aiPackT('retry')}
+                  </Button>
+                </div>
+              );
+            }
+            if (transcriptQ.data) {
+              return (
+                <div className="space-y-3 py-8 text-center">
+                  <p className="text-sm text-muted-foreground">{aiPackT('notProcessed')}</p>
+                  <Button size="sm" onClick={() => void generate()}>
+                    <Sparkles className="size-3.5" /> {aiPackT('generate')}
+                  </Button>
+                </div>
+              );
+            }
+            return <p className="py-8 text-center text-sm text-muted-foreground">{aiPackT('empty')}</p>;
+          })()}
         </TabsContent>
 
         <TabsContent value="transcript">

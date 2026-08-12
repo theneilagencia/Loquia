@@ -270,6 +270,26 @@ export function createApiServices(deps: ApiDeps): Services {
         const res = await api.get<{ source: PackSource | null }>(`/api/meetings/${meetingId}/aipack`).catch(() => ({ source: null }));
         return res.source ? resolvePack(res.source, outputLanguage) : null;
       },
+      getAIPackStatus: (meetingId) =>
+        api
+          .get<import('@loquia/contracts').AIPackStatusInfo>(`/api/meetings/${meetingId}/ai-pack/status`)
+          .catch(() => ({ status: 'not_started' as const, hasCurrent: false, version: null, provider: null, model: null, generatedAt: null })),
+      async generateAIPack(meetingId) {
+        try {
+          return ok(await api.post<ProcessingJob>(`/api/meetings/${meetingId}/ai-pack/generate`));
+        } catch (e) {
+          if (e instanceof ApiHttpError) return err({ code: e.code, message: e.message });
+          throw e;
+        }
+      },
+      async regenerateAIPack(meetingId) {
+        try {
+          return ok(await api.post<ProcessingJob>(`/api/meetings/${meetingId}/ai-pack/regenerate`));
+        } catch (e) {
+          if (e instanceof ApiHttpError) return err({ code: e.code, message: e.message });
+          throw e;
+        }
+      },
     },
 
     transcripts: {

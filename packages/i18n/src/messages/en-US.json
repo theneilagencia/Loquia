@@ -206,6 +206,12 @@
     "evidence": "Evidence",
     "empty": "The AI Pack is being prepared.",
     "notProcessed": "Transcript complete. AI Pack not processed yet.",
+    "generate": "Generate AI Pack",
+    "generating": "Generating the AI Pack from your transcript…",
+    "regenerate": "Regenerate",
+    "regenerating": "Generating a new version… the current AI Pack stays until it's ready.",
+    "failed": "We couldn't prepare the AI Pack. Your recording and transcript were preserved. Try again.",
+    "retry": "Try again",
     "export": "Export"
   },
   "export": {

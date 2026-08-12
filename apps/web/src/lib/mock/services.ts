@@ -13,6 +13,7 @@ import {
   type Invitation,
   type Marker,
   type Meeting,
+  type ProcessingJob,
   type Result,
   type Session,
   type Settings,
@@ -553,6 +554,24 @@ export function createMockServices(deps: MockDeps): Services {
         const source = store.read().packSources.find((p) => p.meetingId === meetingId);
         return source ? resolvePack(source, outputLanguage) : null;
       },
+      async getAIPackStatus(meetingId) {
+        const db = store.read();
+        const hasCurrent = db.packSources.some((p) => p.meetingId === meetingId);
+        return {
+          status: hasCurrent ? ('ready' as const) : ('not_started' as const),
+          hasCurrent,
+          version: hasCurrent ? 1 : null,
+          provider: hasCurrent ? 'mock' : null,
+          model: hasCurrent ? 'mock-aipack-1' : null,
+          generatedAt: hasCurrent ? nowIso() : null,
+        };
+      },
+      async generateAIPack(meetingId) {
+        return this_regenerate(store, meetingId);
+      },
+      async regenerateAIPack(meetingId) {
+        return this_regenerate(store, meetingId);
+      },
     },
 
     // ---------------------------------------------------------- Transcript
@@ -716,6 +735,35 @@ export function createMockServices(deps: MockDeps): Services {
 }
 
 /** Shared meeting-creation used by meetings.create and media.uploadIntent. */
+/** Mock AI Pack (re)generation: (re)build the demo pack source for a meeting. */
+function this_regenerate(store: MockStore, meetingId: Id): Result<ProcessingJob> {
+  const db = store.read();
+  const meeting = db.meetings.find((m) => m.id === meetingId);
+  if (!meeting) return err({ code: 'not_found', message: 'errors.notFoundBody' });
+  const { transcript, packSource } = generateDemoContent(meetingId, meeting.meetingLanguage);
+  store.write((d) => {
+    d.packSources = d.packSources.filter((p) => p.meetingId !== meetingId);
+    d.packSources.push(packSource);
+    if (!d.transcripts.some((t) => t.meetingId === meetingId)) d.transcripts.push(transcript);
+  });
+  const now = nowIso();
+  const job: ProcessingJob = {
+    id: newId('j'),
+    workspaceId: meeting.workspaceId,
+    meetingId,
+    type: 'ai_pack',
+    status: 'completed',
+    stage: 'ready_for_ai_pack',
+    progress: 100,
+    attempt: 1,
+    maxAttempts: 3,
+    createdAt: now,
+    updatedAt: now,
+    completedAt: now,
+  };
+  return ok(job);
+}
+
 function this_meetingsCreate(store: MockStore, input: CreateMeetingInput): Meeting {
   const now = nowIso();
   const meetingId = newId('m');
