@@ -16,24 +16,31 @@ export function AudioPlayer({
   peaks,
   seekTo,
   onSeeked,
+  src,
 }: {
   durationSeconds: number;
   peaks: number[];
   seekTo?: number | null;
   onSeeked?: () => void;
+  /** Real audio URL (presigned). When present, playback drives a real element. */
+  src?: string | null;
 }) {
   const [playing, setPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const raf = useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     if (seekTo != null) {
-      setPosition(Math.min(durationSeconds, Math.max(0, seekTo)));
+      const clamped = Math.min(durationSeconds, Math.max(0, seekTo));
+      setPosition(clamped);
+      if (src && audioRef.current) audioRef.current.currentTime = clamped;
       onSeeked?.();
     }
-  }, [seekTo, durationSeconds, onSeeked]);
+  }, [seekTo, durationSeconds, onSeeked, src]);
 
   useEffect(() => {
+    if (src) return; // a real element drives position via timeupdate
     if (!playing) return;
     raf.current = setInterval(() => {
       setPosition((p) => {
@@ -47,19 +54,33 @@ export function AudioPlayer({
     return () => {
       if (raf.current) clearInterval(raf.current);
     };
-  }, [playing, durationSeconds]);
+  }, [playing, durationSeconds, src]);
 
+  function toggle() {
+    if (src && audioRef.current) {
+      if (playing) audioRef.current.pause();
+      else void audioRef.current.play();
+    }
+    setPlaying((p) => !p);
+  }
+
+  const effectiveDuration = durationSeconds || 1;
   return (
     <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
-      <Button
-        size="icon"
-        variant="secondary"
-        aria-label={playing ? 'Pause' : 'Play'}
-        onClick={() => setPlaying((p) => !p)}
-      >
+      {src && (
+        <audio
+          ref={audioRef}
+          src={src}
+          preload="metadata"
+          onTimeUpdate={(e) => setPosition(Math.floor(e.currentTarget.currentTime))}
+          onEnded={() => setPlaying(false)}
+          className="hidden"
+        />
+      )}
+      <Button size="icon" variant="secondary" aria-label={playing ? 'Pause' : 'Play'} onClick={toggle}>
         {playing ? <Pause /> : <Play />}
       </Button>
-      <Waveform peaks={peaks} progress={durationSeconds ? position / durationSeconds : 0} className="flex-1" />
+      <Waveform peaks={peaks} progress={position / effectiveDuration} className="flex-1" />
       <span className="w-24 text-right font-mono text-xs text-muted-foreground">
         {formatDuration(position)} / {formatDuration(durationSeconds)}
       </span>

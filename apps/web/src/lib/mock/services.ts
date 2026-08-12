@@ -664,6 +664,45 @@ export function createMockServices(deps: MockDeps): Services {
       },
     },
 
+    // --------------------------------------------------------------- Media
+    // Mock media flow: no real object storage. uploadIntent creates the meeting
+    // + queued job (mediaAssetId == meetingId) and returns an empty uploadUrl so
+    // the shared UI skips the direct PUT; the mock pipeline advances via tick.
+    media: {
+      async uploadIntent(input) {
+        const db = store.read();
+        const user = db.users.find((u) => u.id === db.session?.userId);
+        const meeting = this_meetingsCreate(store, {
+          workspaceId: user?.workspaceId ?? 'w1',
+          ownerId: user?.id ?? 'u1',
+          title: input.title,
+          source: input.source,
+          meetingLanguage: input.meetingLanguage,
+          durationSeconds: 0,
+        });
+        return ok({
+          meetingId: meeting.id,
+          mediaAssetId: meeting.id,
+          uploadUrl: '',
+          requiredHeaders: {},
+          expiresAt: new Date(Date.now() + 900_000).toISOString(),
+        });
+      },
+      async completeUpload(mediaAssetId) {
+        const db = store.read();
+        const job = db.jobs
+          .filter((j) => j.meetingId === mediaAssetId)
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+        if (!job) return err({ code: 'not_found', message: 'errors.notFoundBody' });
+        return ok(job);
+      },
+      async getAudioUrl(meetingId) {
+        const db = store.read();
+        const meeting = db.meetings.find((m) => m.id === meetingId);
+        return meeting?.recordingId ? `mock-audio://${meetingId}` : null;
+      },
+    },
+
     // ------------------------------------------------------------- Storage
     storage: {
       async reset() {
@@ -674,6 +713,47 @@ export function createMockServices(deps: MockDeps): Services {
       },
     },
   };
+}
+
+/** Shared meeting-creation used by meetings.create and media.uploadIntent. */
+function this_meetingsCreate(store: MockStore, input: CreateMeetingInput): Meeting {
+  const now = nowIso();
+  const meetingId = newId('m');
+  const meeting: Meeting = {
+    id: meetingId,
+    workspaceId: input.workspaceId,
+    ownerId: input.ownerId,
+    title: input.title,
+    source: input.source,
+    status: 'processing',
+    meetingLanguage: input.meetingLanguage,
+    durationSeconds: input.durationSeconds,
+    participantCount: 2,
+    createdAt: now,
+    updatedAt: now,
+  };
+  store.write((db) => {
+    db.meetings.unshift(meeting);
+    if (input.recording) {
+      const recordingId = newId('r');
+      db.recordings.push({ id: recordingId, meetingId, createdAt: now, ...input.recording });
+      meeting.recordingId = recordingId;
+    }
+    db.jobs.push({
+      id: newId('j'),
+      workspaceId: input.workspaceId,
+      meetingId,
+      type: 'media_processing',
+      status: 'queued',
+      stage: 'received',
+      progress: 0,
+      attempt: 1,
+      maxAttempts: 3,
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+  return meeting;
 }
 
 function sourceLabel(source: Meeting['source'], pt: boolean): string {

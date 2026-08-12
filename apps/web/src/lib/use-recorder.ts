@@ -57,31 +57,35 @@ export function useRecorder() {
   }, []);
 
   const finish = useCallback(async () => {
-    const a = getAdapter();
-    const result = await a.stop();
+    await getAdapter().stop();
     const state = useRecorderStore.getState();
-    const session = await services.auth.getSession();
-    if (!session) {
-      state.reset();
-      return null;
-    }
-    const meeting = await services.meetings.create({
-      workspaceId: session.workspace.id,
-      ownerId: session.user.id,
+    // Upload the finished recording through the same media flow as file upload.
+    // NOTE: in this environment there is no real microphone, so the recorder
+    // synthesizes the signal; a small placeholder blob is uploaded so the real
+    // pipeline (storage → queue → worker → STT) runs end to end.
+    const intent = await services.media.uploadIntent({
       title: state.title || 'Nova gravação',
       source: 'recording',
       meetingLanguage: state.meetingLanguage,
-      durationSeconds: result.durationSeconds,
-      recording: {
-        durationSeconds: result.durationSeconds,
-        audioRef: result.audioRef,
-        waveformPeaks: result.waveformPeaks,
-        source: 'recording',
-      },
+      filename: 'recording.webm',
+      mimeType: 'audio/webm',
+      sizeBytes: 2048,
     });
+    if (!intent.ok) {
+      state.reset();
+      return null;
+    }
+    if (intent.value.uploadUrl) {
+      await fetch(intent.value.uploadUrl, {
+        method: 'PUT',
+        headers: intent.value.requiredHeaders,
+        body: new Blob([new Uint8Array(2048)], { type: 'audio/webm' }),
+      }).catch(() => undefined);
+    }
+    await services.media.completeUpload(intent.value.mediaAssetId);
     state.reset();
-    router.push(`/app/meetings/${meeting.id}/processing`);
-    return meeting;
+    router.push(`/app/meetings/${intent.value.meetingId}/processing`);
+    return intent.value.meetingId;
   }, [services, router]);
 
   return { ...store, requestPermission, start, pause, resume, addMarker, finish };

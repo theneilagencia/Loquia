@@ -11,6 +11,17 @@ const API_PORT = 4000;
 const E2E_DB = process.env.E2E_DATABASE_URL ?? 'postgres://postgres@127.0.0.1:5433/loquia_e2e';
 const baseURL = `http://localhost:${WEB_PORT}`;
 const apiUrl = `http://localhost:${API_PORT}`;
+const REDIS_URL = process.env.E2E_REDIS_URL ?? 'redis://127.0.0.1:6380';
+// Mock providers exercise the real pipeline (storage → queue → worker → STT)
+// without external credentials. API and worker MUST share the same media dir.
+const MEDIA_MOCK_DIR = '/tmp/loquia-e2e-media';
+const mediaEnv = {
+  STORAGE_PROVIDER: 'mock',
+  TRANSCRIPTION_PROVIDER: 'mock',
+  MEDIA_MOCK_DIR,
+  REDIS_URL,
+  PUBLIC_API_URL: apiUrl,
+};
 
 function resolveChromium(): string | undefined {
   if (process.env.PW_CHROMIUM_PATH) return process.env.PW_CHROMIUM_PATH;
@@ -39,8 +50,12 @@ export default defineConfig({
   ],
   webServer: [
     {
-      // Migrate + seed the e2e DB, then start the API.
-      command: `npx tsx src/db/migrate.ts && npx tsx src/db/seed.ts && npx tsx src/index.ts`,
+      // Migrate + seed the e2e DB, then start the real BullMQ worker (background)
+      // and the API (foreground). The worker has no HTTP surface, so it runs as a
+      // child of the same shell (same process group → torn down with the API).
+      // Playwright waits on the API's /health; the worker consumes jobs the API
+      // enqueues into the shared Redis and writes transcript segments.
+      command: `npx tsx src/db/migrate.ts && npx tsx src/db/seed.ts && { (cd ../worker && npx tsx src/index.ts) & npx tsx src/index.ts; }`,
       cwd: '../api',
       url: `${apiUrl}/health`,
       timeout: 120_000,
@@ -51,6 +66,7 @@ export default defineConfig({
         SESSION_SECRET: 'e2e-secret-0123456789-abcdef',
         APP_URL: baseURL,
         API_PORT: String(API_PORT),
+        ...mediaEnv,
       },
     },
     {

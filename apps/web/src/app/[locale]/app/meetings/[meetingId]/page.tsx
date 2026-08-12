@@ -41,6 +41,10 @@ export default function MeetingDetailPage({
     queryKey: ['transcript', meetingId],
     queryFn: () => services.transcripts.get(meetingId),
   });
+  const audioUrlQ = useQuery({
+    queryKey: ['audioUrl', meetingId],
+    queryFn: () => services.media.getAudioUrl(meetingId),
+  });
 
   const meeting = meetingQ.data;
 
@@ -51,7 +55,14 @@ export default function MeetingDetailPage({
     return <p className="text-muted-foreground">{errors('notFoundBody')}</p>;
   }
 
-  const recordingPeaks = aiPackQ.data ? [0.3, 0.6, 0.8, 0.5, 0.9, 0.4, 0.7, 0.6] : [];
+  // Static waveform peaks — real per-sample peaks aren't computed in this
+  // milestone; the player still drives seeking against the real audio element.
+  const recordingPeaks = [0.3, 0.6, 0.8, 0.5, 0.9, 0.4, 0.7, 0.6];
+  // Presigned URLs from real storage are http(s); the mock provider returns a
+  // `mock-audio://` URL, which falls back to simulated playback.
+  const audioSrc =
+    audioUrlQ.data && audioUrlQ.data.startsWith('http') ? audioUrlQ.data : undefined;
+  const showAudio = Boolean(audioUrlQ.data) && meeting.status !== 'processing';
 
   return (
     <div className="space-y-6">
@@ -95,12 +106,13 @@ export default function MeetingDetailPage({
         </Card>
       )}
 
-      {meeting.recordingId && recordingPeaks.length > 0 && (
+      {showAudio && (
         <AudioPlayer
           durationSeconds={meeting.durationSeconds}
           peaks={recordingPeaks}
           seekTo={seekTo}
           onSeeked={() => setSeekTo(null)}
+          src={audioSrc}
         />
       )}
 
@@ -117,7 +129,7 @@ export default function MeetingDetailPage({
             <AIPackView pack={aiPackQ.data} onSeek={setSeekTo} />
           ) : (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              {aiPackT('empty')}
+              {transcriptQ.data ? aiPackT('notProcessed') : aiPackT('empty')}
             </p>
           )}
         </TabsContent>

@@ -143,6 +143,31 @@ export interface StorageService {
   snapshot(): Promise<Record<string, unknown>>;
 }
 
+export interface UploadIntentInput {
+  title: string;
+  source: MeetingSource;
+  meetingLanguage: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes?: number;
+}
+
+export interface UploadIntent {
+  meetingId: Id;
+  mediaAssetId: Id;
+  /** Presigned PUT target; empty string when no direct upload is needed (mock). */
+  uploadUrl: string;
+  requiredHeaders: Record<string, string>;
+  expiresAt: string;
+}
+
+/** Real media upload + audio access (Milestone 3). */
+export interface MediaService {
+  uploadIntent(input: UploadIntentInput): Promise<Result<UploadIntent>>;
+  completeUpload(mediaAssetId: Id): Promise<Result<ProcessingJob>>;
+  getAudioUrl(meetingId: Id): Promise<string | null>;
+}
+
 export type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];
 };
@@ -157,4 +182,5 @@ export interface Services {
   exports: ExportService;
   settings: SettingsService;
   storage: StorageService;
+  media: MediaService;
 }

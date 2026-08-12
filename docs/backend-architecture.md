@@ -19,11 +19,12 @@ LLM, email, or media storage) — those are later milestones.
 apps/
   web/     Next.js frontend (ApiAdapter | MockAdapter, selectable)
   api/     Fastify API  ← implemented in Milestone 2
-  worker/  prepared Render worker (no pipeline)
+  worker/  BullMQ media-pipeline consumer  ← implemented in Milestone 3
 packages/
   domain/    shared domain types (source of truth for web AND api)
   contracts/ service interfaces + Zod schemas (shared)
   export-engine/ single md/txt/json engine (shared; runs client-side)
+  pipeline/  storage + transcription providers, segmentation, queue (M3)
 ```
 
 The API imports `@loquia/domain` and `@loquia/contracts` — interfaces are never
@@ -109,24 +110,38 @@ backend does not duplicate it. The ApiAdapter fetches meeting/transcript/AI-Pack
 source from the API and runs the engine locally for preview/clipboard/download,
 recording export history via the API.
 
-## What remains mock (by design, Milestone 2)
+## Media pipeline (Milestone 3)
 
-- **Transcription & AI Pack content** — demo/deterministic (no STT/LLM). The
-  bilingual AI Pack source is stored as JSONB so the shared engine can render it.
-  No endpoint claims real processing; the pipeline stages are simulated by
-  `POST /meetings/:id/job/tick`.
+The media→transcript pipeline is now **real**: direct-to-storage upload, a
+BullMQ queue, an idempotent worker, real STT + diarization, and persisted
+`TranscriptSegment`s. See `docs/media-pipeline.md`, `docs/storage.md`,
+`docs/transcription-provider.md`, and `docs/processing-jobs.md`. Providers are
+selected by env (`STORAGE_PROVIDER=r2|mock`, `TRANSCRIPTION_PROVIDER=deepgram|mock`)
+with **no silent mock fallback in production**. **No AI Pack / LLM generation is
+implemented** — once the transcript is ready the UI honestly shows *"AI Pack
+ainda não processado."*
+
+## What remains mock (by design, through Milestone 3)
+
+- **AI Pack content** — still demo/deterministic (no LLM). The bilingual AI Pack
+  source is stored as JSONB so the shared engine can render it. No endpoint
+  claims a real pack was generated; after a real transcript the UI shows the
+  honest "AI Pack not processed yet" state.
 - **Email** (invitations/reset) — not sent; activation tokens are surfaced via
   the approve API response for now.
-- **Media upload/storage**, **queue/worker pipeline**, **STT/diarization/LLM** —
-  not implemented; `loquia-worker` and `loquia-queue` are prepared only.
+- **STT/diarization** run through the **mock providers** in this environment
+  (no R2/Deepgram credentials); the real R2/Deepgram adapters are implemented
+  and selected in production. FFmpeg normalization is deferred.
 
 ## Deploy (Render)
 
 `render.yaml` (Blueprint) defines `loquia-postgres`, `loquia-api`,
-`loquia-web`, `loquia-worker`, `loquia-queue`. Secrets are injected by Render
-(`generateValue` / `fromDatabase` / `fromService` / `sync:false`) and never
-committed. Migrations run in the API `preDeployCommand`. **No deploy has been
-performed** — the blueprint is structurally validated only.
+`loquia-web`, `loquia-worker` (the active BullMQ consumer), and `loquia-queue`
+(Key Value / Redis backing the queue). Secrets — including `R2_*` and
+`DEEPGRAM_API_KEY` — are injected by Render (`generateValue` / `fromDatabase` /
+`fromService` / `sync:false`) and never committed. Migrations run in the API
+`preDeployCommand`. **No deploy has been performed** — the blueprint is
+structurally validated only.
 
 ## Testing
 

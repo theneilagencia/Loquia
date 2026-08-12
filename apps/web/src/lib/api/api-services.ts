@@ -256,7 +256,8 @@ export function createApiServices(deps: ApiDeps): Services {
         }
       },
       getProcessingJob: (meetingId) => api.get<ProcessingJob | null>(`/api/meetings/${meetingId}/job`).catch(() => null),
-      tickProcessing: (meetingId) => api.post<ProcessingJob | null>(`/api/meetings/${meetingId}/job/tick`).catch(() => null),
+      // In API mode the worker advances the job; the UI polls (never drives it).
+      tickProcessing: (meetingId) => api.get<ProcessingJob | null>(`/api/meetings/${meetingId}/job`).catch(() => null),
       async retryProcessing(meetingId) {
         try {
           return ok(await api.post<ProcessingJob>(`/api/meetings/${meetingId}/job/retry`));
@@ -340,6 +341,29 @@ export function createApiServices(deps: ApiDeps): Services {
     settings: {
       get: () => api.get<Settings>('/api/settings'),
       update: (_userId, patch) => api.patch<Settings>('/api/settings', patch),
+    },
+
+    media: {
+      async uploadIntent(input) {
+        try {
+          return ok(await api.post<import('@loquia/contracts').UploadIntent>('/api/meetings/upload-intent', input));
+        } catch (e) {
+          if (e instanceof ApiHttpError) return err({ code: e.code, message: e.message });
+          throw e;
+        }
+      },
+      async completeUpload(mediaAssetId) {
+        try {
+          return ok(await api.post<ProcessingJob>(`/api/media/${mediaAssetId}/complete`));
+        } catch (e) {
+          if (e instanceof ApiHttpError) return err({ code: e.code, message: e.message });
+          throw e;
+        }
+      },
+      async getAudioUrl(meetingId) {
+        const res = await api.get<{ url: string | null }>(`/api/meetings/${meetingId}/audio-url`).catch(() => ({ url: null }));
+        return res.url;
+      },
     },
 
     storage: {

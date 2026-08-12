@@ -1,7 +1,8 @@
-# Loquia — Render Blueprint (Milestone 2 foundation).
+# Loquia — Render Blueprint (Milestone 3: media pipeline).
 # Structurally validated only; no deploy is performed in this milestone.
 # Secrets are never committed — they are injected by Render (generateValue /
-# sync:false / fromDatabase / fromService).
+# sync:false / fromDatabase / fromService). R2 and Deepgram credentials are set
+# in the Render dashboard (sync:false); production never silently uses mocks.
 
 databases:
   - name: loquia-postgres
@@ -35,11 +36,30 @@ services:
         generateValue: true
       - key: APP_URL
         sync: false # set to the loquia-web public URL
+      - key: PUBLIC_API_URL
+        sync: false # set to the loquia-api public URL (used for storage callbacks)
       - key: REDIS_URL
         fromService:
           type: keyvalue
           name: loquia-queue
           property: connectionString
+      # --- Media pipeline providers (real; no silent mock fallback in prod) ---
+      - key: STORAGE_PROVIDER
+        value: r2
+      - key: TRANSCRIPTION_PROVIDER
+        value: deepgram
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
+      - key: DEEPGRAM_API_KEY
+        sync: false
+      - key: DEEPGRAM_MODEL
+        value: nova-2
 
   # ---- Web (Next.js), talking to the API ----
   - type: web
@@ -57,7 +77,7 @@ services:
       - key: NEXT_PUBLIC_API_URL
         sync: false # set to the loquia-api public URL
 
-  # ---- Worker (prepared; no pipeline runs yet) ----
+  # ---- Worker (BullMQ consumer: STT + diarization → transcript segments) ----
   - type: worker
     name: loquia-worker
     runtime: node
@@ -77,8 +97,27 @@ services:
           type: keyvalue
           name: loquia-queue
           property: connectionString
+      - key: PUBLIC_API_URL
+        sync: false # set to the loquia-api public URL
+      # --- Media pipeline providers (must match the API service) ---
+      - key: STORAGE_PROVIDER
+        value: r2
+      - key: TRANSCRIPTION_PROVIDER
+        value: deepgram
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
+      - key: DEEPGRAM_API_KEY
+        sync: false
+      - key: DEEPGRAM_MODEL
+        value: nova-2
 
-  # ---- Key Value (Redis-compatible), prepared for the future queue ----
+  # ---- Key Value (Redis-compatible) backing the BullMQ queue ----
   - type: keyvalue
     name: loquia-queue
     plan: starter

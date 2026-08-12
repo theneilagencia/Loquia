@@ -44,12 +44,13 @@ runtime.
 ```
 apps/
   web/        ← the real frontend (implemented)
-  api/        ← scaffolding only (Milestone 2)
-  worker/     ← scaffolding only (Milestone 2)
+  api/        ← Fastify API (Milestone 2)
+  worker/     ← BullMQ media-pipeline consumer (Milestone 3)
 packages/
   domain/         domain types incl. ProcessingJob & AI Pack model
   contracts/      service interfaces, Zod schemas, browser-adapter ports
   export-engine/  single md/txt/json engine (preview = clipboard = download)
+  pipeline/       storage + transcription providers, segmentation, queue (M3)
   i18n/           locale config + pt-BR/en-US message bundles
   ui/             design-system primitives (Button, Card, Badge, …)
   config/         design tokens (CSS vars) + Tailwind preset
@@ -104,8 +105,23 @@ lifecycle (requests → approval → invitations → activation), server-side
 append-only audit, and real persistence of meetings metadata, settings, export
 presets and ProcessingJobs. See [`docs/backend-architecture.md`](docs/backend-architecture.md).
 
-Still mock by design: transcription/AI-Pack content, email, media upload/storage,
-and the STT/diarization/LLM pipeline (later milestones).
+## Media pipeline (Milestone 3)
+
+Recording/upload now runs through a **real** asynchronous pipeline: direct
+browser upload to object storage (the API never proxies the bytes) → `MediaAsset`
+→ `ProcessingJob` → BullMQ queue (Redis) → worker (`apps/worker`) → STT +
+diarization → segmentation → persisted `TranscriptSegment`s → frontend. Providers
+sit behind interfaces and are selected by env — **Cloudflare R2**
+(`STORAGE_PROVIDER=r2|mock`) and **Deepgram** (`TRANSCRIPTION_PROVIDER=deepgram|mock`),
+with deterministic mocks for dev/tests and **no silent mock fallback in
+production**. See [`docs/media-pipeline.md`](docs/media-pipeline.md),
+[`docs/storage.md`](docs/storage.md),
+[`docs/transcription-provider.md`](docs/transcription-provider.md), and
+[`docs/processing-jobs.md`](docs/processing-jobs.md).
+
+**No AI Pack / LLM generation happens yet.** When the transcript is ready the UI
+honestly shows *"Transcrição concluída. AI Pack ainda não processado."* Still
+mock by design: AI-Pack content and email. FFmpeg normalization is deferred.
 
 ### Run the backend locally
 
@@ -159,16 +175,19 @@ Built with the `@storybook/react-vite` framework and intl+theme toolbar globals.
 Stories cover UI primitives and key product components (ProcessingTimeline,
 AIPackView, Waveform) across light/dark and pt-BR/en-US.
 
-## Limitations (by design, Milestone 1)
+## Limitations (by design, through Milestone 3)
 
-- No real backend, database, queue, STT, diarization, LLM, email, storage, or
-  auth. Everything is mock.
-- Planned locales (es/fr/de) are routable but fall back to en-US messages (not
-  advertised as complete).
-- Optional enhancements not yet built (non-blocking): custom preset manager,
-  extended AudioPlayer transport. See `docs/MILESTONE-1.1-REPORT.md` §Gaps.
+- **AI Pack content / LLM generation** is not implemented — after a real
+  transcript the UI shows the honest "AI Pack not processed yet" state.
+- **Email** (invitations/reset) is not sent; activation tokens are surfaced via
+  the approve API response.
+- **STT/diarization** run through the mock providers in this environment (no
+  R2/Deepgram credentials); the real adapters are implemented and selected in
+  production. Live R2/Deepgram smokes are marked *NOT RUN* when credentials are
+  absent. **FFmpeg** audio normalization is deferred.
+- Planned locales (es/fr/de) are routable but fall back to en-US messages.
 
 ## Next milestone
 
-Milestone 2 introduces the real backend (API + worker + persistence + AI
-pipeline). It is intentionally **not** started here.
+Real **AI Pack generation** (LLM) over the persisted transcript — evidence-backed
+canonical sections. Intentionally **not** started here.
