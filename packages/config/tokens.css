@@ -1,0 +1,121 @@
+/*
+ * Loquia design tokens.
+ *
+ * NOTE (Milestone 1): docs/design-tokens.md and the prototype were absent from
+ * the handoff, so this token system is a reconstruction. It follows a semantic,
+ * shadcn-compatible scale (HSL channels) with light/dark themes. Swap these
+ * values when the real brand tokens arrive — component code references only the
+ * semantic names, so nothing else needs to change.
+ */
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 224 24% 12%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 224 24% 12%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 224 24% 12%;
+
+  --primary: 245 66% 56%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 220 20% 96%;
+  --secondary-foreground: 224 24% 20%;
+
+  --muted: 220 20% 96%;
+  --muted-foreground: 220 10% 44%;
+
+  --accent: 190 82% 44%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+
+  --success: 152 60% 40%;
+  --success-foreground: 0 0% 100%;
+
+  --warning: 38 92% 50%;
+  --warning-foreground: 30 40% 12%;
+
+  --border: 220 16% 88%;
+  --input: 220 16% 88%;
+  --ring: 245 66% 56%;
+
+  --radius: 0.75rem;
+}
+
+:root:not([data-theme='light']) {
+  @media (prefers-color-scheme: dark) {
+    --background: 224 32% 8%;
+    --foreground: 210 20% 96%;
+
+    --card: 224 28% 11%;
+    --card-foreground: 210 20% 96%;
+
+    --popover: 224 28% 11%;
+    --popover-foreground: 210 20% 96%;
+
+    --primary: 245 72% 66%;
+    --primary-foreground: 224 40% 8%;
+
+    --secondary: 224 20% 18%;
+    --secondary-foreground: 210 20% 92%;
+
+    --muted: 224 20% 18%;
+    --muted-foreground: 220 12% 62%;
+
+    --accent: 190 82% 52%;
+    --accent-foreground: 224 40% 8%;
+
+    --destructive: 0 62% 52%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 52% 46%;
+    --success-foreground: 224 40% 8%;
+
+    --warning: 38 92% 56%;
+    --warning-foreground: 30 40% 12%;
+
+    --border: 224 18% 22%;
+    --input: 224 18% 22%;
+    --ring: 245 72% 66%;
+  }
+}
+
+:root[data-theme='dark'] {
+  --background: 224 32% 8%;
+  --foreground: 210 20% 96%;
+
+  --card: 224 28% 11%;
+  --card-foreground: 210 20% 96%;
+
+  --popover: 224 28% 11%;
+  --popover-foreground: 210 20% 96%;
+
+  --primary: 245 72% 66%;
+  --primary-foreground: 224 40% 8%;
+
+  --secondary: 224 20% 18%;
+  --secondary-foreground: 210 20% 92%;
+
+  --muted: 224 20% 18%;
+  --muted-foreground: 220 12% 62%;
+
+  --accent: 190 82% 52%;
+  --accent-foreground: 224 40% 8%;
+
+  --destructive: 0 62% 52%;
+  --destructive-foreground: 0 0% 100%;
+
+  --success: 152 52% 46%;
+  --success-foreground: 224 40% 8%;
+
+  --warning: 38 92% 56%;
+  --warning-foreground: 30 40% 12%;
+
+  --border: 224 18% 22%;
+  --input: 224 18% 22%;
+  --ring: 245 72% 66%;
+}

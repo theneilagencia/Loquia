@@ -1,0 +1,2 @@
+/* Import the design tokens so any consumer of @loquia/ui/styles gets them. */
+@import '@loquia/config/tokens';

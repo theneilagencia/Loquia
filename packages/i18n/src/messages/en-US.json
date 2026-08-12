@@ -1,0 +1,359 @@
+{
+  "common": {
+    "appName": "Loquia",
+    "tagline": "Turn meetings into AI-ready context.",
+    "loading": "Loading…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish",
+    "retry": "Retry",
+    "remove": "Remove",
+    "search": "Search",
+    "empty": "Nothing here yet.",
+    "copied": "Copied",
+    "copy": "Copy",
+    "download": "Download",
+    "language": "Language",
+    "theme": "Theme",
+    "themeSystem": "System",
+    "themeLight": "Light",
+    "themeDark": "Dark"
+  },
+  "nav": {
+    "product": "Product",
+    "security": "Security",
+    "login": "Log in",
+    "requestAccess": "Request access",
+    "home": "Home",
+    "meetings": "Meetings",
+    "record": "Record",
+    "upload": "Upload",
+    "settings": "Settings",
+    "admin": "Admin",
+    "brandbook": "Brandbook",
+    "logout": "Log out"
+  },
+  "marketing": {
+    "heroTitle": "Turn meetings into AI-ready context.",
+    "heroSubtitle": "Loquia records, transcribes and organizes your conversations into a structured, evidence-linked pack you can drop straight into any AI tool.",
+    "heroCtaPrimary": "Request access",
+    "heroCtaSecondary": "See how it works",
+    "problemTitle": "Meeting knowledge evaporates.",
+    "problemBody": "Recordings pile up, notes go stale, and the context your team needs is trapped in hours of audio.",
+    "howTitle": "How it works",
+    "howStep1": "Record or upload your meeting.",
+    "howStep2": "We transcribe and identify speakers.",
+    "howStep3": "Get a structured AI Pack, ready to export.",
+    "aiPackTitle": "The AI Pack",
+    "aiPackBody": "Fourteen canonical sections — decisions, action items, risks and more — each backed by evidence from the transcript. Nothing invented.",
+    "presetsTitle": "Export presets",
+    "presetsBody": "AI Pack, Clean Transcript, Analysis, Writing, Full Fidelity or a custom mix — in Markdown, TXT or JSON.",
+    "portabilityTitle": "Portable by design",
+    "portabilityBody": "Your context isn't locked in. Copy to clipboard or download real files that any tool can read.",
+    "privacyTitle": "Private by default",
+    "privacyBody": "You control what is stored and for how long. Audio can be discarded after processing.",
+    "ctaTitle": "Ready to give your AI real context?",
+    "ctaBody": "Request access and we'll get you set up.",
+    "ctaButton": "Request access"
+  },
+  "access": {
+    "requestTitle": "Request access",
+    "requestSubtitle": "Tell us a bit about you and your team.",
+    "name": "Full name",
+    "email": "Work email",
+    "company": "Company",
+    "role": "Your role",
+    "useCase": "What do you want to use Loquia for?",
+    "submit": "Request access",
+    "successTitle": "Request received",
+    "successBody": "Thanks — we'll review your request and email you when it's approved.",
+    "successBack": "Back to home"
+  },
+  "auth": {
+    "loginTitle": "Log in",
+    "loginSubtitle": "Welcome back.",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Log in",
+    "forgot": "Forgot password?",
+    "genericError": "If those credentials are valid, you'll be signed in. Otherwise, check them and try again.",
+    "forgotTitle": "Reset your password",
+    "forgotSubtitle": "We'll email you a link if an account exists.",
+    "forgotSubmit": "Send reset link",
+    "forgotSent": "If an account exists for that email, a reset link is on its way.",
+    "activateTitle": "Activate your account",
+    "activateSubtitle": "Set your name and password to finish.",
+    "activateSubmit": "Activate account",
+    "activateInvalid": "This invitation link is invalid or has expired.",
+    "confirmPassword": "Confirm password"
+  },
+  "onboarding": {
+    "title": "Welcome to Loquia",
+    "step1Title": "How Loquia works",
+    "step1Body": "Record or upload a meeting and Loquia builds an AI-ready pack from it.",
+    "step2Title": "Choose your meeting language",
+    "step2Body": "You can change this per meeting later.",
+    "step3Title": "You're all set",
+    "step3Body": "Let's create your first meeting.",
+    "finish": "Go to app"
+  },
+  "app": {
+    "homeTitle": "Home",
+    "homeGreeting": "Welcome back, {name}.",
+    "recentMeetings": "Recent meetings",
+    "quickRecord": "Record a meeting",
+    "quickUpload": "Upload audio",
+    "commandPalette": "Command palette",
+    "commandHint": "Type a command or search…"
+  },
+  "meetings": {
+    "title": "Meetings",
+    "empty": "No meetings yet. Record or upload one to get started.",
+    "new": "New meeting",
+    "showArchived": "Show archived",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "durationLabel": "{minutes} min",
+    "participants": "{count} participants",
+    "status": {
+      "draft": "Draft",
+      "processing": "Processing",
+      "ready": "Ready",
+      "failed": "Failed",
+      "archived": "Archived"
+    },
+    "tabs": {
+      "aiPack": "AI Pack",
+      "transcript": "Transcript",
+      "details": "Details"
+    }
+  },
+  "recorder": {
+    "title": "Record",
+    "start": "Start recording",
+    "pause": "Pause",
+    "resume": "Resume",
+    "finish": "Finish",
+    "marker": "Add marker",
+    "permissionUnknown": "Microphone access needed",
+    "permissionRequested": "Requesting microphone…",
+    "permissionDenied": "Microphone access was denied. Enable it in your browser settings to record.",
+    "deviceMissing": "No microphone was found. Connect one and try again.",
+    "deviceDisconnected": "The microphone was disconnected. Reconnect it to continue.",
+    "unsupported": "Recording isn't supported in this browser.",
+    "error": "Something went wrong with recording.",
+    "recording": "Recording",
+    "paused": "Paused",
+    "miniRecording": "Recording in progress",
+    "shortcuts": "Space to pause/resume · Cmd/Ctrl+M to mark · Cmd/Ctrl+Enter to finish"
+  },
+  "upload": {
+    "title": "Upload",
+    "drop": "Drag an audio file here, or click to browse",
+    "select": "Choose file",
+    "invalidType": "That file type isn't supported. Use MP3, WAV or M4A.",
+    "tooLarge": "That file is too large.",
+    "uploading": "Uploading…",
+    "processing": "Processing…",
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "remove": "Remove"
+  },
+  "processing": {
+    "title": "Processing",
+    "stages": {
+      "received": "Received",
+      "preparing_audio": "Preparing audio",
+      "transcribing": "Transcribing",
+      "identifying_speakers": "Identifying speakers",
+      "organizing_topics": "Organizing topics",
+      "preparing_ai_pack": "Preparing AI Pack",
+      "ready": "Ready"
+    },
+    "status": {
+      "queued": "Queued",
+      "running": "Running",
+      "partial": "Partial",
+      "failed": "Failed",
+      "completed": "Completed",
+      "retrying": "Retrying"
+    },
+    "failedTitle": "Processing failed",
+    "failedBody": "What we captured is preserved. You can retry processing.",
+    "retry": "Retry processing",
+    "open": "Open meeting"
+  },
+  "transcript": {
+    "search": "Search transcript",
+    "noResults": "No matches.",
+    "edit": "Edit",
+    "save": "Save",
+    "rename": "Rename speaker",
+    "renamePlaceholder": "Speaker name",
+    "addMarker": "Add marker",
+    "editedBadge": "edited"
+  },
+  "aiPack": {
+    "title": "AI Pack",
+    "inferred": "Inferred",
+    "uncertain": "Uncertain",
+    "evidence": "Evidence",
+    "empty": "The AI Pack is being prepared.",
+    "export": "Export"
+  },
+  "export": {
+    "title": "Export",
+    "preset": "Preset",
+    "size": "Size",
+    "format": "Format",
+    "language": "Language",
+    "sections": "Sections",
+    "preview": "Preview",
+    "copy": "Copy to clipboard",
+    "download": "Download",
+    "presets": {
+      "ai_pack": "AI Pack",
+      "clean_transcript": "Clean Transcript",
+      "analysis": "Analysis",
+      "writing": "Writing",
+      "full_fidelity": "Full Fidelity",
+      "custom": "Custom"
+    },
+    "sizes": {
+      "compact": "Compact",
+      "standard": "Standard",
+      "full": "Full"
+    },
+    "history": "Export history",
+    "copied": "Copied to clipboard"
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": {
+      "general": "General",
+      "recording": "Recording",
+      "export": "Export",
+      "language": "Language",
+      "privacy": "Privacy",
+      "appearance": "Appearance"
+    },
+    "general": {
+      "displayName": "Display name",
+      "uiLocale": "Interface language",
+      "timezone": "Timezone"
+    },
+    "recording": {
+      "device": "Preferred microphone",
+      "countdown": "Countdown before recording",
+      "autoMarker": "Add a marker automatically on pause",
+      "meetingLanguage": "Default meeting language"
+    },
+    "exportPrefs": {
+      "defaultPreset": "Default preset",
+      "defaultSize": "Default size",
+      "defaultFormat": "Default format",
+      "exportLanguage": "Export language",
+      "includeEvidence": "Include evidence by default"
+    },
+    "language": {
+      "ui": "Interface language",
+      "meeting": "Meeting language",
+      "transcript": "Transcript language",
+      "export": "Export language"
+    },
+    "privacy": {
+      "storeAudio": "Keep audio after processing",
+      "analytics": "Share anonymous usage analytics",
+      "redact": "Redact emails in exports"
+    },
+    "appearance": {
+      "theme": "Theme",
+      "reducedMotion": "Reduce motion",
+      "density": "Density",
+      "comfortable": "Comfortable",
+      "compact": "Compact"
+    },
+    "saved": "Settings saved"
+  },
+  "admin": {
+    "title": "Admin",
+    "overview": "Overview",
+    "accessRequests": "Access requests",
+    "users": "Users",
+    "workspaces": "Workspaces",
+    "invitations": "Invitations",
+    "audit": "Audit log",
+    "metrics": {
+      "pendingRequests": "Pending requests",
+      "activeUsers": "Active users",
+      "workspaces": "Workspaces",
+      "meetings30d": "Meetings (30d)",
+      "openInvitations": "Open invitations"
+    },
+    "request": {
+      "detail": "Request detail",
+      "approve": "Approve",
+      "reject": "Reject",
+      "rejectReason": "Reason for rejection",
+      "approved": "Request approved — invitation created.",
+      "rejected": "Request rejected.",
+      "pending": "Pending",
+      "statusApproved": "Approved",
+      "statusRejected": "Rejected"
+    },
+    "invite": {
+      "create": "Invite user",
+      "revoke": "Revoke",
+      "email": "Email",
+      "role": "Role",
+      "sent": "Invitation sent",
+      "revoked": "Invitation revoked"
+    },
+    "userActions": {
+      "suspend": "Suspend",
+      "activate": "Activate",
+      "makeAdmin": "Make admin",
+      "makeMember": "Make member"
+    },
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member"
+    }
+  },
+  "brandbook": {
+    "title": "Brandbook",
+    "subtitle": "The visual language of Loquia.",
+    "colors": "Colors",
+    "typography": "Typography",
+    "spacing": "Spacing",
+    "components": "Components",
+    "voice": "Voice & tone"
+  },
+  "errors": {
+    "offlineTitle": "You're offline",
+    "offlineBody": "Your work is preserved locally. We'll sync when you're back.",
+    "notFoundTitle": "Not found",
+    "notFoundBody": "We couldn't find what you were looking for.",
+    "genericTitle": "Something went wrong",
+    "genericBody": "The action didn't complete. Nothing was lost. Try again.",
+    "whatHappened": "What happened",
+    "whatPreserved": "What's preserved",
+    "nextAction": "Next step"
+  },
+  "validation": {
+    "name_min": "Please enter your full name.",
+    "email_invalid": "Enter a valid email address.",
+    "company_min": "Enter your company name.",
+    "role_min": "Enter your role.",
+    "use_case_min": "Tell us a little more (at least 10 characters).",
+    "password_required": "Enter your password.",
+    "password_min": "Use at least 8 characters.",
+    "password_mismatch": "Passwords don't match.",
+    "reason_min": "Enter a reason."
+  }
+}

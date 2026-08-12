@@ -1,0 +1,359 @@
+{
+  "common": {
+    "appName": "Loquia",
+    "tagline": "Transforme reuniões em contexto pronto para IA.",
+    "loading": "Carregando…",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "close": "Fechar",
+    "back": "Voltar",
+    "next": "Avançar",
+    "finish": "Concluir",
+    "retry": "Tentar novamente",
+    "remove": "Remover",
+    "search": "Buscar",
+    "empty": "Nada por aqui ainda.",
+    "copied": "Copiado",
+    "copy": "Copiar",
+    "download": "Baixar",
+    "language": "Idioma",
+    "theme": "Tema",
+    "themeSystem": "Sistema",
+    "themeLight": "Claro",
+    "themeDark": "Escuro"
+  },
+  "nav": {
+    "product": "Produto",
+    "security": "Segurança",
+    "login": "Entrar",
+    "requestAccess": "Solicitar acesso",
+    "home": "Início",
+    "meetings": "Reuniões",
+    "record": "Gravar",
+    "upload": "Enviar",
+    "settings": "Configurações",
+    "admin": "Admin",
+    "brandbook": "Brandbook",
+    "logout": "Sair"
+  },
+  "marketing": {
+    "heroTitle": "Transforme reuniões em contexto pronto para IA.",
+    "heroSubtitle": "A Loquia grava, transcreve e organiza suas conversas em um pacote estruturado e ligado a evidências, pronto para usar em qualquer ferramenta de IA.",
+    "heroCtaPrimary": "Solicitar acesso",
+    "heroCtaSecondary": "Ver como funciona",
+    "problemTitle": "O conhecimento das reuniões evapora.",
+    "problemBody": "As gravações se acumulam, as anotações envelhecem e o contexto que seu time precisa fica preso em horas de áudio.",
+    "howTitle": "Como funciona",
+    "howStep1": "Grave ou envie sua reunião.",
+    "howStep2": "Transcrevemos e identificamos quem falou.",
+    "howStep3": "Receba um AI Pack estruturado, pronto para exportar.",
+    "aiPackTitle": "O AI Pack",
+    "aiPackBody": "Quatorze seções canônicas — decisões, ações, riscos e mais — cada uma sustentada por evidências da transcrição. Nada inventado.",
+    "presetsTitle": "Presets de exportação",
+    "presetsBody": "AI Pack, Transcrição Limpa, Análise, Escrita, Fidelidade Total ou uma combinação personalizada — em Markdown, TXT ou JSON.",
+    "portabilityTitle": "Portável por design",
+    "portabilityBody": "Seu contexto não fica preso. Copie para a área de transferência ou baixe arquivos reais que qualquer ferramenta lê.",
+    "privacyTitle": "Privado por padrão",
+    "privacyBody": "Você controla o que é armazenado e por quanto tempo. O áudio pode ser descartado após o processamento.",
+    "ctaTitle": "Pronto para dar contexto real à sua IA?",
+    "ctaBody": "Solicite acesso e ajudamos você a começar.",
+    "ctaButton": "Solicitar acesso"
+  },
+  "access": {
+    "requestTitle": "Solicitar acesso",
+    "requestSubtitle": "Conte um pouco sobre você e seu time.",
+    "name": "Nome completo",
+    "email": "E-mail corporativo",
+    "company": "Empresa",
+    "role": "Seu cargo",
+    "useCase": "Para que você quer usar a Loquia?",
+    "submit": "Solicitar acesso",
+    "successTitle": "Solicitação recebida",
+    "successBody": "Obrigado — vamos analisar sua solicitação e enviar um e-mail quando for aprovada.",
+    "successBack": "Voltar ao início"
+  },
+  "auth": {
+    "loginTitle": "Entrar",
+    "loginSubtitle": "Que bom te ver de novo.",
+    "email": "E-mail",
+    "password": "Senha",
+    "submit": "Entrar",
+    "forgot": "Esqueceu a senha?",
+    "genericError": "Se essas credenciais forem válidas, você entrará. Caso contrário, confira e tente de novo.",
+    "forgotTitle": "Redefinir sua senha",
+    "forgotSubtitle": "Enviaremos um link por e-mail se existir uma conta.",
+    "forgotSubmit": "Enviar link",
+    "forgotSent": "Se existir uma conta para esse e-mail, o link de redefinição está a caminho.",
+    "activateTitle": "Ative sua conta",
+    "activateSubtitle": "Defina seu nome e senha para concluir.",
+    "activateSubmit": "Ativar conta",
+    "activateInvalid": "Este link de convite é inválido ou expirou.",
+    "confirmPassword": "Confirmar senha"
+  },
+  "onboarding": {
+    "title": "Bem-vindo à Loquia",
+    "step1Title": "Como a Loquia funciona",
+    "step1Body": "Grave ou envie uma reunião e a Loquia monta um pacote pronto para IA a partir dela.",
+    "step2Title": "Escolha o idioma da reunião",
+    "step2Body": "Você pode alterar isso por reunião depois.",
+    "step3Title": "Tudo pronto",
+    "step3Body": "Vamos criar sua primeira reunião.",
+    "finish": "Ir para o app"
+  },
+  "app": {
+    "homeTitle": "Início",
+    "homeGreeting": "Bem-vindo de volta, {name}.",
+    "recentMeetings": "Reuniões recentes",
+    "quickRecord": "Gravar uma reunião",
+    "quickUpload": "Enviar áudio",
+    "commandPalette": "Paleta de comandos",
+    "commandHint": "Digite um comando ou busque…"
+  },
+  "meetings": {
+    "title": "Reuniões",
+    "empty": "Nenhuma reunião ainda. Grave ou envie uma para começar.",
+    "new": "Nova reunião",
+    "showArchived": "Mostrar arquivadas",
+    "archive": "Arquivar",
+    "unarchive": "Desarquivar",
+    "durationLabel": "{minutes} min",
+    "participants": "{count} participantes",
+    "status": {
+      "draft": "Rascunho",
+      "processing": "Processando",
+      "ready": "Pronta",
+      "failed": "Falhou",
+      "archived": "Arquivada"
+    },
+    "tabs": {
+      "aiPack": "AI Pack",
+      "transcript": "Transcrição",
+      "details": "Detalhes"
+    }
+  },
+  "recorder": {
+    "title": "Gravar",
+    "start": "Iniciar gravação",
+    "pause": "Pausar",
+    "resume": "Retomar",
+    "finish": "Concluir",
+    "marker": "Adicionar marcador",
+    "permissionUnknown": "Precisamos de acesso ao microfone",
+    "permissionRequested": "Solicitando microfone…",
+    "permissionDenied": "O acesso ao microfone foi negado. Ative-o nas configurações do navegador para gravar.",
+    "deviceMissing": "Nenhum microfone encontrado. Conecte um e tente de novo.",
+    "deviceDisconnected": "O microfone foi desconectado. Reconecte para continuar.",
+    "unsupported": "A gravação não é suportada neste navegador.",
+    "error": "Algo deu errado na gravação.",
+    "recording": "Gravando",
+    "paused": "Pausado",
+    "miniRecording": "Gravação em andamento",
+    "shortcuts": "Espaço para pausar/retomar · Cmd/Ctrl+M para marcar · Cmd/Ctrl+Enter para concluir"
+  },
+  "upload": {
+    "title": "Enviar",
+    "drop": "Arraste um arquivo de áudio aqui, ou clique para escolher",
+    "select": "Escolher arquivo",
+    "invalidType": "Esse tipo de arquivo não é suportado. Use MP3, WAV ou M4A.",
+    "tooLarge": "Esse arquivo é grande demais.",
+    "uploading": "Enviando…",
+    "processing": "Processando…",
+    "cancel": "Cancelar",
+    "retry": "Tentar novamente",
+    "remove": "Remover"
+  },
+  "processing": {
+    "title": "Processamento",
+    "stages": {
+      "received": "Recebido",
+      "preparing_audio": "Preparando áudio",
+      "transcribing": "Transcrevendo",
+      "identifying_speakers": "Identificando quem falou",
+      "organizing_topics": "Organizando tópicos",
+      "preparing_ai_pack": "Preparando AI Pack",
+      "ready": "Pronto"
+    },
+    "status": {
+      "queued": "Na fila",
+      "running": "Em andamento",
+      "partial": "Parcial",
+      "failed": "Falhou",
+      "completed": "Concluído",
+      "retrying": "Tentando de novo"
+    },
+    "failedTitle": "O processamento falhou",
+    "failedBody": "O que capturamos está preservado. Você pode tentar processar de novo.",
+    "retry": "Tentar processar de novo",
+    "open": "Abrir reunião"
+  },
+  "transcript": {
+    "search": "Buscar na transcrição",
+    "noResults": "Nenhum resultado.",
+    "edit": "Editar",
+    "save": "Salvar",
+    "rename": "Renomear quem falou",
+    "renamePlaceholder": "Nome",
+    "addMarker": "Adicionar marcador",
+    "editedBadge": "editado"
+  },
+  "aiPack": {
+    "title": "AI Pack",
+    "inferred": "Inferido",
+    "uncertain": "Incerto",
+    "evidence": "Evidência",
+    "empty": "O AI Pack está sendo preparado.",
+    "export": "Exportar"
+  },
+  "export": {
+    "title": "Exportar",
+    "preset": "Preset",
+    "size": "Tamanho",
+    "format": "Formato",
+    "language": "Idioma",
+    "sections": "Seções",
+    "preview": "Prévia",
+    "copy": "Copiar para a área de transferência",
+    "download": "Baixar",
+    "presets": {
+      "ai_pack": "AI Pack",
+      "clean_transcript": "Transcrição Limpa",
+      "analysis": "Análise",
+      "writing": "Escrita",
+      "full_fidelity": "Fidelidade Total",
+      "custom": "Personalizado"
+    },
+    "sizes": {
+      "compact": "Compacto",
+      "standard": "Padrão",
+      "full": "Completo"
+    },
+    "history": "Histórico de exportações",
+    "copied": "Copiado para a área de transferência"
+  },
+  "settings": {
+    "title": "Configurações",
+    "tabs": {
+      "general": "Geral",
+      "recording": "Gravação",
+      "export": "Exportação",
+      "language": "Idioma",
+      "privacy": "Privacidade",
+      "appearance": "Aparência"
+    },
+    "general": {
+      "displayName": "Nome de exibição",
+      "uiLocale": "Idioma da interface",
+      "timezone": "Fuso horário"
+    },
+    "recording": {
+      "device": "Microfone preferido",
+      "countdown": "Contagem antes de gravar",
+      "autoMarker": "Adicionar marcador automaticamente ao pausar",
+      "meetingLanguage": "Idioma padrão da reunião"
+    },
+    "exportPrefs": {
+      "defaultPreset": "Preset padrão",
+      "defaultSize": "Tamanho padrão",
+      "defaultFormat": "Formato padrão",
+      "exportLanguage": "Idioma de exportação",
+      "includeEvidence": "Incluir evidência por padrão"
+    },
+    "language": {
+      "ui": "Idioma da interface",
+      "meeting": "Idioma da reunião",
+      "transcript": "Idioma da transcrição",
+      "export": "Idioma de exportação"
+    },
+    "privacy": {
+      "storeAudio": "Manter áudio após o processamento",
+      "analytics": "Compartilhar análises de uso anônimas",
+      "redact": "Ocultar e-mails nas exportações"
+    },
+    "appearance": {
+      "theme": "Tema",
+      "reducedMotion": "Reduzir movimento",
+      "density": "Densidade",
+      "comfortable": "Confortável",
+      "compact": "Compacta"
+    },
+    "saved": "Configurações salvas"
+  },
+  "admin": {
+    "title": "Admin",
+    "overview": "Visão geral",
+    "accessRequests": "Solicitações de acesso",
+    "users": "Usuários",
+    "workspaces": "Workspaces",
+    "invitations": "Convites",
+    "audit": "Registro de auditoria",
+    "metrics": {
+      "pendingRequests": "Solicitações pendentes",
+      "activeUsers": "Usuários ativos",
+      "workspaces": "Workspaces",
+      "meetings30d": "Reuniões (30d)",
+      "openInvitations": "Convites abertos"
+    },
+    "request": {
+      "detail": "Detalhe da solicitação",
+      "approve": "Aprovar",
+      "reject": "Rejeitar",
+      "rejectReason": "Motivo da rejeição",
+      "approved": "Solicitação aprovada — convite criado.",
+      "rejected": "Solicitação rejeitada.",
+      "pending": "Pendente",
+      "statusApproved": "Aprovada",
+      "statusRejected": "Rejeitada"
+    },
+    "invite": {
+      "create": "Convidar usuário",
+      "revoke": "Revogar",
+      "email": "E-mail",
+      "role": "Papel",
+      "sent": "Convite enviado",
+      "revoked": "Convite revogado"
+    },
+    "userActions": {
+      "suspend": "Suspender",
+      "activate": "Ativar",
+      "makeAdmin": "Tornar admin",
+      "makeMember": "Tornar membro"
+    },
+    "roles": {
+      "owner": "Dono",
+      "admin": "Admin",
+      "member": "Membro"
+    }
+  },
+  "brandbook": {
+    "title": "Brandbook",
+    "subtitle": "A linguagem visual da Loquia.",
+    "colors": "Cores",
+    "typography": "Tipografia",
+    "spacing": "Espaçamento",
+    "components": "Componentes",
+    "voice": "Voz e tom"
+  },
+  "errors": {
+    "offlineTitle": "Você está offline",
+    "offlineBody": "Seu trabalho está preservado localmente. Vamos sincronizar quando você voltar.",
+    "notFoundTitle": "Não encontrado",
+    "notFoundBody": "Não conseguimos encontrar o que você procurava.",
+    "genericTitle": "Algo deu errado",
+    "genericBody": "A ação não foi concluída. Nada foi perdido. Tente de novo.",
+    "whatHappened": "O que aconteceu",
+    "whatPreserved": "O que foi preservado",
+    "nextAction": "Próximo passo"
+  },
+  "validation": {
+    "name_min": "Informe seu nome completo.",
+    "email_invalid": "Digite um e-mail válido.",
+    "company_min": "Informe o nome da empresa.",
+    "role_min": "Informe seu cargo.",
+    "use_case_min": "Conte um pouco mais (ao menos 10 caracteres).",
+    "password_required": "Digite sua senha.",
+    "password_min": "Use ao menos 8 caracteres.",
+    "password_mismatch": "As senhas não coincidem.",
+    "reason_min": "Informe um motivo."
+  }
+}
