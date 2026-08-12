@@ -9,20 +9,22 @@ Next.js + TypeScript, running entirely on a **MockAdapter** — no real backend.
 
 ---
 
-## ⚠️ Handoff note (read first)
+## Handoff note (read first)
 
-This milestone was specified to build on a Claude Design **handoff**
-(`prototype/Loquia.dc.html`, `docs/*`, `assets/`, `MANIFEST.md`) as the source of
-truth. **That handoff was never present in the repository** — it was completely
-empty (no commits, no branches) when Milestone 1 started. See
-[`docs/HANDOFF-GAP.md`](docs/HANDOFF-GAP.md) for the full record.
+This app is built on the validated Claude Design **handoff**
+(`prototype/Loquia.dc.html`, `docs/*`, `assets/`, `MANIFEST.md`), which is the
+source of truth for product, UX, brand and behavior.
 
-As a result, everything the missing docs would have pinned down — the visual
-design and design tokens, the brandbook, the 14 AI Pack section names, the
-component visuals — was **reconstructed from the task specification**. The
-engineering contract in the spec (routes, domain model incl. `ProcessingJob`,
-services/adapters, presets/sizes/formats, processing stages, i18n axes) was
-followed precisely. Files authored as reconstructions say so in a header comment.
+History: the handoff was **absent** when Milestone 1 started, so that milestone
+built the app from the task spec (reconstructions) and was correctly reproved.
+In **Milestone 1.1** the real handoff was imported verbatim and the app was
+reconciled against it — canonical AI Pack (14 sections), the real design tokens
+(Iris/Sage/Amber/Danger, Manrope + Geist Mono), the convergence brand mark, the
+validated headline, 4-step onboarding, and the prototype imagery. The full
+before/after is in [`docs/HANDOFF-GAP.md`](docs/HANDOFF-GAP.md); the audit is in
+[`docs/MILESTONE-1.1-REPORT.md`](docs/MILESTONE-1.1-REPORT.md). The prototype is
+preserved under `prototype/` as an immutable reference and is never required at
+runtime.
 
 ---
 
@@ -128,10 +130,10 @@ AIPackView, Waveform) across light/dark and pt-BR/en-US.
 
 - No real backend, database, queue, STT, diarization, LLM, email, storage, or
   auth. Everything is mock.
-- The visual design and the AI Pack section taxonomy are **reconstructions**
-  (the design handoff was absent) and should be reconciled with the real
-  brandbook when it becomes available.
-- Planned locales (es/fr/de) are routable but fall back to en-US messages.
+- Planned locales (es/fr/de) are routable but fall back to en-US messages (not
+  advertised as complete).
+- Optional enhancements not yet built (non-blocking): custom preset manager,
+  extended AudioPlayer transport. See `docs/MILESTONE-1.1-REPORT.md` §Gaps.
 
 ## Next milestone
 
