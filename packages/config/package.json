@@ -1,0 +1,11 @@
+{
+  "name": "@loquia/config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tailwind-preset": "./tailwind-preset.cjs",
+    "./tokens": "./tokens.css"
+  },
+  "files": ["tailwind-preset.cjs", "tokens.css"]
+}

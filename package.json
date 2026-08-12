@@ -1,0 +1,29 @@
+{
+  "name": "loquia",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Loquia — transforma reuniões em contexto pronto para IA. Frontend definitivo (Milestone 1, mock mode).",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @loquia/web dev",
+    "build": "pnpm --filter @loquia/web build",
+    "start": "pnpm --filter @loquia/web start",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "pnpm -r --if-present lint",
+    "test": "pnpm -r --if-present test",
+    "test:e2e": "pnpm --filter @loquia/web test:e2e",
+    "storybook": "pnpm --filter @loquia/web storybook",
+    "build-storybook": "pnpm --filter @loquia/web build-storybook",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\""
+  },
+  "devDependencies": {
+    "@types/node": "22.10.5",
+    "prettier": "3.4.2",
+    "prettier-plugin-tailwindcss": "0.6.9",
+    "typescript": "5.7.3"
+  }
+}
