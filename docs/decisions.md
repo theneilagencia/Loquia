@@ -1,0 +1,29 @@
+# Loquia — decisões registradas
+
+## Produto
+1. A unidade central é a **reunião como entrada** e o **AI Pack como saída**. Nada de decision ledger, promises, loops ou conflicts como módulos de navegação — reposicionamento de 11/08/2026.
+2. AI Pack é a aba padrão do detalhe da reunião. Transcrição nunca é o default.
+3. Navegação principal limitada a Início, Reuniões, Configurações + ações Gravar e Enviar arquivo. Um item por tipo de informação é proibido.
+4. Complexidade fica no motor. A interface não expõe vocabulário interno (knowledge graph, event sourcing, open loops).
+5. Sem signup público. AccessRequest e User são entidades separadas; o usuário só existe como `pending_activation` após aprovação.
+6. Mensagem de login é genérica para email inexistente, pendente, suspenso ou senha vazia.
+7. Toda mensagem de erro declara: o que aconteceu, o que foi preservado, próxima ação.
+8. Seção vazia não é renderizada com placeholder. Nas seções obrigatórias, usa-se a frase negativa explícita.
+
+## Marca
+9. Nome tratado no feminino em português ("a Loquia").
+10. Tagline conceitual anterior ("Close your laptop...") descartada — já usada em outro produto. Headline oficial é o benefício direto.
+11. Símbolo é convergência abstrata. Microfone, balão, cérebro, robô e sparkle proibidos.
+12. Iris é a única cor de ação. Máximo dois fundos por tela.
+
+## Técnicas
+13. Protótipo em arquivo único é referência, não fundação. A aplicação definitiva nasce em Next.js/TypeScript conforme `docs/migration-checklist.md`.
+14. **Um único motor de exportação**: `plano → pack → render`. `packJSONLegacy()` e `exportText()` foram removidos; preview, clipboard e download consomem a mesma função.
+15. Clipboard usa a API real com fallback `textarea+execCommand`; toast apenas após sucesso.
+16. Download usa Blob + Object URL com revoke; JSON deve passar em `JSON.parse`.
+17. Cores são tokens CSS (`var(--*)`), nunca hex inline, para que dark mode seja um tema real e não inversão.
+18. Dark mode: superfícies com matiz roxa, accents com luminosidade elevada; `color-scheme` declarado.
+19. Persistência mock em localStorage com uma chave versionada; Blob de áudio iria para IndexedDB na versão final.
+20. Tema `system` observa `prefers-color-scheme` via `matchMedia` e reage a mudanças.
+21. Locale na URL fica para a versão Next.js; no protótipo a preferência é persistida.
+22. Layout responsivo por `clamp()` e `repeat(auto-fit,minmax())`; tabelas de admin são listas de cartões.

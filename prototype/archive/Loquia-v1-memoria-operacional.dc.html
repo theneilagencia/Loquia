@@ -1,0 +1,1704 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin:0; padding:0; background:#F7F5F1; }
+  body { font-family:'Manrope', system-ui, sans-serif; color:#1D1926; -webkit-font-smoothing:antialiased; text-wrap:pretty; }
+  * { box-sizing:border-box; }
+  a { color:#5B4AE6; text-decoration:none; }
+  a:hover { color:#4737C4; }
+  ::selection { background:#ECE9FF; }
+  input, button, textarea, select { font-family:inherit; }
+  button, [role="button"], input { transition: background-color .12s ease, border-color .12s ease, color .12s ease, transform .12s ease; }
+  button:active { transform: translateY(1px); }
+  :focus-visible { outline:2px solid #5B4AE6; outline-offset:2px; border-radius:6px; }
+  @keyframes loq-in { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:none } }
+  @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important } }
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#F7F5F1">
+
+<sc-if value="{{ isMarketing }}" hint-placeholder-val="{{ true }}">
+<div>
+  <header style="position:sticky;top:0;z-index:40;background:rgba(247,245,241,.86);backdrop-filter:blur(12px);border-bottom:1px solid rgba(29,25,38,.07)">
+    <div style="max-width:1180px;margin:0 auto;padding:16px clamp(20px,4vw,32px);display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+      <div onClick="{{ goLanding }}" style="display:flex;align-items:center;gap:10px;cursor:pointer">
+        <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M4 6 L16 16" stroke="#5B4AE6" stroke-width="2.2" stroke-linecap="round"/><path d="M4 16 L16 16" stroke="#5B4AE6" stroke-width="2.2" stroke-linecap="round" opacity="0.55"/><path d="M4 26 L16 16" stroke="#5B4AE6" stroke-width="2.2" stroke-linecap="round" opacity="0.3"/><path d="M16 16 L27 16" stroke="#1D1926" stroke-width="2.6" stroke-linecap="round"/><circle cx="27" cy="16" r="3" fill="#1D1926"/></svg>
+        <span style="font-size:19px;font-weight:800;letter-spacing:-.03em">Loquia</span>
+      </div>
+      <nav style="display:flex;gap:26px;font-size:14.5px;font-weight:500;color:#57506180">
+        <span onClick="{{ goBrand }}" style="cursor:pointer;color:#575061">Brandbook</span>
+        <span onClick="{{ goApp }}" style="cursor:pointer;color:#575061">{{ t.navProduct }}</span>
+        <span onClick="{{ goAdmin }}" style="cursor:pointer;color:#575061">Admin</span>
+      </nav>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:6px;border:1px solid rgba(29,25,38,.12);border-radius:999px;padding:3px">
+        <button onClick="{{ setPt }}" style="border:0;border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:600;cursor:pointer;background:{{ ptBg }};color:{{ ptFg }}">Português</button>
+        <button onClick="{{ setEn }}" style="border:0;border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:600;cursor:pointer;background:{{ enBg }};color:{{ enFg }}">English</button>
+      </div>
+      <button onClick="{{ goRequest }}" style="border:0;background:#1D1926;color:#F7F5F1;border-radius:999px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer">{{ t.requestAccess }}</button>
+    </div>
+  </header>
+</div>
+</sc-if>
+
+<sc-if value="{{ isLanding }}" hint-placeholder-val="{{ true }}">
+<main>
+  <section style="max-width:1180px;margin:0 auto;padding:clamp(48px,7vw,96px) clamp(20px,4vw,32px) 72px">
+    <div style="font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#5B4AE6;margin-bottom:26px">{{ t.eyebrow }}</div>
+    <h1 style="font-size:clamp(34px,4.4vw,60px);line-height:1.08;letter-spacing:-.038em;font-weight:800;margin:0">{{ t.heroL1 }} <span style="color:#57506199">{{ t.heroL3 }}</span></h1>
+    <p style="margin:28px 0 0;font-size:clamp(16px,1.5vw,19px);line-height:1.55;color:#575061;max-width:56ch">{{ t.heroBody }}</p>
+    <div style="margin-top:16px;font-size:15px;color:#1D1926;font-weight:600">{{ t.tagline }}</div>
+    <div style="margin-top:38px;display:flex;gap:12px;flex-wrap:wrap">
+      <button onClick="{{ goRequest }}" style="border:0;background:#5B4AE6;color:#fff;border-radius:999px;padding:14px 26px;font-size:15px;font-weight:600;cursor:pointer">{{ t.requestAccess }}</button>
+      <button onClick="{{ goApp }}" style="background:transparent;border:1px solid rgba(29,25,38,.18);color:#1D1926;border-radius:999px;padding:14px 26px;font-size:15px;font-weight:600;cursor:pointer">{{ t.seeHow }}</button>
+    </div>
+  </section>
+
+  <section style="max-width:1180px;margin:0 auto;padding:0 clamp(20px,4vw,32px) 96px">
+    <div style="background:#FFFFFF;border:1px solid rgba(29,25,38,.08);border-radius:20px;padding:clamp(22px,3vw,40px);box-shadow:0 1px 2px rgba(29,25,38,.04),0 24px 48px -32px rgba(29,25,38,.22)">
+      <div style="font-family:'Geist Mono',monospace;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:#57506199;margin-bottom:28px">{{ t.demoLabel }}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:12px;align-items:stretch">
+        <sc-for list="{{ flow }}" as="step" hint-placeholder-count="5">
+          <div style="border:1px solid rgba(29,25,38,.09);border-radius:14px;padding:18px;background:#F7F5F1">
+            <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:{{ step.tone }};margin-bottom:10px">{{ step.kind }}</div>
+            <div style="font-size:14.5px;line-height:1.42;font-weight:600">{{ step.text }}</div>
+            <div style="margin-top:12px;font-family:'Geist Mono',monospace;font-size:11px;color:#57506199">{{ step.meta }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section style="max-width:1180px;margin:0 auto;padding:0 clamp(20px,4vw,32px) 40px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:24px">
+      <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:20px;padding:clamp(24px,3vw,36px)">
+        <h2 style="margin:0 0 10px;font-size:clamp(22px,2.4vw,29px);letter-spacing:-.025em;font-weight:700;line-height:1.15">{{ t.secDecTitle }}</h2>
+        <p style="margin:0 0 26px;color:#575061;font-size:15.5px;line-height:1.55">{{ t.secDecBody }}</p>
+        <sc-for list="{{ lineagePreview }}" as="v" hint-placeholder-count="3">
+          <div style="display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-top:1px solid rgba(29,25,38,.07)">
+            <span style="font-family:'Geist Mono',monospace;font-size:11px;color:{{ v.tone }};min-width:74px;padding-top:2px">{{ v.tag }}</span>
+            <span style="font-size:14.5px;line-height:1.45;color:{{ v.textTone }}">{{ v.text }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:20px;padding:clamp(24px,3vw,36px)">
+        <h2 style="margin:0 0 10px;font-size:clamp(22px,2.4vw,29px);letter-spacing:-.025em;font-weight:700;line-height:1.15">{{ t.secPromTitle }}</h2>
+        <p style="margin:0 0 26px;color:#575061;font-size:15.5px;line-height:1.55">{{ t.secPromBody }}</p>
+        <div style="border:1px solid rgba(177,61,76,.24);background:#FDF4F4;border-radius:14px;padding:20px">
+          <sc-for list="{{ promiseSpec }}" as="row" hint-placeholder-count="5">
+            <div style="display:flex;justify-content:space-between;gap:16px;padding:7px 0;font-size:14px">
+              <span style="color:#575061">{{ row.k }}</span>
+              <span style="font-weight:600;text-align:right">{{ row.v }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="max-width:1180px;margin:0 auto;padding:24px clamp(20px,4vw,32px) 40px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:24px">
+      <div style="background:#1D1926;color:#F7F5F1;border-radius:20px;padding:clamp(24px,3vw,36px)">
+        <h2 style="margin:0 0 10px;font-size:clamp(22px,2.4vw,29px);letter-spacing:-.025em;font-weight:700;line-height:1.15">{{ t.secLoopTitle }}</h2>
+        <p style="margin:0 0 26px;color:#F7F5F199;font-size:15.5px;line-height:1.55">{{ t.secLoopBody }}</p>
+        <div style="border:1px solid rgba(247,245,241,.16);border-radius:14px;padding:22px">
+          <div style="font-size:17px;font-weight:700;margin-bottom:16px">{{ t.pricingLoop }}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+            <sc-for list="{{ loopSpec }}" as="row" hint-placeholder-count="3">
+              <div>
+                <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#F7F5F166">{{ row.k }}</div>
+                <div style="font-size:20px;font-weight:700;margin-top:5px">{{ row.v }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <button onClick="{{ goLoops }}" style="margin-top:22px;border:0;background:#5B4AE6;color:#fff;border-radius:999px;padding:11px 20px;font-size:14px;font-weight:600;cursor:pointer">{{ t.prepareDecision }}</button>
+        </div>
+      </div>
+      <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:20px;padding:clamp(24px,3vw,36px)">
+        <h2 style="margin:0 0 10px;font-size:clamp(22px,2.4vw,29px);letter-spacing:-.025em;font-weight:700;line-height:1.15">{{ t.secConfTitle }}</h2>
+        <p style="margin:0 0 26px;color:#575061;font-size:15.5px;line-height:1.55">{{ t.secConfBody }}</p>
+        <div style="display:grid;gap:12px">
+          <div style="border:1px solid rgba(29,25,38,.09);border-radius:12px;padding:16px;background:#F7F5F1">
+            <div style="font-family:'Geist Mono',monospace;font-size:11px;color:#57506199;margin-bottom:6px">15 · 07</div>
+            <div style="font-size:14.5px;line-height:1.45">“{{ t.confA }}”</div>
+          </div>
+          <div style="border:1px solid rgba(154,100,22,.3);border-radius:12px;padding:16px;background:#FBF6EE">
+            <div style="font-family:'Geist Mono',monospace;font-size:11px;color:#9A6416;margin-bottom:6px">08 · 08</div>
+            <div style="font-size:14.5px;line-height:1.45">“{{ t.confB }}”</div>
+          </div>
+        </div>
+        <button onClick="{{ goConflicts }}" style="margin-top:20px;background:transparent;border:1px solid rgba(29,25,38,.18);border-radius:999px;padding:11px 20px;font-size:14px;font-weight:600;cursor:pointer">{{ t.review }}</button>
+      </div>
+    </div>
+  </section>
+
+  <section style="max-width:1180px;margin:0 auto;padding:40px clamp(20px,4vw,32px) 110px">
+    <h2 style="margin:0 0 8px;font-size:clamp(26px,3vw,36px);letter-spacing:-.03em;font-weight:800">{{ t.secPrepTitle }}</h2>
+    <p style="margin:0 0 32px;color:#575061;font-size:16px;max-width:60ch">{{ t.secPrepBody }}</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:16px">
+      <sc-for list="{{ prepStats }}" as="s" hint-placeholder-count="5">
+        <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:16px;padding:22px">
+          <div style="font-size:34px;font-weight:800;letter-spacing:-.03em;color:{{ s.tone }}">{{ s.n }}</div>
+          <div style="margin-top:6px;font-size:13.5px;line-height:1.4;color:#575061">{{ s.label }}</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="margin-top:56px;padding-top:36px;border-top:1px solid rgba(29,25,38,.09);display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:24px">
+      <div>
+        <div style="font-size:24px;font-weight:700;letter-spacing:-.02em">{{ t.footerLine }}</div>
+        <div style="margin-top:8px;color:#575061;font-size:14.5px">{{ t.noSignup }}</div>
+      </div>
+      <button onClick="{{ goRequest }}" style="border:0;background:#5B4AE6;color:#fff;border-radius:999px;padding:14px 26px;font-size:15px;font-weight:600;cursor:pointer">{{ t.requestAccess }}</button>
+    </div>
+  </section>
+</main>
+</sc-if>
+
+<sc-if value="{{ isRequest }}" hint-placeholder-val="{{ false }}">
+<main style="max-width:760px;margin:0 auto;padding:64px 32px 110px">
+  <div style="font-family:'Geist Mono',monospace;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:#5B4AE6;margin-bottom:16px">{{ t.accessLabel }}</div>
+  <h1 style="margin:0;font-size:42px;letter-spacing:-.03em;font-weight:800;line-height:1.1">{{ t.requestTitle }}</h1>
+  <p style="margin:16px 0 40px;color:#575061;font-size:16px;line-height:1.55">{{ t.requestBody }}</p>
+  <sc-if value="{{ requestSent }}" hint-placeholder-val="{{ false }}">
+    <div style="background:#fff;border:1px solid rgba(51,121,101,.3);border-radius:18px;padding:32px">
+      <div style="font-size:20px;font-weight:700;margin-bottom:8px;color:#337965">{{ t.requestSentTitle }}</div>
+      <div style="color:#575061;font-size:15px;line-height:1.55">{{ t.requestSentBody }}</div>
+      <button onClick="{{ goAdmin }}" style="margin-top:22px;border:0;background:#1D1926;color:#F7F5F1;border-radius:999px;padding:11px 20px;font-size:14px;font-weight:600;cursor:pointer">{{ t.viewInAdmin }}</button>
+    </div>
+  </sc-if>
+  <sc-if value="{{ requestOpen }}" hint-placeholder-val="{{ true }}">
+  <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:18px;padding:32px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px">
+      <sc-for list="{{ requestFields }}" as="f" hint-placeholder-count="8">
+        <label style="display:block;grid-column:{{ f.span }}">
+          <span style="display:block;font-size:13px;font-weight:600;margin-bottom:7px;color:#1D1926">{{ f.label }}</span>
+          <input placeholder="{{ f.ph }}" style="width:100%;border:1px solid rgba(29,25,38,.16);border-radius:10px;padding:11px 13px;font-size:14.5px;background:#F7F5F1;color:#1D1926;outline:none" style-focus="border-color:#5B4AE6;background:#fff" />
+        </label>
+      </sc-for>
+    </div>
+    <label style="display:flex;gap:10px;align-items:flex-start;margin-top:24px;font-size:13.5px;color:#575061;line-height:1.5">
+      <input type="checkbox" style="margin-top:2px;accent-color:#5B4AE6;width:16px;height:16px" />
+      <span>{{ t.consent }}</span>
+    </label>
+    <button onClick="{{ submitRequest }}" style="margin-top:26px;border:0;background:#5B4AE6;color:#fff;border-radius:999px;padding:13px 24px;font-size:15px;font-weight:600;cursor:pointer">{{ t.sendRequest }}</button>
+  </div>
+  </sc-if>
+</main>
+</sc-if>
+
+<sc-if value="{{ isBrand }}" hint-placeholder-val="{{ false }}">
+<main style="max-width:1000px;margin:0 auto;padding:64px 32px 110px">
+  <div style="font-family:'Geist Mono',monospace;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:#5B4AE6;margin-bottom:16px">Brandbook</div>
+  <h1 style="margin:0 0 12px;font-size:44px;letter-spacing:-.032em;font-weight:800">Loquia</h1>
+  <p style="margin:0 0 48px;color:#575061;font-size:17px;max-width:60ch;line-height:1.55">{{ t.brandIntro }}</p>
+
+  <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:20px;padding:40px;margin-bottom:24px">
+    <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#57506199;margin-bottom:28px">{{ t.brandSymbol }}</div>
+    <div style="display:flex;gap:56px;align-items:center;flex-wrap:wrap">
+      <svg width="92" height="92" viewBox="0 0 32 32" fill="none" aria-label="Loquia symbol"><path d="M4 6 L16 16" stroke="#5B4AE6" stroke-width="2.2" stroke-linecap="round"/><path d="M4 16 L16 16" stroke="#5B4AE6" stroke-width="2.2" stroke-linecap="round" opacity="0.55"/><path d="M4 26 L16 16" stroke="#5B4AE6" stroke-width="2.2" stroke-linecap="round" opacity="0.3"/><path d="M16 16 L27 16" stroke="#1D1926" stroke-width="2.6" stroke-linecap="round"/><circle cx="27" cy="16" r="3" fill="#1D1926"/></svg>
+      <div style="display:flex;align-items:center;gap:12px">
+        <svg width="34" height="34" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M4 6 L16 16" stroke="#5B4AE6" stroke-width="2.2" stroke-linecap="round"/><path d="M4 16 L16 16" stroke="#5B4AE6" stroke-width="2.2" stroke-linecap="round" opacity="0.55"/><path d="M4 26 L16 16" stroke="#5B4AE6" stroke-width="2.2" stroke-linecap="round" opacity="0.3"/><path d="M16 16 L27 16" stroke="#1D1926" stroke-width="2.6" stroke-linecap="round"/><circle cx="27" cy="16" r="3" fill="#1D1926"/></svg>
+        <span style="font-size:38px;font-weight:800;letter-spacing:-.04em">Loquia</span>
+      </div>
+      <div style="background:#1D1926;border-radius:14px;padding:26px 32px;display:flex;align-items:center;gap:12px">
+        <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M4 6 L16 16" stroke="#F7F5F1" stroke-width="2.2" stroke-linecap="round" opacity="0.5"/><path d="M4 16 L16 16" stroke="#F7F5F1" stroke-width="2.2" stroke-linecap="round" opacity="0.35"/><path d="M4 26 L16 16" stroke="#F7F5F1" stroke-width="2.2" stroke-linecap="round" opacity="0.2"/><path d="M16 16 L27 16" stroke="#F7F5F1" stroke-width="2.6" stroke-linecap="round"/><circle cx="27" cy="16" r="3" fill="#F7F5F1"/></svg>
+        <span style="font-size:32px;font-weight:800;letter-spacing:-.04em;color:#F7F5F1">Loquia</span>
+      </div>
+    </div>
+    <p style="margin:28px 0 0;color:#575061;font-size:14.5px;line-height:1.55;max-width:66ch">{{ t.brandSymbolBody }}</p>
+  </div>
+
+  <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:20px;padding:40px;margin-bottom:24px">
+    <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#57506199;margin-bottom:24px">{{ t.brandPalette }}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px">
+      <sc-for list="{{ palette }}" as="c" hint-placeholder-count="9">
+        <div style="border:1px solid rgba(29,25,38,.09);border-radius:12px;overflow:hidden">
+          <div style="height:72px;background:{{ c.hex }}"></div>
+          <div style="padding:12px 14px">
+            <div style="font-size:13.5px;font-weight:600">{{ c.name }}</div>
+            <div style="font-family:'Geist Mono',monospace;font-size:11.5px;color:#57506199;margin-top:3px">{{ c.hex }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:24px">
+    <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:20px;padding:40px">
+      <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#57506199;margin-bottom:24px">{{ t.brandType }}</div>
+      <div style="font-size:44px;font-weight:800;letter-spacing:-.035em;line-height:1.05">Manrope</div>
+      <div style="color:#575061;font-size:14px;margin-top:6px">400 · 500 · 600 · 700 · 800</div>
+      <div style="font-family:'Geist Mono',monospace;font-size:26px;margin-top:32px">Geist Mono</div>
+      <div style="color:#575061;font-size:14px;margin-top:6px">{{ t.monoUse }}</div>
+    </div>
+    <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:20px;padding:40px">
+      <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#57506199;margin-bottom:24px">{{ t.brandVoice }}</div>
+      <sc-for list="{{ voice }}" as="v" hint-placeholder-count="4">
+        <div style="padding:14px 0;border-top:1px solid rgba(29,25,38,.07)">
+          <div style="font-size:14.5px;font-weight:700;color:#337965">{{ v.yes }}</div>
+          <div style="font-size:14.5px;color:#B13D4C;margin-top:4px;text-decoration:line-through;opacity:.75">{{ v.no }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:20px;padding:40px;margin-top:24px">
+    <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#57506199;margin-bottom:24px">{{ t.glossary }}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:0 40px">
+      <sc-for list="{{ glossary }}" as="g" hint-placeholder-count="8">
+        <div style="display:flex;justify-content:space-between;gap:16px;padding:11px 0;border-top:1px solid rgba(29,25,38,.07);font-size:14px">
+          <span style="font-weight:600">{{ g.en }}</span>
+          <span style="color:#575061">{{ g.pt }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</main>
+</sc-if>
+
+<sc-if value="{{ isProduct }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;min-height:100vh">
+  <aside style="width:236px;flex:none;background:#1D1926;color:#F7F5F1;padding:22px 16px;display:flex;flex-direction:column;gap:26px;position:sticky;top:0;height:100vh">
+    <div onClick="{{ goLanding }}" style="display:flex;align-items:center;gap:9px;padding:6px 10px;cursor:pointer">
+      <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M4 6 L16 16" stroke="#F7F5F1" stroke-width="2.2" stroke-linecap="round" opacity="0.5"/><path d="M4 16 L16 16" stroke="#F7F5F1" stroke-width="2.2" stroke-linecap="round" opacity="0.35"/><path d="M4 26 L16 16" stroke="#F7F5F1" stroke-width="2.2" stroke-linecap="round" opacity="0.2"/><path d="M16 16 L27 16" stroke="#F7F5F1" stroke-width="2.6" stroke-linecap="round"/><circle cx="27" cy="16" r="3" fill="#F7F5F1"/></svg>
+      <span style="font-size:17px;font-weight:800;letter-spacing:-.03em">Loquia</span>
+    </div>
+    <div style="padding:0 10px">
+      <div style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#F7F5F155">Workspace</div>
+      <div style="font-size:14.5px;font-weight:600;margin-top:5px">Northstar</div>
+    </div>
+    <nav style="display:flex;flex-direction:column;gap:2px">
+      <sc-for list="{{ nav }}" as="item" hint-placeholder-count="9">
+        <div onClick="{{ item.go }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px;border-radius:9px;cursor:pointer;font-size:14px;font-weight:{{ item.weight }};background:{{ item.bg }};color:{{ item.fg }}">
+          <span>{{ item.label }}</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;color:{{ item.countFg }}">{{ item.count }}</span>
+        </div>
+      </sc-for>
+    </nav>
+    <div style="flex:1"></div>
+    <div style="border-top:1px solid rgba(247,245,241,.12);padding-top:16px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:6px;border:1px solid rgba(247,245,241,.16);border-radius:999px;padding:3px">
+        <button onClick="{{ setPt }}" style="flex:1;border:0;border-radius:999px;padding:6px 8px;font-size:11.5px;font-weight:600;cursor:pointer;background:{{ ptBgDark }};color:{{ ptFgDark }}">PT-BR</button>
+        <button onClick="{{ setEn }}" style="flex:1;border:0;border-radius:999px;padding:6px 8px;font-size:11.5px;font-weight:600;cursor:pointer;background:{{ enBgDark }};color:{{ enFgDark }}">EN-US</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:4px 6px">
+        <div style="width:30px;height:30px;border-radius:999px;background:#5B4AE6;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">RM</div>
+        <div>
+          <div style="font-size:13px;font-weight:600">Rafael Martins</div>
+          <div style="font-size:11.5px;color:#F7F5F166">Head of Ops</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div style="flex:1;min-width:0">
+    <header style="position:sticky;top:0;z-index:30;background:rgba(247,245,241,.9);backdrop-filter:blur(12px);border-bottom:1px solid rgba(29,25,38,.07);padding:14px clamp(20px,2.6vw,36px);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div onClick="{{ openPalette }}" style="flex:1 1 220px;max-width:460px;min-width:0;display:flex;align-items:center;gap:10px;border:1px solid rgba(29,25,38,.14);background:#fff;border-radius:10px;padding:9px 13px;cursor:text;color:#57506199;font-size:14px;white-space:nowrap;overflow:hidden">
+        <span style="overflow:hidden;text-overflow:ellipsis">{{ t.searchPlaceholder }}</span>
+        <span style="flex:1"></span>
+        <span style="font-family:'Geist Mono',monospace;font-size:11px;border:1px solid rgba(29,25,38,.14);border-radius:5px;padding:2px 6px">⌘K</span>
+      </div>
+      <div style="flex:1"></div>
+      <button onClick="{{ goPrep }}" style="border:1px solid rgba(29,25,38,.16);background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:600;cursor:pointer">{{ t.prepNext }}</button>
+      <button onClick="{{ goAdmin }}" style="border:0;background:#1D1926;color:#F7F5F1;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:600;cursor:pointer">Admin</button>
+    </header>
+
+    <main style="padding:clamp(20px,2.6vw,36px);max-width:1240px">
+
+      <sc-if value="{{ isDash }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <h1 style="margin:0;font-size:clamp(28px,3.2vw,38px);letter-spacing:-.032em;font-weight:800">{{ t.now }}</h1>
+        <p style="margin:8px 0 32px;color:#575061;font-size:15.5px">{{ t.nowSub }}</p>
+
+        <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:18px;padding:26px;margin-bottom:24px">
+          <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#B13D4C;margin-bottom:18px">{{ t.needsYou }}</div>
+          <sc-for list="{{ needsYou }}" as="n" hint-placeholder-count="4">
+            <div onClick="{{ n.go }}" style="display:flex;align-items:center;gap:16px;padding:14px 0;border-top:1px solid rgba(29,25,38,.07);cursor:pointer">
+              <span style="width:8px;height:8px;border-radius:999px;flex:none;background:{{ n.tone }}"></span>
+              <span style="font-size:15px;font-weight:600;flex:1">{{ n.title }}</span>
+              <span style="font-size:13.5px;color:#575061">{{ n.meta }}</span>
+              <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#5B4AE6">→</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:24px;margin-bottom:24px">
+          <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:18px;padding:26px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px">
+              <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#57506199">{{ t.openLoops }}</div>
+              <div style="font-size:30px;font-weight:800;letter-spacing:-.03em">14</div>
+            </div>
+            <sc-for list="{{ loopBreakdown }}" as="b" hint-placeholder-count="4">
+              <div style="display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid rgba(29,25,38,.07);font-size:14px">
+                <span style="color:#575061">{{ b.label }}</span>
+                <span style="font-weight:700">{{ b.n }}</span>
+              </div>
+            </sc-for>
+            <button onClick="{{ goLoops }}" style="margin-top:16px;width:100%;border:1px solid rgba(29,25,38,.14);background:#F7F5F1;border-radius:10px;padding:10px;font-size:13.5px;font-weight:600;cursor:pointer">{{ t.viewAll }}</button>
+          </div>
+          <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:18px;padding:26px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px">
+              <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#57506199">{{ t.whatChanged }}</div>
+              <div style="font-size:13px;color:#575061">{{ t.sinceYesterday }}</div>
+            </div>
+            <sc-for list="{{ changeSummary }}" as="c" hint-placeholder-count="4">
+              <div style="display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid rgba(29,25,38,.07);font-size:14px">
+                <span style="color:#575061">{{ c.label }}</span>
+                <span style="font-weight:700">{{ c.n }}</span>
+              </div>
+            </sc-for>
+            <button onClick="{{ goChanges }}" style="margin-top:16px;width:100%;border:1px solid rgba(29,25,38,.14);background:#F7F5F1;border-radius:10px;padding:10px;font-size:13.5px;font-weight:600;cursor:pointer">{{ t.viewAll }}</button>
+          </div>
+        </div>
+
+        <div style="background:#1D1926;color:#F7F5F1;border-radius:18px;padding:26px;margin-bottom:24px">
+          <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#F7F5F177;margin-bottom:6px">{{ t.circles }}</div>
+          <div style="font-size:14.5px;color:#F7F5F1aa;margin-bottom:16px">{{ t.circlesSub }}</div>
+          <sc-for list="{{ circles }}" as="c" hint-placeholder-count="3">
+            <div onClick="{{ c.go }}" style="display:flex;align-items:center;gap:16px;padding:14px 0;border-top:1px solid rgba(247,245,241,.14);cursor:pointer">
+              <span style="font-size:15.5px;font-weight:600;flex:1">{{ c.title }}</span>
+              <span style="font-family:'Geist Mono',monospace;font-size:12.5px;color:#F7F5F1aa">{{ c.meetings }}</span>
+              <span style="font-family:'Geist Mono',monospace;font-size:12.5px;color:#F7F5F1;min-width:82px;text-align:right">{{ c.age }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:18px;padding:26px">
+          <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#337965;margin-bottom:14px">{{ t.recentlyResolved }}</div>
+          <sc-for list="{{ resolved }}" as="r" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-top:1px solid rgba(29,25,38,.07)">
+              <span style="font-size:14.5px;font-weight:600;flex:1">{{ r.title }}</span>
+              <span style="font-size:13px;color:#575061">{{ r.when }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isLoops }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <h1 style="margin:0;font-size:clamp(26px,2.9vw,34px);letter-spacing:-.03em;font-weight:800">{{ t.openLoops }}</h1>
+        <p style="margin:8px 0 26px;color:#575061;font-size:15.5px">{{ t.loopsSub }}</p>
+        <div style="display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap">
+          <sc-for list="{{ loopFilters }}" as="f" hint-placeholder-count="6">
+            <button onClick="{{ f.go }}" style="border:1px solid {{ f.border }};background:{{ f.bg }};color:{{ f.fg }};border-radius:999px;padding:7px 15px;font-size:13px;font-weight:600;cursor:pointer">{{ f.label }}</button>
+          </sc-for>
+        </div>
+        <sc-if value="{{ loopsEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fff;border:1px dashed rgba(29,25,38,.18);border-radius:18px;padding:56px;text-align:center">
+            <div style="font-size:17px;font-weight:700">{{ t.emptyTitle }}</div>
+            <div style="margin-top:8px;color:#575061;font-size:14.5px">{{ t.emptyBody }}</div>
+            <button onClick="{{ clearFilter }}" style="margin-top:20px;border:1px solid rgba(29,25,38,.16);background:#F7F5F1;border-radius:999px;padding:10px 20px;font-size:13.5px;font-weight:600;cursor:pointer">{{ t.clearFilters }}</button>
+          </div>
+        </sc-if>
+        <div style="display:grid;gap:14px">
+          <sc-for list="{{ visibleLoops }}" as="l" hint-placeholder-count="4">
+            <div onClick="{{ l.go }}" style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:16px;padding:24px;cursor:pointer" style-hover="border-color:rgba(91,74,230,.4)">
+              <div style="display:flex;align-items:flex-start;gap:16px">
+                <div style="flex:1">
+                  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <span style="font-size:18px;font-weight:700;letter-spacing:-.015em">{{ l.title }}</span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 9px;background:{{ l.statusBg }};color:{{ l.statusFg }}">{{ l.statusLabel }}</span>
+                  </div>
+                  <div style="margin-top:8px;color:#575061;font-size:14.5px;line-height:1.5">{{ l.next }}</div>
+                </div>
+                <div style="text-align:right;flex:none">
+                  <div style="font-family:'Geist Mono',monospace;font-size:12px;color:#57506199">{{ t.openFor }}</div>
+                  <div style="font-size:22px;font-weight:800;letter-spacing:-.02em;color:{{ l.ageTone }}">{{ l.age }}</div>
+                </div>
+              </div>
+              <div style="margin-top:18px;padding-top:14px;border-top:1px solid rgba(29,25,38,.07);display:flex;gap:26px;flex-wrap:wrap">
+                <sc-for list="{{ l.stats }}" as="s" hint-placeholder-count="4">
+                  <div>
+                    <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#57506199">{{ s.k }}</div>
+                    <div style="font-size:15px;font-weight:700;margin-top:3px">{{ s.v }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isLoopDetail }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div onClick="{{ goLoops }}" style="cursor:pointer;font-size:13.5px;color:#5B4AE6;font-weight:600;margin-bottom:16px">← {{ t.openLoops }}</div>
+        <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap">
+          <div style="flex:1;min-width:340px">
+            <h1 style="margin:0;font-size:clamp(26px,2.9vw,34px);letter-spacing:-.03em;font-weight:800">{{ loop.title }}</h1>
+            <p style="margin:10px 0 0;color:#575061;font-size:15.5px;line-height:1.55;max-width:64ch">{{ loop.description }}</p>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onClick="{{ askLoquia }}" style="border:1px solid rgba(29,25,38,.16);background:#fff;border-radius:999px;padding:10px 18px;font-size:13.5px;font-weight:600;cursor:pointer">{{ t.askLoquia }}</button>
+            <button onClick="{{ resolveLoop }}" style="border:0;background:#337965;color:#fff;border-radius:999px;padding:10px 18px;font-size:13.5px;font-weight:600;cursor:pointer">{{ t.resolve }}</button>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:26px 0">
+          <sc-for list="{{ loop.summary }}" as="s" hint-placeholder-count="4">
+            <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:14px;padding:18px">
+              <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#57506199">{{ s.k }}</div>
+              <div style="font-size:19px;font-weight:700;margin-top:6px;color:{{ s.tone }}">{{ s.v }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ askOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fff;border:1px solid rgba(91,74,230,.28);border-radius:18px;padding:26px;margin-bottom:24px;animation:loq-in .16s ease-out">
+            <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#5B4AE6;margin-bottom:12px">{{ t.askLoquia }}</div>
+            <div style="font-size:15px;color:#575061;margin-bottom:10px">{{ askQuestion }}</div>
+            <div style="font-size:18px;line-height:1.5;font-weight:600;max-width:70ch">{{ askAnswer }}</div>
+            <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+              <sc-for list="{{ askCitations }}" as="c" hint-placeholder-count="2">
+                <span onClick="{{ c.openEvidence }}" style="display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(91,74,230,.28);background:#ECE9FF;border-radius:7px;padding:5px 10px;cursor:pointer;font-family:'Geist Mono',monospace;font-size:11.5px;color:#4737C4">{{ c.label }}</span>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px">
+          <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:18px;padding:26px">
+            <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#57506199;margin-bottom:20px">{{ t.timeline }}</div>
+            <sc-for list="{{ loop.timeline }}" as="e" hint-placeholder-count="5">
+              <div style="display:flex;gap:16px;padding-bottom:22px">
+                <div style="display:flex;flex-direction:column;align-items:center;flex:none;width:12px">
+                  <span style="width:9px;height:9px;border-radius:999px;background:{{ e.tone }};margin-top:5px"></span>
+                  <span style="flex:1;width:1px;background:rgba(29,25,38,.12);margin-top:5px"></span>
+                </div>
+                <div style="flex:1">
+                  <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
+                    <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#57506199">{{ e.date }}</span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:{{ e.tone }}">{{ e.kind }}</span>
+                  </div>
+                  <div style="font-size:15px;font-weight:600;margin-top:5px;line-height:1.45">{{ e.text }}</div>
+                  <div onClick="{{ e.openEvidence }}" style="display:inline-flex;align-items:center;gap:7px;margin-top:9px;border:1px solid rgba(91,74,230,.28);background:#ECE9FF;border-radius:7px;padding:4px 9px;cursor:pointer;font-family:'Geist Mono',monospace;font-size:11.5px;color:#4737C4">{{ e.stamp }} · {{ e.source }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:grid;gap:20px;align-content:start">
+            <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:18px;padding:24px">
+              <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#57506199;margin-bottom:14px">{{ t.openQuestions }}</div>
+              <sc-for list="{{ loop.questions }}" as="q" hint-placeholder-count="2">
+                <div style="padding:11px 0;border-top:1px solid rgba(29,25,38,.07)">
+                  <div style="font-size:14.5px;font-weight:600;line-height:1.4">{{ q.text }}</div>
+                  <div style="font-size:12.5px;color:#575061;margin-top:4px">{{ q.meta }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:18px;padding:24px">
+              <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#57506199;margin-bottom:14px">{{ t.promises }}</div>
+              <sc-for list="{{ loop.promises }}" as="p" hint-placeholder-count="3">
+                <div style="padding:11px 0;border-top:1px solid rgba(29,25,38,.07)">
+                  <div style="font-size:14.5px;font-weight:600;line-height:1.4">{{ p.text }}</div>
+                  <div style="font-size:12.5px;margin-top:4px;color:{{ p.tone }}">{{ p.meta }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isDecisions }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <h1 style="margin:0;font-size:clamp(26px,2.9vw,34px);letter-spacing:-.03em;font-weight:800">{{ t.ledger }}</h1>
+        <p style="margin:8px 0 26px;color:#575061;font-size:15.5px">{{ t.ledgerSub }}</p>
+        <div style="display:grid;gap:14px">
+          <sc-for list="{{ decisionList }}" as="d" hint-placeholder-count="4">
+            <div onClick="{{ d.go }}" style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:16px;padding:24px;cursor:pointer" style-hover="border-color:rgba(91,74,230,.4)">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 9px;background:{{ d.statusBg }};color:{{ d.statusFg }}">{{ d.statusLabel }}</span>
+                <span style="font-size:17px;font-weight:700;letter-spacing:-.015em">{{ d.title }}</span>
+              </div>
+              <div style="margin-top:12px;font-size:16px;line-height:1.5">“{{ d.statement }}”</div>
+              <div style="margin-top:14px;display:flex;gap:20px;flex-wrap:wrap;align-items:center">
+                <span style="font-size:13px;color:#575061">{{ d.meta }}</span>
+                <span onClick="{{ d.openEvidence }}" style="display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(91,74,230,.28);background:#ECE9FF;border-radius:7px;padding:3px 9px;font-family:'Geist Mono',monospace;font-size:11.5px;color:#4737C4">{{ d.stamp }}</span>
+                <span style="font-size:12.5px;color:#57506199">{{ d.review }}</span>
+              </div>
+              <sc-if value="{{ d.hasSupersede }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(29,25,38,.07);font-size:13.5px;color:#575061">{{ d.supersedeText }}</div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isDecisionDetail }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div onClick="{{ goDecisions }}" style="cursor:pointer;font-size:13.5px;color:#5B4AE6;font-weight:600;margin-bottom:16px">← {{ t.ledger }}</div>
+        <h1 style="margin:0;font-size:clamp(26px,2.9vw,34px);letter-spacing:-.03em;font-weight:800">{{ decision.title }}</h1>
+        <div style="margin:18px 0 30px;background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:18px;padding:28px">
+          <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#337965;margin-bottom:12px">{{ t.currentState }}</div>
+          <div style="font-size:22px;line-height:1.4;font-weight:600">“{{ decision.statement }}”</div>
+          <div style="margin-top:18px;display:flex;gap:24px;flex-wrap:wrap">
+            <sc-for list="{{ decision.facts }}" as="f" hint-placeholder-count="4">
+              <div>
+                <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#57506199">{{ f.k }}</div>
+                <div style="font-size:14.5px;font-weight:600;margin-top:4px">{{ f.v }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top:22px;display:flex;gap:9px;flex-wrap:wrap">
+            <sc-for list="{{ decision.actions }}" as="a" hint-placeholder-count="4">
+              <button onClick="{{ a.go }}" style="border:1px solid rgba(29,25,38,.16);background:#F7F5F1;border-radius:999px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer">{{ a.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:18px;padding:28px">
+          <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#57506199;margin-bottom:22px">{{ t.lineage }}</div>
+          <sc-for list="{{ decision.lineage }}" as="v" hint-placeholder-count="3">
+            <div style="display:flex;gap:18px;padding-bottom:20px">
+              <div style="flex:none;width:74px;text-align:right">
+                <div style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:{{ v.tone }}">{{ v.version }}</div>
+                <div style="font-family:'Geist Mono',monospace;font-size:11px;color:#57506199;margin-top:3px">{{ v.date }}</div>
+              </div>
+              <div style="flex:none;display:flex;flex-direction:column;align-items:center;width:11px">
+                <span style="width:9px;height:9px;border-radius:999px;background:{{ v.tone }}"></span>
+                <span style="flex:1;width:1px;background:rgba(29,25,38,.12);margin-top:4px"></span>
+              </div>
+              <div style="flex:1">
+                <div style="font-size:15.5px;line-height:1.45;color:{{ v.textTone }}">“{{ v.text }}”</div>
+                <div style="margin-top:6px;font-size:12.5px;color:#575061">{{ v.note }}</div>
+                <div onClick="{{ v.openEvidence }}" style="display:inline-flex;margin-top:9px;border:1px solid rgba(91,74,230,.28);background:#ECE9FF;border-radius:7px;padding:4px 9px;cursor:pointer;font-family:'Geist Mono',monospace;font-size:11.5px;color:#4737C4">{{ v.stamp }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isPromises }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <h1 style="margin:0;font-size:clamp(26px,2.9vw,34px);letter-spacing:-.03em;font-weight:800">{{ t.promiseTracker }}</h1>
+        <p style="margin:8px 0 26px;color:#575061;font-size:15.5px">{{ t.promisesSub }}</p>
+        <sc-for list="{{ promiseGroups }}" as="g" hint-placeholder-count="3">
+          <div style="margin-bottom:30px">
+            <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#57506199;margin-bottom:12px">{{ g.label }}</div>
+            <div style="display:grid;gap:12px">
+              <sc-for list="{{ g.items }}" as="p" hint-placeholder-count="2">
+                <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-left:3px solid {{ p.tone }};border-radius:14px;padding:20px 24px;display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+                  <div style="flex:1;min-width:240px">
+                    <div style="font-size:16px;font-weight:700">{{ p.description }}</div>
+                    <div style="margin-top:6px;font-size:13.5px;color:#575061">{{ p.who }}</div>
+                  </div>
+                  <div>
+                    <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#57506199">{{ t.due }}</div>
+                    <div style="font-size:14px;font-weight:600;margin-top:3px">{{ p.due }}</div>
+                  </div>
+                  <div>
+                    <span style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:4px 10px;background:{{ p.statusBg }};color:{{ p.statusFg }}">{{ p.statusLabel }}</span>
+                  </div>
+                  <div onClick="{{ p.openEvidence }}" style="border:1px solid rgba(91,74,230,.28);background:#ECE9FF;border-radius:7px;padding:4px 9px;cursor:pointer;font-family:'Geist Mono',monospace;font-size:11.5px;color:#4737C4">{{ p.stamp }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isChanges }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <h1 style="margin:0;font-size:clamp(26px,2.9vw,34px);letter-spacing:-.03em;font-weight:800">{{ t.whatChangedTitle }}</h1>
+        <div style="display:flex;gap:8px;margin:22px 0 26px;flex-wrap:wrap">
+          <sc-for list="{{ changeFilters }}" as="f" hint-placeholder-count="4">
+            <button onClick="{{ f.go }}" style="border:1px solid {{ f.border }};background:{{ f.bg }};color:{{ f.fg }};border-radius:999px;padding:7px 15px;font-size:13px;font-weight:600;cursor:pointer">{{ f.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:grid;gap:14px">
+          <sc-for list="{{ changes }}" as="c" hint-placeholder-count="4">
+            <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:16px;padding:24px">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:{{ c.tone }}">{{ c.kind }}</span>
+                <span style="font-size:16.5px;font-weight:700">{{ c.entity }}</span>
+                <span style="flex:1"></span>
+                <span style="font-size:12.5px;color:#575061">{{ c.when }}</span>
+              </div>
+              <div style="margin-top:16px;display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center">
+                <div style="background:#F7F5F1;border-radius:10px;padding:14px 16px">
+                  <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#57506199">{{ t.before }}</div>
+                  <div style="font-size:14.5px;margin-top:5px;color:#575061;text-decoration:line-through">{{ c.before }}</div>
+                </div>
+                <span style="font-family:'Geist Mono',monospace;color:#5B4AE6">→</span>
+                <div style="background:#ECE9FF;border-radius:10px;padding:14px 16px">
+                  <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#4737C4">{{ t.after }}</div>
+                  <div style="font-size:14.5px;margin-top:5px;font-weight:600">{{ c.after }}</div>
+                </div>
+              </div>
+              <div style="margin-top:16px;display:flex;gap:20px;flex-wrap:wrap;align-items:center">
+                <span style="font-size:13.5px;color:#575061">{{ c.reason }}</span>
+                <span onClick="{{ c.openEvidence }}" style="border:1px solid rgba(91,74,230,.28);background:#ECE9FF;border-radius:7px;padding:3px 9px;cursor:pointer;font-family:'Geist Mono',monospace;font-size:11.5px;color:#4737C4">{{ c.stamp }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isConflicts }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <h1 style="margin:0;font-size:clamp(26px,2.9vw,34px);letter-spacing:-.03em;font-weight:800">{{ t.conflicts }}</h1>
+        <p style="margin:8px 0 26px;color:#575061;font-size:15.5px">{{ t.conflictsSub }}</p>
+        <div style="display:grid;gap:16px">
+          <sc-for list="{{ conflicts }}" as="c" hint-placeholder-count="2">
+            <div style="background:#fff;border:1px solid {{ c.border }};border-radius:18px;padding:26px">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px">
+                <span style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 9px;background:{{ c.statusBg }};color:{{ c.statusFg }}">{{ c.statusLabel }}</span>
+                <span style="font-size:17px;font-weight:700">{{ c.title }}</span>
+                <span style="flex:1"></span>
+                <span style="font-size:12.5px;color:#575061">{{ c.severity }}</span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
+                <div style="border:1px solid rgba(29,25,38,.1);border-radius:12px;padding:18px;background:#F7F5F1">
+                  <div style="font-family:'Geist Mono',monospace;font-size:11px;color:#57506199;margin-bottom:7px">{{ c.dateA }} · {{ c.sourceA }}</div>
+                  <div style="font-size:15px;line-height:1.45">“{{ c.textA }}”</div>
+                  <div onClick="{{ c.evidenceA }}" style="display:inline-flex;margin-top:11px;border:1px solid rgba(91,74,230,.28);background:#ECE9FF;border-radius:7px;padding:4px 9px;cursor:pointer;font-family:'Geist Mono',monospace;font-size:11.5px;color:#4737C4">{{ c.stampA }}</div>
+                </div>
+                <div style="border:1px solid rgba(154,100,22,.3);border-radius:12px;padding:18px;background:#FBF6EE">
+                  <div style="font-family:'Geist Mono',monospace;font-size:11px;color:#9A6416;margin-bottom:7px">{{ c.dateB }} · {{ c.sourceB }}</div>
+                  <div style="font-size:15px;line-height:1.45">“{{ c.textB }}”</div>
+                  <div onClick="{{ c.evidenceB }}" style="display:inline-flex;margin-top:11px;border:1px solid rgba(91,74,230,.28);background:#ECE9FF;border-radius:7px;padding:4px 9px;cursor:pointer;font-family:'Geist Mono',monospace;font-size:11.5px;color:#4737C4">{{ c.stampB }}</div>
+                </div>
+              </div>
+              <sc-if value="{{ c.unresolved }}" hint-placeholder-val="{{ true }}">
+                <div style="margin-top:20px;display:flex;gap:9px;flex-wrap:wrap">
+                  <button onClick="{{ c.keep }}" style="border:1px solid rgba(29,25,38,.16);background:#F7F5F1;border-radius:999px;padding:10px 18px;font-size:13.5px;font-weight:600;cursor:pointer">{{ t.keepPrevious }}</button>
+                  <button onClick="{{ c.replace }}" style="border:0;background:#5B4AE6;color:#fff;border-radius:999px;padding:10px 18px;font-size:13.5px;font-weight:600;cursor:pointer">{{ t.replacePrevious }}</button>
+                  <button onClick="{{ c.dismiss }}" style="border:1px solid rgba(29,25,38,.16);background:transparent;border-radius:999px;padding:10px 18px;font-size:13.5px;font-weight:600;cursor:pointer">{{ t.notConflict }}</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ c.resolvedFlag }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:20px;background:#F0F6F4;border:1px solid rgba(51,121,101,.28);border-radius:12px;padding:16px 18px">
+                  <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#337965">{{ t.resolution }}</div>
+                  <div style="font-size:14.5px;margin-top:6px;line-height:1.45">{{ c.resolutionText }}</div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isMeetings }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <h1 style="margin:0;font-size:clamp(26px,2.9vw,34px);letter-spacing:-.03em;font-weight:800">{{ t.sources }}</h1>
+        <p style="margin:8px 0 26px;color:#575061;font-size:15.5px">{{ t.sourcesSub }}</p>
+        <div style="display:grid;gap:12px">
+          <sc-for list="{{ meetings }}" as="m" hint-placeholder-count="5">
+            <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:14px;padding:20px 24px;display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+              <div style="flex:1;min-width:230px">
+                <div style="font-size:16px;font-weight:700">{{ m.title }}</div>
+                <div style="margin-top:5px;font-size:13px;color:#575061">{{ m.meta }}</div>
+              </div>
+              <sc-for list="{{ m.extracted }}" as="e" hint-placeholder-count="4">
+                <div style="text-align:center;min-width:64px">
+                  <div style="font-size:18px;font-weight:800;color:{{ e.tone }}">{{ e.n }}</div>
+                  <div style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#57506199;margin-top:2px">{{ e.k }}</div>
+                </div>
+              </sc-for>
+              <div onClick="{{ m.openEvidence }}" style="border:1px solid rgba(91,74,230,.28);background:#ECE9FF;border-radius:7px;padding:5px 10px;cursor:pointer;font-family:'Geist Mono',monospace;font-size:11.5px;color:#4737C4">{{ t.evidence }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isLive }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap">
+          <div style="flex:1;min-width:300px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+              <span style="width:9px;height:9px;border-radius:999px;background:{{ recDot }}"></span>
+              <span style="font-family:'Geist Mono',monospace;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:{{ recTone }}">{{ recLabel }}</span>
+              <span style="font-family:'Geist Mono',monospace;font-size:11.5px;color:#57506199">{{ recSource }}</span>
+            </div>
+            <h1 style="margin:0;font-size:clamp(26px,2.9vw,34px);letter-spacing:-.03em;font-weight:800">{{ liveTitle }}</h1>
+            <div style="margin-top:8px;font-size:14.5px;color:#575061">{{ liveParticipants }}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px">
+            <span style="font-family:'Geist Mono',monospace;font-size:26px;font-weight:500;letter-spacing:-.02em">{{ recClock }}</span>
+            <button onClick="{{ toggleRec }}" style="border:1px solid rgba(29,25,38,.16);background:#fff;border-radius:999px;padding:10px 18px;font-size:13.5px;font-weight:600;cursor:pointer">{{ recToggleLabel }}</button>
+            <button onClick="{{ endRec }}" style="border:0;background:#1D1926;color:#F7F5F1;border-radius:999px;padding:10px 18px;font-size:13.5px;font-weight:600;cursor:pointer">{{ t.endMeeting }}</button>
+          </div>
+        </div>
+
+        <div style="margin-top:26px;display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;align-items:start">
+          <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:18px;padding:26px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+              <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#57506199">{{ t.liveTranscript }}</div>
+              <div style="font-family:'Geist Mono',monospace;font-size:11px;color:#57506199">{{ liveLang }}</div>
+            </div>
+            <sc-for list="{{ liveLines }}" as="l" hint-placeholder-count="5">
+              <div style="display:flex;gap:14px;padding:11px 0;border-top:1px solid rgba(29,25,38,.07)">
+                <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#57506199;flex:none;width:44px;padding-top:3px">{{ l.stamp }}</span>
+                <div style="flex:1">
+                  <div style="font-size:12.5px;font-weight:700;color:{{ l.tone }}">{{ l.speaker }}</div>
+                  <div style="font-size:15px;line-height:1.5;margin-top:3px;color:{{ l.textTone }}">{{ l.text }}</div>
+                </div>
+              </div>
+            </sc-for>
+            <div style="margin-top:14px;font-family:'Geist Mono',monospace;font-size:11.5px;color:#57506199">{{ liveTail }}</div>
+          </div>
+
+          <div style="display:grid;gap:20px;align-content:start">
+            <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:18px;padding:26px">
+              <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#5B4AE6;margin-bottom:6px">{{ t.beingCaptured }}</div>
+              <div style="font-size:13.5px;color:#575061;margin-bottom:12px">{{ t.beingCapturedSub }}</div>
+              <sc-for list="{{ liveObjects }}" as="o" hint-placeholder-count="4">
+                <div style="padding:13px 0;border-top:1px solid rgba(29,25,38,.07)">
+                  <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+                    <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;border-radius:5px;padding:3px 7px;background:{{ o.kindBg }};color:{{ o.kindFg }}">{{ o.kind }}</span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#57506199">{{ o.stamp }}</span>
+                    <span style="flex:1"></span>
+                    <span style="font-size:11.5px;color:{{ o.reviewTone }}">{{ o.review }}</span>
+                  </div>
+                  <div style="font-size:14.5px;font-weight:600;line-height:1.42;margin-top:7px">{{ o.text }}</div>
+                  <div style="font-size:12.5px;color:#575061;margin-top:4px">{{ o.meta }}</div>
+                </div>
+              </sc-for>
+            </div>
+
+            <sc-if value="{{ closePanel }}" hint-placeholder-val="{{ true }}">
+            <div style="background:#1D1926;color:#F7F5F1;border-radius:18px;padding:26px;animation:loq-in .2s ease-out">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+                <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#F7F5F177">{{ t.beforeFinish }}</span>
+                <span style="flex:1"></span>
+                <span onClick="{{ dismissClose }}" style="cursor:pointer;font-size:12.5px;color:#F7F5F166">{{ t.notNow }}</span>
+              </div>
+              <sc-for list="{{ closeItems }}" as="c" hint-placeholder-count="3">
+                <div style="padding:10px 0;border-top:1px solid rgba(247,245,241,.14);font-size:15px;line-height:1.45">{{ c.text }}</div>
+              </sc-for>
+              <input value="{{ closeDraft }}" onChange="{{ onCloseDraft }}" placeholder="{{ t.closePlaceholder }}" style="margin-top:16px;width:100%;border:1px solid rgba(247,245,241,.2);background:rgba(247,245,241,.06);color:#F7F5F1;border-radius:10px;padding:12px 14px;font-size:14.5px;outline:none" style-focus="border-color:#5B4AE6" />
+              <button onClick="{{ applyClose }}" style="margin-top:12px;border:0;background:#5B4AE6;color:#fff;border-radius:999px;padding:11px 20px;font-size:14px;font-weight:600;cursor:pointer">{{ t.closeLoop }}</button>
+            </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isPrep }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="font-family:'Geist Mono',monospace;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:#5B4AE6;margin-bottom:12px">Atlas · {{ t.prepIn }}</div>
+        <h1 style="margin:0;font-size:clamp(26px,3vw,36px);letter-spacing:-.032em;font-weight:800;max-width:20ch">{{ t.prepTitle }}</h1>
+        <div style="margin-top:28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px">
+          <sc-for list="{{ prepBlocks }}" as="b" hint-placeholder-count="6">
+            <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:16px;padding:24px">
+              <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:{{ b.tone }};margin-bottom:14px">{{ b.label }}</div>
+              <sc-for list="{{ b.items }}" as="i" hint-placeholder-count="2">
+                <div style="padding:11px 0;border-top:1px solid rgba(29,25,38,.07)">
+                  <div style="font-size:15px;font-weight:600;line-height:1.4">{{ i.text }}</div>
+                  <div style="font-size:12.5px;color:#575061;margin-top:4px">{{ i.meta }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <div style="margin-top:24px;background:#1D1926;color:#F7F5F1;border-radius:18px;padding:28px">
+          <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#F7F5F177;margin-bottom:10px">{{ t.beforeFinish }}</div>
+          <div style="font-size:19px;font-weight:600;line-height:1.45;max-width:56ch">{{ t.closeLoopBody }}</div>
+          <button onClick="{{ goLoops }}" style="margin-top:20px;border:0;background:#5B4AE6;color:#fff;border-radius:999px;padding:11px 20px;font-size:14px;font-weight:600;cursor:pointer">{{ t.closeLoop }}</button>
+        </div>
+      </div>
+      </sc-if>
+
+    </main>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
+<main style="max-width:1080px;margin:0 auto;padding:56px 32px 110px">
+  <div onClick="{{ goApp }}" style="cursor:pointer;font-size:13.5px;color:#5B4AE6;font-weight:600;margin-bottom:16px">← {{ t.navProduct }}</div>
+  <h1 style="margin:0;font-size:clamp(26px,2.9vw,34px);letter-spacing:-.03em;font-weight:800">{{ t.adminTitle }}</h1>
+  <p style="margin:8px 0 28px;color:#575061;font-size:15.5px">{{ t.adminSub }}</p>
+  <div style="background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:18px;overflow:hidden">
+    <div style="display:grid;grid-template-columns:1.4fr 1.2fr .8fr .8fr auto;gap:16px;padding:14px 24px;background:#F7F5F1;font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#57506199">
+      <span>{{ t.colPerson }}</span><span>{{ t.colCompany }}</span><span>{{ t.colTeam }}</span><span>{{ t.colStatus }}</span><span></span>
+    </div>
+    <sc-for list="{{ accessRequests }}" as="r" hint-placeholder-count="4">
+      <div style="display:grid;grid-template-columns:1.4fr 1.2fr .8fr .8fr auto;gap:16px;padding:18px 24px;border-top:1px solid rgba(29,25,38,.07);align-items:center">
+        <div>
+          <div style="font-size:14.5px;font-weight:600">{{ r.name }}</div>
+          <div style="font-size:12.5px;color:#575061">{{ r.email }}</div>
+        </div>
+        <div style="font-size:14px">{{ r.company }}</div>
+        <div style="font-size:14px;color:#575061">{{ r.team }}</div>
+        <div><span style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:4px 10px;background:{{ r.statusBg }};color:{{ r.statusFg }}">{{ r.statusLabel }}</span></div>
+        <div style="display:flex;gap:8px">
+          <button onClick="{{ r.approve }}" style="border:0;background:#337965;color:#fff;border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;cursor:pointer">{{ t.approve }}</button>
+          <button onClick="{{ r.reject }}" style="border:1px solid rgba(29,25,38,.16);background:transparent;border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;cursor:pointer">{{ t.reject }}</button>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+  <div style="margin-top:24px;background:#fff;border:1px solid rgba(29,25,38,.08);border-radius:18px;padding:26px">
+    <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#57506199;margin-bottom:14px">{{ t.audit }}</div>
+    <sc-for list="{{ auditLog }}" as="a" hint-placeholder-count="4">
+      <div style="display:flex;gap:16px;padding:11px 0;border-top:1px solid rgba(29,25,38,.07);font-size:14px">
+        <span style="font-family:'Geist Mono',monospace;font-size:12px;color:#57506199;min-width:110px">{{ a.when }}</span>
+        <span style="flex:1">{{ a.text }}</span>
+        <span style="color:#575061;font-size:13px">{{ a.actor }}</span>
+      </div>
+    </sc-for>
+  </div>
+</main>
+</sc-if>
+
+<sc-if value="{{ evidenceOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeEvidence }}" style="position:fixed;inset:0;background:rgba(29,25,38,.32);z-index:80"></div>
+  <aside style="position:fixed;top:0;right:0;bottom:0;width:440px;max-width:92vw;background:#fff;z-index:81;padding:32px;overflow:auto;box-shadow:-24px 0 60px -30px rgba(29,25,38,.4);animation:loq-in .18s ease-out">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+      <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#57506199">{{ t.evidence }}</div>
+      <button onClick="{{ closeEvidence }}" style="border:0;background:#F7F5F1;border-radius:999px;width:30px;height:30px;cursor:pointer;font-size:15px">×</button>
+    </div>
+    <div style="font-size:17px;font-weight:700">{{ evidence.source }}</div>
+    <div style="font-size:13px;color:#575061;margin-top:4px">{{ evidence.meta }}</div>
+    <div style="margin-top:22px;display:flex;align-items:center;gap:12px;background:#1D1926;border-radius:12px;padding:14px 16px">
+      <span style="width:32px;height:32px;border-radius:999px;background:#5B4AE6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px">▶</span>
+      <div style="flex:1;height:3px;background:rgba(247,245,241,.2);border-radius:999px;position:relative">
+        <span style="position:absolute;left:0;top:0;bottom:0;width:38%;background:#5B4AE6;border-radius:999px"></span>
+      </div>
+      <span style="font-family:'Geist Mono',monospace;font-size:12px;color:#F7F5F1">{{ evidence.stamp }}</span>
+    </div>
+    <div style="margin-top:22px;display:grid;gap:14px">
+      <sc-for list="{{ evidence.lines }}" as="l" hint-placeholder-count="4">
+        <div style="border-left:2px solid {{ l.tone }};padding-left:14px">
+          <div style="font-family:'Geist Mono',monospace;font-size:11px;color:#57506199">{{ l.stamp }} · {{ l.speaker }}</div>
+          <div style="font-size:14.5px;line-height:1.5;margin-top:5px;color:{{ l.textTone }}">{{ l.text }}</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="margin-top:26px;padding-top:18px;border-top:1px solid rgba(29,25,38,.08)">
+      <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#57506199">{{ t.originalLanguage }}</div>
+      <div style="font-size:14px;margin-top:6px;color:#575061">{{ evidence.language }}</div>
+    </div>
+  </aside>
+</sc-if>
+
+<sc-if value="{{ paletteOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closePalette }}" style="position:fixed;inset:0;background:rgba(29,25,38,.4);z-index:90"></div>
+  <div style="position:fixed;top:14vh;left:50%;transform:translateX(-50%);width:620px;max-width:92vw;background:#fff;border-radius:16px;z-index:91;overflow:hidden;box-shadow:0 40px 90px -40px rgba(29,25,38,.6);animation:loq-in .16s ease-out">
+    <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="{{ t.askAnything }}" autoFocus="{{ true }}" style="width:100%;border:0;border-bottom:1px solid rgba(29,25,38,.09);padding:20px 22px;font-size:16.5px;outline:none;background:#fff;color:#1D1926" />
+    <div style="max-height:52vh;overflow:auto;padding:10px">
+      <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:36px;text-align:center;color:#575061;font-size:14.5px">{{ t.noResults }}</div>
+      </sc-if>
+      <sc-for list="{{ results }}" as="r" hint-placeholder-count="5">
+        <div onClick="{{ r.go }}" style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:10px;cursor:pointer" style-hover="background:#F7F5F1">
+          <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;border-radius:5px;padding:3px 7px;min-width:84px;text-align:center;background:{{ r.kindBg }};color:{{ r.kindFg }}">{{ r.kind }}</span>
+          <span style="flex:1;font-size:14.5px;font-weight:600">{{ r.title }}</span>
+          <span style="font-size:12.5px;color:#575061">{{ r.meta }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;align-items:center;gap:18px;padding:11px 18px;border-top:1px solid rgba(29,25,38,.08);background:#F7F5F1;font-family:'Geist Mono',monospace;font-size:11px;color:#57506199">
+      <sc-for list="{{ paletteHints }}" as="hk" hint-placeholder-count="3">
+        <span style="display:flex;align-items:center;gap:6px"><span style="border:1px solid rgba(29,25,38,.16);border-radius:4px;padding:1px 5px;background:#fff">{{ hk.key }}</span>{{ hk.label }}</span>
+      </sc-for>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ toastOpen }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:95;background:#1D1926;color:#F7F5F1;border-radius:12px;padding:14px 22px;font-size:14.5px;font-weight:600;box-shadow:0 20px 40px -20px rgba(29,25,38,.5);animation:loq-in .18s ease-out">{{ toast }}</div>
+</sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:960}}">
+const L = {};
+L.pt = {
+navProduct:"Produto", requestAccess:"Solicitar acesso", seeHow:"Ver como funciona",
+eyebrow:"Memória operacional para equipes",
+heroL1:"Saiba o que foi decidido, o que foi prometido", heroL2:"", heroL3:"e o que ainda não saiu do papel.",
+heroBody:"A Loquia acompanha decisões, compromissos, mudanças e questões abertas através das suas conversas.",
+tagline:"Conversas viram compromissos.",
+demoLabel:"Da conversa ao resultado",
+secDecTitle:"Decisões deveriam ter histórico.", secDecBody:"A Loquia preserva como uma decisão evoluiu e qual versão continua válida.",
+secPromTitle:"Uma promessa não é só mais uma tarefa.", secPromBody:"Saiba quem prometeu o quê, para quem e até quando.",
+secLoopTitle:"Veja o que continua voltando.", secLoopBody:"A Loquia identifica assuntos que continuam sendo discutidos sem chegar a uma conclusão.",
+secConfTitle:"Perceba contradições antes que virem confusão.", secConfBody:"Contradições de alta importância nunca são resolvidas automaticamente.",
+secPrepTitle:"Entre na reunião sabendo onde as coisas realmente estão.", secPrepBody:"Antes de cada conversa, a Loquia reúne o estado atual do relacionamento.",
+pricingLoop:"Pricing internacional", prepareDecision:"Preparar decisão", review:"Revisar",
+confA:"Não faremos integrações customizadas.", confB:"Para fechar a Atlas podemos desenvolver integração exclusiva.",
+footerLine:"Conversas viram compromissos.", noSignup:"Acesso por convite. Sem cadastro público.",
+accessLabel:"Acesso controlado", requestTitle:"Solicitar acesso à Loquia",
+requestBody:"Cada solicitação é revisada por uma pessoa. Se fizer sentido para o seu contexto, enviamos um convite.",
+requestSentTitle:"Solicitação recebida", requestSentBody:"Você receberá uma resposta por email. Enquanto isso, a solicitação aparece na fila de revisão do admin.",
+viewInAdmin:"Ver no admin", consent:"Concordo que a Loquia processe estes dados para avaliar minha solicitação de acesso.", sendRequest:"Enviar solicitação",
+now:"Agora", nowSub:"O que precisa de você, o que está aberto e o que mudou.",
+needsYou:"Precisa de você", openLoops:"Loops abertos", whatChanged:"O que mudou", sinceYesterday:"desde ontem",
+circles:"Andando em círculos", circlesSub:"Assuntos discutidos várias vezes sem produzir uma decisão.",
+recentlyResolved:"Resolvidos recentemente", viewAll:"Ver tudo",
+loopsSub:"Assuntos que começaram numa conversa e ainda não chegaram a uma conclusão.",
+openFor:"Aberto há", timeline:"Linha do tempo", openQuestions:"Questões abertas", promises:"Promessas",
+askLoquia:"Perguntar à Loquia", resolve:"Resolver",
+ledger:"Decision Ledger", ledgerSub:"As decisões vigentes da organização, com origem e histórico.",
+currentState:"Estado atual", lineage:"Histórico da decisão",
+promiseTracker:"Promessas", promisesSub:"Quem prometeu o quê, para quem e até quando.", due:"Prazo",
+whatChangedTitle:"O que mudou", before:"Antes", after:"Depois",
+conflicts:"Contradições", conflictsSub:"Possíveis contradições entre decisões e conversas.",
+keepPrevious:"Manter decisão anterior", replacePrevious:"Substituir decisão anterior", notConflict:"Não é contradição", resolution:"Resolução",
+sources:"Fontes", sourcesSub:"Reuniões são evidência, não o centro do produto.", evidence:"Evidência",
+prepIn:"Reunião em 40 minutos", prepTitle:"Antes de entrar na sala", beforeFinish:"Antes de encerrar",
+closeLoopBody:"2 compromissos estão sem responsável. 1 prazo está ambíguo. 1 assunto foi discutido sem decisão.", closeLoop:"Fechar o loop",
+adminTitle:"Solicitações de acesso", adminSub:"Revisar, aprovar e convidar. Toda ação fica registrada na auditoria.",
+colPerson:"Pessoa", colCompany:"Empresa", colTeam:"Equipe", colStatus:"Status", approve:"Aprovar", reject:"Recusar", audit:"Auditoria",
+searchPlaceholder:"Pesquisar ou perguntar", askAnything:"O que prometemos à Atlas?", noResults:"Nada encontrado. Tente outro termo.",
+prepNext:"Próxima reunião", originalLanguage:"Idioma original",
+liveNav:"Reunião ao vivo", liveTranscript:"Transcrição ao vivo", endMeeting:"Encerrar",
+beingCaptured:"A Loquia está capturando", beingCapturedSub:"Objetos identificados automaticamente. Nada vira compromisso sem confirmação.",
+notNow:"Agora não", closePlaceholder:"Ex: Marina fica responsável até quinta.",
+recordingOn:"Gravando", recordingPaused:"Pausada", pause:"Pausar", resume:"Retomar",
+emptyTitle:"Nenhum loop com esse filtro", emptyBody:"Nada nesse estado agora. Isso costuma ser uma boa notícia.", clearFilters:"Limpar filtros",
+brandIntro:"A Loquia é a memória operacional dos compromissos de uma organização. A marca precisa parecer calma, precisa e confiável.",
+brandSymbol:"Símbolo e lockups", brandSymbolBody:"O símbolo representa convergência: múltiplos sinais dispersos que se reduzem a uma única direção. Nunca usar microfone, balão de fala, cérebro ou brilho.",
+brandPalette:"Paleta", brandType:"Tipografia", brandVoice:"Voz", monoUse:"Timestamps, evidência, rótulos de sistema", glossary:"Glossário"
+};
+L.en = {
+navProduct:"Product", requestAccess:"Request access", seeHow:"See how it works",
+eyebrow:"Operational memory for teams",
+heroL1:"Know what was decided, what was promised", heroL2:"", heroL3:"and what still hasn't happened.",
+heroBody:"Loquia tracks decisions, commitments, changes and open questions across your conversations.",
+tagline:"Conversations become commitments.",
+demoLabel:"From conversation to outcome",
+secDecTitle:"Decisions should have a history.", secDecBody:"Loquia preserves how a decision evolved and which version still holds.",
+secPromTitle:"A promise is not just another task.", secPromBody:"Know who promised what, to whom and by when.",
+secLoopTitle:"See what keeps coming back.", secLoopBody:"Loquia surfaces topics that keep being discussed without reaching a conclusion.",
+secConfTitle:"Catch contradictions before they become confusion.", secConfBody:"High-severity contradictions are never resolved without human review.",
+secPrepTitle:"Walk in knowing where things actually stand.", secPrepBody:"Before every conversation, Loquia assembles the current state of the relationship.",
+pricingLoop:"International pricing", prepareDecision:"Prepare decision", review:"Review",
+confA:"We will not build custom integrations.", confB:"To close Atlas we can build an exclusive integration.",
+footerLine:"Conversations become commitments.", noSignup:"Invitation only. No public signup.",
+accessLabel:"Controlled access", requestTitle:"Request access to Loquia",
+requestBody:"Every request is reviewed by a person. If it fits your context, we send an invitation.",
+requestSentTitle:"Request received", requestSentBody:"You'll hear back by email. In the meantime, the request sits in the admin review queue.",
+viewInAdmin:"View in admin", consent:"I agree that Loquia may process this data to evaluate my access request.", sendRequest:"Send request",
+now:"Now", nowSub:"What needs you, what is open and what changed.",
+needsYou:"Needs you", openLoops:"Open Loops", whatChanged:"What changed", sinceYesterday:"since yesterday",
+circles:"Going in circles", circlesSub:"Topics discussed repeatedly without producing a decision.",
+recentlyResolved:"Recently resolved", viewAll:"View all",
+loopsSub:"Topics that started in a conversation and haven't reached a conclusion.",
+openFor:"Open for", timeline:"Timeline", openQuestions:"Open questions", promises:"Promises",
+askLoquia:"Ask Loquia", resolve:"Resolve",
+ledger:"Decision Ledger", ledgerSub:"The organization's current decisions, with origin and history.",
+currentState:"Current state", lineage:"Decision lineage",
+promiseTracker:"Promises", promisesSub:"Who promised what, to whom and by when.", due:"Due",
+whatChangedTitle:"What changed", before:"Before", after:"After",
+conflicts:"Conflicts", conflictsSub:"Possible contradictions between decisions and conversations.",
+keepPrevious:"Keep previous decision", replacePrevious:"Replace previous decision", notConflict:"Not a conflict", resolution:"Resolution",
+sources:"Sources", sourcesSub:"Meetings are evidence, not the center of the product.", evidence:"Evidence",
+prepIn:"Meeting in 40 minutes", prepTitle:"Before you walk into the room", beforeFinish:"Before you finish",
+closeLoopBody:"2 commitments have no owner. 1 deadline is ambiguous. 1 topic was discussed without a decision.", closeLoop:"Close the loop",
+adminTitle:"Access requests", adminSub:"Review, approve and invite. Every action is written to the audit log.",
+colPerson:"Person", colCompany:"Company", colTeam:"Team", colStatus:"Status", approve:"Approve", reject:"Reject", audit:"Audit",
+searchPlaceholder:"Search or ask", askAnything:"What did we promise Atlas?", noResults:"Nothing found. Try another term.",
+prepNext:"Next meeting", originalLanguage:"Original language",
+liveNav:"Live meeting", liveTranscript:"Live transcript", endMeeting:"End",
+beingCaptured:"Loquia is capturing", beingCapturedSub:"Objects identified automatically. Nothing becomes a commitment without confirmation.",
+notNow:"Not now", closePlaceholder:"e.g. Marina owns this until Thursday.",
+recordingOn:"Recording", recordingPaused:"Paused", pause:"Pause", resume:"Resume",
+emptyTitle:"No loops match this filter", emptyBody:"Nothing in that state right now. That is usually good news.", clearFilters:"Clear filters",
+brandIntro:"Loquia is the operational memory of an organization's commitments. The brand must feel calm, precise and reliable.",
+brandSymbol:"Symbol and lockups", brandSymbolBody:"The symbol represents convergence: multiple scattered signals resolving into a single direction. Never a microphone, speech bubble, brain or sparkle.",
+brandPalette:"Palette", brandType:"Typography", brandVoice:"Voice", monoUse:"Timestamps, evidence, system labels", glossary:"Glossary"
+};
+
+const INK="#1D1926", IRIS="#5B4AE6", IRIS_S="#4737C4", SOFT="#ECE9FF", SAGE="#337965", AMBER="#9A6416", DANGER="#B13D4C", MUTED="#575061";
+
+class Component extends DCLogic {
+  state = {
+    route:"landing", lang:"pt", loopFilter:"all", changeFilter:"week",
+    evidence:null, paletteOpen:false, query:"", toast:"", requestSent:false,
+    conflict:{}, loopId:"pricing", decisionId:"pricing", requests:{}, askOpen:false, recording:true, recSec:1587, closeDismissed:false, closeDraft:"", closeApplied:false
+  };
+
+  componentDidMount(){
+    this._key = (e)=>{
+      const k = (e.key||"").toLowerCase();
+      if ((e.metaKey||e.ctrlKey) && k==="k"){ e.preventDefault(); this.setState({paletteOpen:!this.state.paletteOpen, query:""}); }
+      if (e.key==="Escape") this.setState({paletteOpen:false, evidence:null});
+    };
+    window.addEventListener("keydown", this._key);
+    this._tick = setInterval(()=>{ if (this.state.recording && this.state.route==="live") this.setState(st=>({recSec:st.recSec+1})); }, 1000);
+  }
+  componentWillUnmount(){ window.removeEventListener("keydown", this._key); clearTimeout(this._tm); clearInterval(this._tick); }
+
+  go = (route, extra) => () => { this.setState(Object.assign({route, paletteOpen:false, evidence:null}, extra||{})); window.scrollTo(0,0); };
+  flash = (msg) => { this.setState({toast:msg}); clearTimeout(this._tm); this._tm = setTimeout(()=>this.setState({toast:""}), 2800); };
+  ev = (payload) => () => this.setState({evidence:payload});
+
+  loc(){ return this.state.lang==="pt" ? "pt-BR" : "en-US"; }
+  fmtDate(y,m,d){ return new Intl.DateTimeFormat(this.loc(),{day:"numeric",month:"long"}).format(new Date(y,m-1,d)); }
+  nDays(n){
+    const pt = this.state.lang==="pt";
+    const num = new Intl.NumberFormat(this.loc()).format(n);
+    return num + " " + (pt ? (n===1?"dia":"dias") : (n===1?"day":"days"));
+  }
+  ago(n){ return new Intl.RelativeTimeFormat(this.loc(),{numeric:"auto"}).format(-n,"day"); }
+
+  evidenceFor(key){
+    const pt = this.state.lang==="pt";
+    const B = {
+      pricing:{ source: pt?"Comercial LATAM · 12 de agosto":"LATAM Commercial · August 12", stamp:"28:17",
+        lines:[
+          {speaker:"André Lima", stamp:"27:52", text: pt?"O time brasileiro reclamou do preço em dólar desde o início.":"The Brazilian team has pushed back on USD pricing from the start."},
+          {speaker:"Marina Costa", stamp:"28:17", text: pt?"Então vamos usar preço localizado em BRL para clientes brasileiros. Fechado.":"So we'll use localized BRL pricing for Brazilian customers. Settled.", hi:true},
+          {speaker:"Rafael Martins", stamp:"28:40", text: pt?"Vale a partir do próximo ciclo de faturamento.":"Effective from the next billing cycle."}
+        ]},
+      atlasDoc:{ source: pt?"Integração Atlas · 5 de agosto":"Atlas Integration · August 5", stamp:"42:13",
+        lines:[
+          {speaker:"Cliente Atlas", stamp:"41:58", text: pt?"Precisamos da documentação técnica para começar o escopo.":"We need the technical documentation to start scoping."},
+          {speaker:"Rafael Martins", stamp:"42:13", text: pt?"Eu envio a documentação técnica até dia 18.":"I'll send the technical documentation by the 18th.", hi:true}
+        ]},
+      integration:{ source: pt?"Comitê de produto · 15 de julho":"Product committee · July 15", stamp:"11:04",
+        lines:[
+          {speaker:"Camila Rocha", stamp:"10:47", text: pt?"Cada integração customizada custa um trimestre de engenharia.":"Every custom integration costs a quarter of engineering."},
+          {speaker:"Marina Costa", stamp:"11:04", text: pt?"Então não faremos integrações customizadas.":"So we will not build custom integrations.", hi:true}
+        ]},
+      integrationB:{ source: pt?"Negociação Atlas · 8 de agosto":"Atlas negotiation · August 8", stamp:"19:36",
+        lines:[
+          {speaker:"André Lima", stamp:"19:20", text: pt?"A Atlas condiciona a assinatura à integração com o ERP deles.":"Atlas is conditioning the signature on integrating with their ERP."},
+          {speaker:"Rafael Martins", stamp:"19:36", text: pt?"Para fechar a Atlas podemos desenvolver uma integração exclusiva.":"To close Atlas we can build an exclusive integration.", hi:true}
+        ]},
+      launch:{ source: pt?"Planning Q3 · 12 de agosto":"Q3 Planning · August 12", stamp:"07:22",
+        lines:[
+          {speaker:"Camila Rocha", stamp:"07:05", text: pt?"Outubro inteiro é arriscado sem um piloto antes.":"A full October is risky without a pilot first."},
+          {speaker:"Marina Costa", stamp:"07:22", text: pt?"Piloto em setembro, lançamento geral em outubro.":"Pilot in September, general release in October.", hi:true}
+        ]}
+    };
+    const b = B[key] || B.pricing;
+    return {
+      source: b.source,
+      meta: pt ? "Reunião · gravação disponível" : "Meeting · recording available",
+      stamp: b.stamp,
+      language: pt ? "Português (pt-BR) — a evidência sempre aponta para a fala original." : "Portuguese (pt-BR) — evidence always points to the original utterance.",
+      lines: b.lines.map(l=>({
+        stamp:l.stamp, speaker:l.speaker, text:l.text,
+        tone: l.hi ? IRIS : "rgba(29,25,38,.14)",
+        textTone: l.hi ? INK : MUTED
+      }))
+    };
+  }
+
+  pill(active){
+    return active
+      ? {bg:INK, fg:"#F7F5F1", border:INK}
+      : {bg:"transparent", fg:MUTED, border:"rgba(29,25,38,.16)"};
+  }
+
+  renderVals(){
+    const s = this.state, pt = s.lang==="pt", t = L[s.lang];
+    const r = s.route;
+    const marketing = r==="landing"||r==="request"||r==="brand";
+    const product = ["dash","loops","loopDetail","decisions","decisionDetail","promises","changes","conflicts","meetings","live","prep"].indexOf(r)>=0;
+
+    const navDef = [
+      {id:"dash", label:t.now, count:""},
+      {id:"loops", label:t.openLoops, count:"14"},
+      {id:"decisions", label:t.ledger, count:"32"},
+      {id:"promises", label:t.promiseTracker, count:"9"},
+      {id:"changes", label:t.whatChanged, count:"6"},
+      {id:"conflicts", label:t.conflicts, count:"2"},
+      {id:"live", label:t.liveNav, count:"●"},
+      {id:"meetings", label:t.sources, count:"41"},
+      {id:"prep", label:t.prepTitle, count:""}
+    ];
+    const activeNav = r==="loopDetail" ? "loops" : (r==="decisionDetail" ? "decisions" : r);
+
+    const loops = [
+      {id:"pricing", key:"pricing", status:"at_risk", days:38, meetings:6, promises:1, questions:2, decisions:0,
+       title: pt?"Pricing internacional":"International pricing",
+       next: pt?"Próximo passo: escolher entre USD único ou preço localizado. Sem decisão desde 3 de julho.":"Next step: choose between single USD or localized pricing. No decision since July 3."},
+      {id:"atlas", key:"atlas", status:"blocked", days:21, meetings:5, promises:3, questions:2, decisions:2,
+       title: pt?"Integração Atlas":"Atlas integration",
+       next: pt?"Bloqueado por aprovação jurídica. Documentação técnica prometida está atrasada.":"Blocked by legal approval. The promised technical documentation is overdue."},
+      {id:"launch", key:"launch", status:"open", days:14, meetings:4, promises:2, questions:1, decisions:3,
+       title: pt?"Lançamento Q3":"Q3 launch",
+       next: pt?"Piloto confirmado para setembro. Falta definir critério de saída do piloto.":"Pilot confirmed for September. Pilot exit criteria still undefined."},
+      {id:"hiring", key:"hiring", status:"waiting", days:19, meetings:3, promises:1, questions:1, decisions:1,
+       title: pt?"Contratação de product designer":"Hiring a product designer",
+       next: pt?"Aguardando retorno de duas candidatas finalistas.":"Waiting on two finalist candidates."}
+    ];
+    const statusMap = {
+      open:{bg:SOFT, fg:IRIS_S, label: pt?"Aberto":"Open"},
+      waiting:{bg:"#F1EFEA", fg:MUTED, label: pt?"Aguardando":"Waiting"},
+      blocked:{bg:"#FBF6EE", fg:AMBER, label: pt?"Bloqueado":"Blocked"},
+      at_risk:{bg:"#FDF4F4", fg:DANGER, label: pt?"Em risco":"At risk"},
+      resolved:{bg:"#F0F6F4", fg:SAGE, label: pt?"Resolvido":"Resolved"}
+    };
+    const filterDefs = [
+      {id:"all", label: pt?"Todos":"All"},
+      {id:"open", label: statusMap.open.label},
+      {id:"waiting", label: statusMap.waiting.label},
+      {id:"blocked", label: statusMap.blocked.label},
+      {id:"at_risk", label: statusMap.at_risk.label},
+      {id:"resolved", label: statusMap.resolved.label}
+    ];
+    const visible = loops.filter(l => s.loopFilter==="all" || l.status===s.loopFilter);
+    const loop = loops.filter(l=>l.id===s.loopId)[0] || loops[0];
+
+    const decisions = [
+      {id:"pricing", status: s.conflict.pricing==="replaced" ? "active":"active",
+       title: pt?"Pricing internacional":"International pricing",
+       statement: pt?"Usaremos preço localizado em BRL para clientes brasileiros.":"We will use localized BRL pricing for Brazilian customers.",
+       date: this.fmtDate(2026,8,12), owner:"Marina Costa", stamp:"28:17", key:"pricing",
+       supersedes: pt?"Substitui: “Preços serão sempre apresentados em USD.”":"Supersedes: “Prices will always be shown in USD.”"},
+      {id:"launch", status:"active",
+       title: pt?"Lançamento Q3":"Q3 launch",
+       statement: pt?"Piloto em setembro. Lançamento geral em outubro.":"Pilot in September. General release in October.",
+       date: this.fmtDate(2026,8,12), owner:"Camila Rocha", stamp:"07:22", key:"launch",
+       supersedes: pt?"Substitui duas decisões anteriores sobre a data de lançamento.":"Supersedes two earlier decisions about the launch date."},
+      {id:"integration", status: s.conflict.integration==="replaced" ? "superseded" : "pending",
+       title: pt?"Política de integrações":"Integration policy",
+       statement: pt?"Não faremos integrações customizadas.":"We will not build custom integrations.",
+       date: this.fmtDate(2026,7,15), owner:"Marina Costa", stamp:"11:04", key:"integration",
+       supersedes: s.conflict.integration==="replaced"
+         ? (pt?"Substituída em 8 de agosto: integração exclusiva aprovada para a Atlas.":"Superseded on August 8: exclusive integration approved for Atlas.")
+         : (pt?"Contradição detectada em 8 de agosto. Precisa de revisão humana.":"Contradiction detected on August 8. Needs human review.")},
+      {id:"pilot", status:"active",
+       title: pt?"Escopo do piloto Atlas":"Atlas pilot scope",
+       statement: pt?"O piloto começa com uma única unidade.":"The pilot starts with a single unit.",
+       date: this.fmtDate(2026,8,5), owner:"Rafael Martins", stamp:"33:09", key:"atlasDoc",
+       supersedes:""}
+    ];
+    const decStatus = {
+      active:{bg:"#F0F6F4", fg:SAGE, label: pt?"Vigente":"Active"},
+      superseded:{bg:"#F1EFEA", fg:MUTED, label: pt?"Substituída":"Superseded"},
+      pending:{bg:"#FBF6EE", fg:AMBER, label: pt?"Precisa de revisão":"Needs review"}
+    };
+    const decision = decisions.filter(d=>d.id===s.decisionId)[0] || decisions[0];
+
+    const lineageByDecision = {
+      pricing:[
+        {version:"v1", date:this.fmtDate(2026,6,3), text: pt?"Preços serão sempre apresentados em USD.":"Prices will always be shown in USD.", note: pt?"Substituída":"Superseded", stamp:"14:02", tone:"rgba(29,25,38,.3)", textTone:MUTED, key:"pricing"},
+        {version:"v2", date:this.fmtDate(2026,7,20), text: pt?"USD como padrão, com exceções aprovadas caso a caso.":"USD by default, with case-by-case approved exceptions.", note: pt?"Substituída":"Superseded", stamp:"22:31", tone:"rgba(29,25,38,.3)", textTone:MUTED, key:"pricing"},
+        {version:"v3", date:this.fmtDate(2026,8,12), text: pt?"Usaremos preço localizado em BRL para clientes brasileiros.":"We will use localized BRL pricing for Brazilian customers.", note: pt?"Vigente · Marina Costa":"Active · Marina Costa", stamp:"28:17", tone:SAGE, textTone:INK, key:"pricing"}
+      ],
+      launch:[
+        {version:"v1", date:this.fmtDate(2026,6,15), text: pt?"Lançamento em setembro.":"Launch in September.", note: pt?"Substituída":"Superseded", stamp:"08:11", tone:"rgba(29,25,38,.3)", textTone:MUTED, key:"launch"},
+        {version:"v2", date:this.fmtDate(2026,8,3), text: pt?"Lançamento adiado para outubro.":"Launch postponed to October.", note: pt?"Substituída":"Superseded", stamp:"05:40", tone:"rgba(29,25,38,.3)", textTone:MUTED, key:"launch"},
+        {version:"v3", date:this.fmtDate(2026,8,12), text: pt?"Piloto em setembro. Lançamento geral em outubro.":"Pilot in September. General release in October.", note: pt?"Vigente · Camila Rocha":"Active · Camila Rocha", stamp:"07:22", tone:SAGE, textTone:INK, key:"launch"}
+      ],
+      integration:[
+        {version:"v1", date:this.fmtDate(2026,7,15), text: pt?"Não faremos integrações customizadas.":"We will not build custom integrations.", note: s.conflict.integration==="replaced" ? (pt?"Substituída":"Superseded") : (pt?"Vigente, em revisão":"Active, under review"), stamp:"11:04", tone: s.conflict.integration==="replaced" ? "rgba(29,25,38,.3)" : AMBER, textTone: s.conflict.integration==="replaced" ? MUTED : INK, key:"integration"},
+        {version:"v2", date:this.fmtDate(2026,8,8), text: pt?"Integração exclusiva aprovada para a Atlas, como exceção documentada.":"Exclusive integration approved for Atlas, as a documented exception.", note: s.conflict.integration==="replaced" ? (pt?"Vigente · Rafael Martins":"Active · Rafael Martins") : (pt?"Proposta, não confirmada":"Proposed, unconfirmed"), stamp:"19:36", tone: s.conflict.integration==="replaced" ? SAGE : "rgba(29,25,38,.3)", textTone: s.conflict.integration==="replaced" ? INK : MUTED, key:"integrationB"}
+      ],
+      pilot:[
+        {version:"v1", date:this.fmtDate(2026,8,5), text: pt?"O piloto começa com uma única unidade.":"The pilot starts with a single unit.", note: pt?"Vigente · Rafael Martins":"Active · Rafael Martins", stamp:"33:09", tone:SAGE, textTone:INK, key:"atlasDoc"}
+      ]
+    };
+
+    const promises = [
+      {group:"external", description: pt?"Enviar documentação técnica":"Send technical documentation", who:"Rafael Martins → Atlas", due:this.fmtDate(2026,8,18), status:"overdue", stamp:"42:13", key:"atlasDoc"},
+      {group:"external", description: pt?"Confirmar preço localizado por escrito":"Confirm localized pricing in writing", who:"Marina Costa → Atlas", due:this.fmtDate(2026,8,22), status:"open", stamp:"29:04", key:"pricing"},
+      {group:"inbound", description: pt?"Enviar dados de volume":"Send volume data", who:"Atlas → Rafael Martins", due:this.fmtDate(2026,8,10), status:"open", stamp:"12:55", key:"atlasDoc"},
+      {group:"inbound", description: pt?"Retorno do jurídico sobre o contrato":"Legal feedback on the contract", who:"Atlas → Camila Rocha", due:this.fmtDate(2026,8,14), status:"completed", stamp:"38:20", key:"integrationB"},
+      {group:"internal", description: pt?"Nova previsão de receita":"New revenue forecast", who:"Marina Costa", due:this.fmtDate(2026,8,14), status:"open", stamp:"51:07", key:"launch"},
+      {group:"internal", description: pt?"Estimativa de esforço da integração":"Integration effort estimate", who:"André Lima", due:this.fmtDate(2026,8,9), status:"renegotiated", stamp:"25:31", key:"integrationB"}
+    ];
+    const promStatus = {
+      open:{bg:SOFT, fg:IRIS_S, label: pt?"Aberta":"Open", tone:IRIS},
+      overdue:{bg:"#FDF4F4", fg:DANGER, label: pt?"Atrasada":"Overdue", tone:DANGER},
+      completed:{bg:"#F0F6F4", fg:SAGE, label: pt?"Concluída":"Completed", tone:SAGE},
+      renegotiated:{bg:"#FBF6EE", fg:AMBER, label: pt?"Renegociada":"Renegotiated", tone:AMBER}
+    };
+    const groupLabels = {
+      external: pt?"Promessas que fizemos":"Promises to others",
+      inbound: pt?"Promessas feitas a nós":"Promises to us",
+      internal: pt?"Compromissos internos":"Internal commitments"
+    };
+    const promiseGroups = ["external","inbound","internal"].map(g=>({
+      label: groupLabels[g],
+      items: promises.filter(p=>p.group===g).map(p=>{
+        const st = promStatus[p.status];
+        return {description:p.description, who:p.who, due:p.due, stamp:p.stamp,
+          statusBg:st.bg, statusFg:st.fg, statusLabel:st.label, tone:st.tone,
+          openEvidence:this.ev(this.evidenceFor(p.key))};
+      })
+    }));
+
+    const changeDefs = [
+      {span:"today", kind:"decision", entity: pt?"Lançamento Q3":"Q3 launch", when: this.ago(0),
+       before: pt?"Lançamento geral em outubro":"General release in October",
+       after: pt?"Piloto em setembro, lançamento geral em outubro":"Pilot in September, general release in October",
+       reason: pt?"Camila levantou risco de lançar sem piloto.":"Camila raised the risk of launching without a pilot.", stamp:"07:22", key:"launch", tone:IRIS_S},
+      {span:"today", kind:"promise", entity: pt?"Documentação técnica Atlas":"Atlas technical documentation", when: this.ago(0),
+       before: pt?"Prazo 18 de agosto":"Due August 18", after: pt?"Atrasada, sem evidência de conclusão":"Overdue, no evidence of completion",
+       reason: pt?"Nenhuma menção de envio nas últimas duas reuniões.":"No mention of delivery in the last two meetings.", stamp:"42:13", key:"atlasDoc", tone:DANGER},
+      {span:"week", kind:"conflict", entity: pt?"Política de integrações":"Integration policy", when: this.ago(2),
+       before: pt?"Não faremos integrações customizadas":"No custom integrations",
+       after: pt?"Integração exclusiva proposta para a Atlas":"Exclusive integration proposed for Atlas",
+       reason: pt?"Contradição detectada entre 15/07 e 08/08.":"Contradiction detected between Jul 15 and Aug 8.", stamp:"19:36", key:"integrationB", tone:AMBER},
+      {span:"week", kind:"decision", entity: pt?"Pricing internacional":"International pricing", when: this.ago(3),
+       before: pt?"USD como padrão com exceções":"USD by default with exceptions",
+       after: pt?"Preço localizado em BRL no Brasil":"Localized BRL pricing in Brazil",
+       reason: pt?"Pressão consistente do time comercial no Brasil.":"Consistent pushback from the Brazilian sales team.", stamp:"28:17", key:"pricing", tone:IRIS_S},
+      {span:"month", kind:"risk", entity: pt?"Aprovação jurídica Atlas":"Atlas legal approval", when: this.ago(9),
+       before: pt?"Sem risco registrado":"No recorded risk", after: pt?"Risco alto: cláusula de exclusividade":"High risk: exclusivity clause",
+       reason: pt?"Jurídico sinalizou exposição contratual.":"Legal flagged contractual exposure.", stamp:"38:20", key:"integrationB", tone:DANGER}
+    ];
+    const changeFilterDefs = [
+      {id:"today", label: pt?"Hoje":"Today"},
+      {id:"week", label: pt?"Última semana":"Last week"},
+      {id:"month", label: pt?"Último mês":"Last month"},
+      {id:"visit", label: pt?"Desde a última visita":"Since last visit"}
+    ];
+    const spanRank = {today:0, week:1, month:2, visit:1};
+    const changes = changeDefs.filter(c => spanRank[c.span] <= spanRank[s.changeFilter]);
+    const kindLabels = {decision: pt?"Decisão":"Decision", promise: pt?"Promessa":"Promise", conflict: pt?"Contradição":"Conflict", risk:"Risk"};
+
+    const conflictDefs = [
+      {id:"integration", severity: pt?"Severidade alta":"High severity",
+       title: pt?"Política de integrações customizadas":"Custom integration policy",
+       dateA:this.fmtDate(2026,7,15), sourceA: pt?"Comitê de produto":"Product committee", textA:t.confA, stampA:"11:04", keyA:"integration",
+       dateB:this.fmtDate(2026,8,8), sourceB: pt?"Negociação Atlas":"Atlas negotiation", textB:t.confB, stampB:"19:36", keyB:"integrationB"},
+      {id:"forecast", severity: pt?"Severidade média":"Medium severity",
+       title: pt?"Data da nova previsão":"New forecast date",
+       dateA:this.fmtDate(2026,8,6), sourceA:"Planning Q3", textA: pt?"A previsão fica pronta na sexta.":"The forecast will be ready on Friday.", stampA:"51:07", keyA:"launch",
+       dateB:this.fmtDate(2026,8,11), sourceB: pt?"Comercial LATAM":"LATAM Commercial", textB: pt?"A previsão depende do pricing, então só depois da decisão.":"The forecast depends on pricing, so only after the decision.", stampB:"28:17", keyB:"pricing"}
+    ];
+    const conflicts = conflictDefs.map(c=>{
+      const st = s.conflict[c.id];
+      const resolved = !!st;
+      const label = st==="replaced" ? (pt?"Resolvida · substituída":"Resolved · replaced")
+        : st==="kept" ? (pt?"Resolvida · mantida":"Resolved · kept")
+        : st==="dismissed" ? (pt?"Não é contradição":"Not a conflict")
+        : (pt?"Precisa de revisão":"Needs review");
+      const resolutionText = st==="replaced" ? (pt?"A decisão anterior foi marcada como substituída. O histórico continua visível no Decision Ledger.":"The previous decision was marked as superseded. The lineage stays visible in the Decision Ledger.")
+        : st==="kept" ? (pt?"A decisão anterior permanece vigente. A fala de 8 de agosto ficou registrada como exceção não aprovada.":"The previous decision stays active. The August 8 statement was recorded as an unapproved exception.")
+        : (pt?"Marcada como não sendo contradição. A Loquia deixa de sinalizar este par.":"Marked as not a conflict. Loquia will stop flagging this pair.");
+      return {
+        title:c.title, severity:c.severity,
+        border: resolved ? "rgba(29,25,38,.08)" : "rgba(154,100,22,.34)",
+        statusBg: resolved ? "#F0F6F4" : "#FBF6EE", statusFg: resolved ? SAGE : AMBER, statusLabel: label,
+        dateA:c.dateA, sourceA:c.sourceA, textA:c.textA, stampA:c.stampA,
+        dateB:c.dateB, sourceB:c.sourceB, textB:c.textB, stampB:c.stampB,
+        evidenceA:this.ev(this.evidenceFor(c.keyA)), evidenceB:this.ev(this.evidenceFor(c.keyB)),
+        unresolved: !resolved, resolvedFlag: resolved, resolutionText,
+        keep: ()=>{ this.setState({conflict:Object.assign({}, s.conflict, {[c.id]:"kept"})}); this.flash(pt?"Decisão anterior mantida":"Previous decision kept"); },
+        replace: ()=>{ this.setState({conflict:Object.assign({}, s.conflict, {[c.id]:"replaced"})}); this.flash(pt?"Decisão substituída · histórico preservado":"Decision superseded · lineage preserved"); },
+        dismiss: ()=>{ this.setState({conflict:Object.assign({}, s.conflict, {[c.id]:"dismissed"})}); this.flash(pt?"Marcada como não sendo contradição":"Marked as not a conflict"); }
+      };
+    });
+
+    const meetingDefs = [
+      {title: pt?"Comercial LATAM":"LATAM Commercial", date:this.fmtDate(2026,8,12), dur:"52 min", key:"pricing", n:[2,3,2,1]},
+      {title: pt?"Negociação Atlas":"Atlas negotiation", date:this.fmtDate(2026,8,8), dur:"47 min", key:"integrationB", n:[1,4,2,1]},
+      {title: pt?"Integração Atlas · kickoff":"Atlas integration · kickoff", date:this.fmtDate(2026,8,5), dur:"61 min", key:"atlasDoc", n:[3,4,3,0]},
+      {title:"Planning Q3", date:this.fmtDate(2026,8,3), dur:"58 min", key:"launch", n:[3,4,2,1]},
+      {title: pt?"Comitê de produto":"Product committee", date:this.fmtDate(2026,7,15), dur:"44 min", key:"integration", n:[2,1,1,0]}
+    ];
+    const exKeys = [
+      {k: pt?"Decisões":"Decisions", tone:IRIS_S},
+      {k: pt?"Promessas":"Promises", tone:INK},
+      {k: pt?"Questões":"Questions", tone:AMBER},
+      {k: pt?"Conflitos":"Conflicts", tone:DANGER}
+    ];
+
+    const searchIndex = [
+      {kind: pt?"Promessa":"Promise", title: pt?"Documentação técnica → Atlas":"Technical documentation → Atlas", meta: pt?"Atrasada · 18 ago":"Overdue · Aug 18", route:"promises", kindBg:"#FDF4F4", kindFg:DANGER},
+      {kind:"Loop", title: pt?"Pricing internacional":"International pricing", meta:this.nDays(38), route:"loopDetail", extra:{loopId:"pricing"}, kindBg:SOFT, kindFg:IRIS_S},
+      {kind: pt?"Decisão":"Decision", title: pt?"Piloto em setembro, lançamento em outubro":"Pilot in September, launch in October", meta: pt?"Vigente":"Active", route:"decisionDetail", extra:{decisionId:"launch"}, kindBg:"#F0F6F4", kindFg:SAGE},
+      {kind: pt?"Contradição":"Conflict", title: pt?"Política de integrações":"Integration policy", meta: pt?"Precisa de revisão":"Needs review", route:"conflicts", kindBg:"#FBF6EE", kindFg:AMBER},
+      {kind: pt?"Mudança":"Change", title: pt?"Lançamento moveu de setembro para outubro":"Launch moved from September to October", meta:this.ago(3), route:"changes", kindBg:"#F1EFEA", kindFg:MUTED},
+      {kind: pt?"Questão":"Question", title: pt?"Quem paga a integração?":"Who pays for the integration?", meta:this.nDays(21), route:"loopDetail", extra:{loopId:"atlas"}, kindBg:SOFT, kindFg:IRIS_S},
+      {kind: pt?"Fonte":"Source", title: pt?"Comercial LATAM · 12 ago":"LATAM Commercial · Aug 12", meta:"52 min", route:"meetings", kindBg:"#F1EFEA", kindFg:MUTED}
+    ];
+    const q = s.query.trim().toLowerCase();
+    const results = q ? searchIndex.filter(x => (x.title+" "+x.kind+" "+x.meta).toLowerCase().indexOf(q)>=0) : searchIndex;
+
+    const reqDefs = [
+      {id:"r1", name:"Helena Duarte", email:"helena@vetorlabs.com", company:"Vetor Labs", team:"40–80"},
+      {id:"r2", name:"Tomás Ferreira", email:"tomas@northbay.io", company:"Northbay", team:"12–40"},
+      {id:"r3", name:"Alice Mendonça", email:"alice@grupopilar.com.br", company:"Grupo Pilar", team:"80+"},
+      {id:"r4", name:"Ivan Rocha", email:"ivan@cadenzahq.com", company:"Cadenza", team:"12–40"}
+    ];
+
+    const V = {
+      t, isMarketing:marketing, isLanding:r==="landing", isRequest:r==="request", isBrand:r==="brand",
+      isProduct:product, isAdmin:r==="admin",
+      isDash:r==="dash", isLoops:r==="loops", isLoopDetail:r==="loopDetail", isDecisions:r==="decisions",
+      isDecisionDetail:r==="decisionDetail", isPromises:r==="promises", isChanges:r==="changes",
+      isConflicts:r==="conflicts", isMeetings:r==="meetings", isLive:r==="live", isPrep:r==="prep",
+
+      goLanding:this.go("landing"), goBrand:this.go("brand"), goApp:this.go("dash"), goAdmin:this.go("admin"),
+      goRequest:this.go("request"), goLoops:this.go("loops"), goDecisions:this.go("decisions"),
+      goChanges:this.go("changes"), goConflicts:this.go("conflicts"), goPrep:this.go("prep"),
+      setPt:()=>this.setState({lang:"pt"}), setEn:()=>this.setState({lang:"en"}),
+      ptBg: pt?INK:"transparent", ptFg: pt?"#F7F5F1":MUTED, enBg: pt?"transparent":INK, enFg: pt?MUTED:"#F7F5F1",
+      ptBgDark: pt?"#F7F5F1":"transparent", ptFgDark: pt?INK:"rgba(247,245,241,.65)",
+      enBgDark: pt?"transparent":"#F7F5F1", enFgDark: pt?"rgba(247,245,241,.65)":INK,
+
+      openPalette:()=>this.setState({paletteOpen:true, query:""}),
+      closePalette:()=>this.setState({paletteOpen:false}),
+      paletteOpen:s.paletteOpen, query:s.query,
+      onQuery:(e)=>this.setState({query:e.target.value}),
+      noResults: results.length===0,
+      results: results.map(x=>({kind:x.kind, title:x.title, meta:x.meta, kindBg:x.kindBg, kindFg:x.kindFg, go:this.go(x.route, x.extra)})),
+
+      evidenceOpen: !!s.evidence, evidence: s.evidence || {lines:[]},
+      closeEvidence: ()=>this.setState({evidence:null}),
+      toastOpen: !!s.toast, toast:s.toast,
+
+      flow:[
+        {kind:"Meeting", tone:MUTED, text: pt?"“Vamos adiar o lançamento.”":"“Let's push the launch.”", meta:"03 ago · 05:40"},
+        {kind:"Decision", tone:IRIS_S, text: pt?"Piloto em setembro, lançamento geral em outubro.":"Pilot in September, general release in October.", meta:"12 ago · 07:22"},
+        {kind:"Promise", tone:DANGER, text: pt?"Marina entrega a nova previsão até sexta.":"Marina delivers the new forecast by Friday.", meta:pt?"Prazo 14 ago":"Due Aug 14"},
+        {kind:"Loop", tone:AMBER, text: pt?"Aprovação da integração continua aberta.":"Integration approval is still open.", meta:this.nDays(21)},
+        {kind:"Resolution", tone:SAGE, text: pt?"Jurídico aprovou o contrato Atlas.":"Legal approved the Atlas contract.", meta:this.ago(2)}
+      ],
+      lineagePreview:[
+        {tag:"v1 · "+this.fmtDate(2026,6,15), text: pt?"Lançamento em setembro.":"Launch in September.", tone:"rgba(29,25,38,.4)", textTone:MUTED},
+        {tag:"v2 · "+this.fmtDate(2026,8,3), text: pt?"Lançamento adiado para outubro.":"Launch postponed to October.", tone:"rgba(29,25,38,.4)", textTone:MUTED},
+        {tag:"v3 · "+this.fmtDate(2026,8,12), text: pt?"Piloto em setembro. Lançamento geral em outubro.":"Pilot in September. General release in October.", tone:SAGE, textTone:INK}
+      ],
+      promiseSpec:[
+        {k: pt?"Prometido por":"Promised by", v:"Rafael Martins"},
+        {k: pt?"Prometido a":"Promised to", v:"Atlas"},
+        {k: pt?"Compromisso":"Commitment", v: pt?"Documentação técnica":"Technical documentation"},
+        {k: pt?"Prazo":"Due", v:this.fmtDate(2026,8,18)},
+        {k:"Status", v: pt?"Atrasada":"Overdue"}
+      ],
+      loopSpec:[
+        {k: pt?"Discutido":"Discussed", v: pt?"6 reuniões":"6 meetings"},
+        {k: pt?"Aberto há":"Open for", v:this.nDays(38)},
+        {k: pt?"Decisão":"Decision", v: pt?"Nenhuma":"None"}
+      ],
+      prepStats:[
+        {n:"2", label: pt?"promessas atrasadas":"promises overdue", tone:DANGER},
+        {n:"1", label: pt?"decisão vigente":"decision active", tone:SAGE},
+        {n:"3", label: pt?"questões abertas":"open questions", tone:IRIS_S},
+        {n:"1", label: pt?"novo risco":"new risk", tone:AMBER},
+        {n:"1", label: pt?"mudança desde a última reunião":"change since last meeting", tone:INK}
+      ],
+
+      requestSent:s.requestSent, requestOpen: !s.requestSent,
+      submitRequest: ()=>{ this.setState({requestSent:true}); this.flash(pt?"Solicitação enviada para revisão":"Request sent for review"); },
+      requestFields:[
+        {label: pt?"Nome completo":"Full name", ph:"Helena Duarte", span:"span 1"},
+        {label: pt?"Email corporativo":"Work email", ph:"helena@empresa.com", span:"span 1"},
+        {label: pt?"Empresa":"Company", ph:"Vetor Labs", span:"span 1"},
+        {label: pt?"Cargo":"Role", ph: pt?"Diretora de operações":"Head of Operations", span:"span 1"},
+        {label: pt?"Tamanho da equipe":"Team size", ph:"40–80", span:"span 1"},
+        {label: pt?"Reuniões por mês":"Meetings per month", ph:"120", span:"span 1"},
+        {label: pt?"Principal caso de uso":"Primary use case", ph: pt?"Acompanhar compromissos com clientes":"Track commitments with clients", span:"span 2"},
+        {label: pt?"Qual problema você quer resolver?":"Primary problem to solve", ph: pt?"Decisões se perdem entre reuniões":"Decisions get lost between meetings", span:"span 2"},
+        {label: pt?"Como você conheceu a Loquia?":"How did you hear about Loquia?", ph: pt?"Indicação":"Referral", span:"span 2"}
+      ],
+
+      palette:[
+        {name:"Loquia Ink", hex:"#1D1926"}, {name:"Loquia Canvas", hex:"#F7F5F1"}, {name:"Loquia Surface", hex:"#FFFFFF"},
+        {name:"Loquia Iris", hex:"#5B4AE6"}, {name:"Loquia Iris Strong", hex:"#4737C4"}, {name:"Loquia Iris Soft", hex:"#ECE9FF"},
+        {name:"Loquia Sage", hex:"#337965"}, {name:"Loquia Amber", hex:"#9A6416"}, {name:"Loquia Danger", hex:"#B13D4C"}
+      ],
+      voice: pt ? [
+        {yes:"A Loquia encontrou uma contradição entre duas decisões.", no:"✨ A IA detectou insights incríveis!"},
+        {yes:"Aberto há 38 dias, sem decisão.", no:"Este assunto está pendente há um tempinho."},
+        {yes:"Rafael prometeu a documentação até 18 de agosto.", no:"Alguém ficou de mandar aquele documento."},
+        {yes:"Evidência: 28:17, Comercial LATAM.", no:"Segundo nossa análise inteligente."}
+      ] : [
+        {yes:"Loquia found a contradiction between two decisions.", no:"✨ AI detected amazing insights!"},
+        {yes:"Open for 38 days, no decision.", no:"This topic has been pending for a while."},
+        {yes:"Rafael promised the documentation by August 18.", no:"Someone was going to send that document."},
+        {yes:"Evidence: 28:17, LATAM Commercial.", no:"According to our smart analysis."}
+      ],
+      glossary:[
+        {en:"Decision", pt:"Decisão"}, {en:"Promise", pt:"Promessa"},
+        {en:"Loop", pt:"Loop (mantido em inglês)"}, {en:"Open Loop", pt:"Loop aberto"},
+        {en:"Conflict", pt:"Contradição"}, {en:"Evidence", pt:"Evidência"},
+        {en:"Commitment", pt:"Compromisso"}, {en:"Current state", pt:"Estado atual"},
+        {en:"Superseded", pt:"Substituída"}, {en:"Resolved", pt:"Resolvido"},
+        {en:"Blocked", pt:"Bloqueado"}, {en:"Overdue", pt:"Atrasado"}
+      ],
+
+      nav: navDef.map(n=>({
+        label:n.label, count:n.count, go:this.go(n.id),
+        bg: activeNav===n.id ? "rgba(247,245,241,.12)" : "transparent",
+        fg: activeNav===n.id ? "#F7F5F1" : "rgba(247,245,241,.68)",
+        countFg: activeNav===n.id ? "rgba(247,245,241,.7)" : "rgba(247,245,241,.35)",
+        weight: activeNav===n.id ? "700" : "500"
+      })),
+
+      needsYou:[
+        {title: pt?"Documentação técnica prometida à Atlas":"Technical documentation promised to Atlas", meta: pt?"Atrasada há 2 dias":"2 days overdue", tone:DANGER, go:this.go("promises")},
+        {title: pt?"Pricing internacional bloqueia 3 pessoas":"International pricing is blocking 3 people", meta: pt?"Sem decisão há 38 dias":"No decision for 38 days", tone:AMBER, go:this.go("loopDetail",{loopId:"pricing"})},
+        {title: pt?"Contradição sobre integrações customizadas":"Contradiction about custom integrations", meta: pt?"Precisa de revisão humana":"Needs human review", tone:AMBER, go:this.go("conflicts")},
+        {title: pt?"Prazo do lançamento mudou sem confirmação":"Launch deadline changed without confirmation", meta: this.ago(0), tone:IRIS, go:this.go("changes")}
+      ],
+      loopBreakdown:[
+        {label: pt?"Aguardando você":"Waiting for you", n:"4"},
+        {label: pt?"Aguardando outros":"Waiting for others", n:"6"},
+        {label: pt?"Bloqueados":"Blocked", n:"3"},
+        {label: pt?"Atrasados":"Overdue", n:"1"}
+      ],
+      changeSummary:[
+        {label: pt?"Decisões":"Decisions", n:"3"},
+        {label: pt?"Novas promessas":"New promises", n:"7"},
+        {label: pt?"Prazos alterados":"Deadlines changed", n:"2"},
+        {label: pt?"Contradições":"Conflicts", n:"1"}
+      ],
+      circles:[
+        {title: pt?"Pricing internacional":"International pricing", meetings: pt?"6 reuniões":"6 meetings", age:this.nDays(38), go:this.go("loopDetail",{loopId:"pricing"})},
+        {title: pt?"Integração ERP":"ERP integration", meetings: pt?"5 reuniões":"5 meetings", age:this.nDays(24), go:this.go("loopDetail",{loopId:"atlas"})},
+        {title: pt?"Novo posicionamento":"New positioning", meetings: pt?"4 reuniões":"4 meetings", age:this.nDays(19), go:this.go("loopDetail",{loopId:"hiring"})}
+      ],
+      resolved:[
+        {title: pt?"Contrato Cliente Atlas":"Client Atlas contract", when:this.ago(2)},
+        {title: pt?"Migração de pricing":"Pricing migration", when:this.ago(5)},
+        {title: pt?"Decisão de contratação":"Hiring decision", when:this.ago(8)}
+      ],
+
+      loopFilters: filterDefs.map(f=>{
+        const p = this.pill(s.loopFilter===f.id);
+        return {label:f.label, bg:p.bg, fg:p.fg, border:p.border, go:()=>this.setState({loopFilter:f.id})};
+      }),
+      loopsEmpty: visible.length===0,
+      clearFilter: ()=>this.setState({loopFilter:"all"}),
+      visibleLoops: visible.map(l=>{
+        const st = statusMap[l.status];
+        return {
+          title:l.title, next:l.next, age:this.nDays(l.days),
+          ageTone: l.days>30 ? DANGER : (l.days>18 ? AMBER : INK),
+          statusBg:st.bg, statusFg:st.fg, statusLabel:st.label,
+          go:this.go("loopDetail",{loopId:l.id}),
+          stats:[
+            {k: pt?"Reuniões":"Meetings", v:String(l.meetings)},
+            {k: pt?"Decisões":"Decisions", v:String(l.decisions)},
+            {k: pt?"Promessas":"Promises", v:String(l.promises)},
+            {k: pt?"Questões abertas":"Open questions", v:String(l.questions)}
+          ]
+        };
+      }),
+
+      loop: {
+        title: loop.title,
+        description: pt
+          ? "Este assunto atravessou "+loop.meetings+" reuniões desde que foi aberto. A Loquia reúne aqui tudo o que foi decidido, prometido e questionado."
+          : "This topic has crossed "+loop.meetings+" meetings since it opened. Loquia assembles everything decided, promised and questioned here.",
+        summary:[
+          {k: pt?"Aberto há":"Open for", v:this.nDays(loop.days), tone: loop.days>30?DANGER:INK},
+          {k:"Owner", v: loop.id==="pricing"?"Marina Costa":"Rafael Martins", tone:INK},
+          {k:"Status", v: statusMap[loop.status].label, tone: statusMap[loop.status].fg},
+          {k: pt?"Última movimentação":"Last activity", v:this.ago(2), tone:INK}
+        ],
+        timeline: (loop.id==="pricing" ? [
+          {date:this.fmtDate(2026,7,3), kind: pt?"ABERTO":"OPENED", text: pt?"Time comercial levanta que o preço em USD trava negociações no Brasil.":"Sales raises that USD pricing stalls deals in Brazil.", stamp:"14:02", source: pt?"Comercial LATAM":"LATAM Commercial", tone:IRIS, key:"pricing"},
+          {date:this.fmtDate(2026,7,20), kind: pt?"DECISÃO":"DECISION", text: pt?"USD como padrão, com exceções aprovadas caso a caso.":"USD by default, with case-by-case exceptions.", stamp:"22:31", source:"Planning Q3", tone:IRIS_S, key:"pricing"},
+          {date:this.fmtDate(2026,7,29), kind: pt?"QUESTÃO":"QUESTION", text: pt?"Quem aprova as exceções? Ficou sem resposta.":"Who approves exceptions? Left unanswered.", stamp:"09:18", source: pt?"Comitê de produto":"Product committee", tone:AMBER, key:"integration"},
+          {date:this.fmtDate(2026,8,8), kind: pt?"ESTAGNAÇÃO":"STAGNATION", text: pt?"Sexta reunião com o mesmo assunto e nenhuma decisão nova.":"Sixth meeting on the same topic with no new decision.", stamp:"19:36", source: pt?"Negociação Atlas":"Atlas negotiation", tone:DANGER, key:"integrationB"},
+          {date:this.fmtDate(2026,8,12), kind: pt?"DECISÃO":"DECISION", text: pt?"Preço localizado em BRL para clientes brasileiros.":"Localized BRL pricing for Brazilian customers.", stamp:"28:17", source: pt?"Comercial LATAM":"LATAM Commercial", tone:SAGE, key:"pricing"}
+        ] : [
+          {date:this.fmtDate(2026,8,5), kind: pt?"ABERTO":"OPENED", text: pt?"Atlas pede integração com o ERP próprio.":"Atlas asks for an integration with their own ERP.", stamp:"12:55", source: pt?"Integração Atlas":"Atlas integration", tone:IRIS, key:"atlasDoc"},
+          {date:this.fmtDate(2026,8,5), kind: pt?"PROMESSA":"PROMISE", text: pt?"Rafael promete documentação técnica até 18 de agosto.":"Rafael promises the technical documentation by August 18.", stamp:"42:13", source: pt?"Integração Atlas":"Atlas integration", tone:DANGER, key:"atlasDoc"},
+          {date:this.fmtDate(2026,8,8), kind: pt?"CONTRADIÇÃO":"CONFLICT", text: pt?"Proposta de integração exclusiva contradiz a política de julho.":"Exclusive integration proposal contradicts the July policy.", stamp:"19:36", source: pt?"Negociação Atlas":"Atlas negotiation", tone:AMBER, key:"integrationB"},
+          {date:this.fmtDate(2026,8,12), kind: pt?"BLOQUEIO":"BLOCKED", text: pt?"Jurídico sinaliza cláusula de exclusividade.":"Legal flags an exclusivity clause.", stamp:"38:20", source: pt?"Comercial LATAM":"LATAM Commercial", tone:DANGER, key:"integrationB"}
+        ]).map(e=>({date:e.date, kind:e.kind, text:e.text, stamp:e.stamp, source:e.source, tone:e.tone, openEvidence:this.ev(this.evidenceFor(e.key))})),
+        questions: loop.id==="pricing" ? [
+          {text: pt?"Quem aprova exceções de preço?":"Who approves pricing exceptions?", meta: pt?"Aberta há 24 dias · André Lima":"Open for 24 days · André Lima"},
+          {text: pt?"O preço localizado vale para renovações?":"Does localized pricing apply to renewals?", meta: pt?"Aberta há 9 dias · Marina Costa":"Open for 9 days · Marina Costa"}
+        ] : [
+          {text: pt?"Quem paga a integração?":"Who pays for the integration?", meta: pt?"Aberta há 21 dias · Rafael Martins":"Open for 21 days · Rafael Martins"},
+          {text: pt?"A exclusividade é por quanto tempo?":"How long does exclusivity last?", meta: pt?"Aberta há 4 dias · Camila Rocha":"Open for 4 days · Camila Rocha"}
+        ],
+        promises: loop.id==="pricing" ? [
+          {text: pt?"Confirmar preço localizado por escrito":"Confirm localized pricing in writing", meta:"Marina → Atlas · "+this.fmtDate(2026,8,22), tone:MUTED}
+        ] : [
+          {text: pt?"Enviar documentação técnica":"Send technical documentation", meta: (pt?"Rafael → Atlas · atrasada":"Rafael → Atlas · overdue"), tone:DANGER},
+          {text: pt?"Enviar dados de volume":"Send volume data", meta:"Atlas → Rafael · "+this.fmtDate(2026,8,10), tone:MUTED},
+          {text: pt?"Estimativa de esforço":"Effort estimate", meta: (pt?"André · renegociada":"André · renegotiated"), tone:AMBER}
+        ]
+      },
+      askOpen: s.askOpen,
+      askQuestion: pt ? "O que estamos esperando neste loop?" : "What are we waiting for in this loop?",
+      askAnswer: loop.id==="pricing"
+        ? (pt ? "Nada externo. O loop está parado porque ninguém decidiu entre USD único e preço localizado — a alternativa localizada já foi aceita verbalmente em 12 de agosto, mas não foi confirmada como decisão."
+              : "Nothing external. The loop is stalled because nobody chose between single USD and localized pricing — the localized option was verbally accepted on August 12 but never confirmed as a decision.")
+        : (pt ? "Aprovação jurídica sobre a cláusula de exclusividade. A documentação técnica prometida por Rafael também está atrasada e bloqueia o escopo do lado da Atlas."
+              : "Legal approval on the exclusivity clause. The technical documentation Rafael promised is also overdue and blocks scoping on the Atlas side."),
+      askCitations: (loop.id==="pricing"
+        ? [{label:"28:17 · "+(pt?"Comercial LATAM":"LATAM Commercial"), key:"pricing"},{label:"22:31 · Planning Q3", key:"pricing"}]
+        : [{label:"38:20 · "+(pt?"Jurídico":"Legal"), key:"integrationB"},{label:"42:13 · "+(pt?"Integração Atlas":"Atlas integration"), key:"atlasDoc"}]
+      ).map(c=>({label:c.label, openEvidence:this.ev(this.evidenceFor(c.key))})),
+      askLoquia: ()=>this.setState({askOpen:!s.askOpen}),
+      paletteHints:[
+        {key:"↑↓", label: pt?"navegar":"navigate"},
+        {key:"↵", label: pt?"abrir":"open"},
+        {key:"esc", label: pt?"fechar":"close"}
+      ],
+      resolveLoop: ()=>this.flash(pt?"Loop marcado como resolvido":"Loop marked as resolved"),
+
+      decisionList: decisions.map(d=>{
+        const st = decStatus[d.status];
+        return {
+          title:d.title, statement:d.statement, stamp:d.stamp,
+          statusBg:st.bg, statusFg:st.fg, statusLabel:st.label,
+          meta: (pt?"Decidido em ":"Decided ")+d.date+" · "+d.owner,
+          review: pt?"Identificado automaticamente · confirmado por "+d.owner : "Auto-identified · confirmed by "+d.owner,
+          hasSupersede: !!d.supersedes, supersedeText:d.supersedes,
+          openEvidence:this.ev(this.evidenceFor(d.key)),
+          go:this.go("decisionDetail",{decisionId:d.id})
+        };
+      }),
+      decision: {
+        title: decision.title, statement: decision.statement,
+        facts:[
+          {k: pt?"Decidido em":"Decided", v:decision.date},
+          {k:"Owner", v:decision.owner},
+          {k:"Status", v:decStatus[decision.status].label},
+          {k: pt?"Confiança":"Confidence", v: pt?"Alta":"High"}
+        ],
+        actions:[
+          {label: pt?"Ver origem":"View source", go:this.ev(this.evidenceFor(decision.key))},
+          {label: pt?"Marcar como substituída":"Mark as superseded", go:()=>this.flash(pt?"Decisão marcada como substituída":"Decision marked as superseded")},
+          {label: pt?"Relacionar a Loop":"Link to Loop", go:this.go("loops")},
+          {label: pt?"Confirmar":"Confirm", go:()=>this.flash(pt?"Confirmada por Rafael Martins":"Confirmed by Rafael Martins")}
+        ],
+        lineage: (lineageByDecision[decision.id]||[]).map(v=>({
+          version:v.version, date:v.date, text:v.text, note:v.note, stamp:v.stamp,
+          tone:v.tone, textTone:v.textTone, openEvidence:this.ev(this.evidenceFor(v.key))
+        }))
+      },
+
+      promiseGroups,
+
+      changeFilters: changeFilterDefs.map(f=>{
+        const p = this.pill(s.changeFilter===f.id);
+        return {label:f.label, bg:p.bg, fg:p.fg, border:p.border, go:()=>this.setState({changeFilter:f.id})};
+      }),
+      changes: changes.map(c=>({
+        kind:kindLabels[c.kind], entity:c.entity, when:c.when, before:c.before, after:c.after,
+        reason:c.reason, stamp:c.stamp, tone:c.tone, openEvidence:this.ev(this.evidenceFor(c.key))
+      })),
+
+      conflicts,
+
+      meetings: meetingDefs.map(m=>({
+        title:m.title, meta:m.date+" · "+m.dur+" · Rafael, Marina, André",
+        extracted: exKeys.map((k,i)=>({k:k.k, tone:k.tone, n:String(m.n[i])})),
+        openEvidence:this.ev(this.evidenceFor(m.key))
+      })),
+
+      isLiveRoute:true,
+      recClock: (function(n){ const m=Math.floor(n/60), sec=n%60; return String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0"); })(s.recSec),
+      recDot: s.recording ? DANGER : "rgba(29,25,38,.3)",
+      recTone: s.recording ? DANGER : MUTED,
+      recLabel: s.recording ? t.recordingOn : t.recordingPaused,
+      recSource: pt ? "Google Meet · áudio" : "Google Meet · audio",
+      recToggleLabel: s.recording ? t.pause : t.resume,
+      toggleRec: ()=>this.setState({recording:!s.recording}),
+      endRec: ()=>{ this.setState({recording:false}); this.flash(pt?"Reunião encerrada · processando objetos":"Meeting ended · processing objects"); },
+      liveTitle: pt ? "Integração Atlas · alinhamento semanal" : "Atlas integration · weekly sync",
+      liveParticipants: "Rafael Martins, Marina Costa, André Lima · Atlas (2)",
+      liveLang: pt ? "pt-BR · original preservado" : "pt-BR · original preserved",
+      liveLines: [
+        {stamp:"24:02", speaker:"André Lima", text: pt?"O jurídico deles voltou com a cláusula de exclusividade por 12 meses.":"Their legal came back with a 12-month exclusivity clause.", tone:MUTED, textTone:MUTED},
+        {stamp:"24:31", speaker:"Marina Costa", text: pt?"Doze meses contradiz o que decidimos em julho sobre integrações.":"Twelve months contradicts what we decided in July about integrations.", tone:MUTED, textTone:MUTED},
+        {stamp:"25:10", speaker:"Rafael Martins", text: pt?"Podemos aceitar seis meses e revisar depois do piloto.":"We can accept six months and revisit after the pilot.", tone:INK, textTone:INK},
+        {stamp:"25:44", speaker:"Marina Costa", text: pt?"Então eu levo essa contraproposta para o jurídico ainda hoje.":"Then I'll take that counterproposal to legal today.", tone:INK, textTone:INK},
+        {stamp:"26:03", speaker:"Atlas · Sofia", text: pt?"E quem cobre o custo da integração? Isso ainda não ficou claro.":"And who covers the integration cost? That's still not clear.", tone:INK, textTone:INK}
+      ],
+      liveTail: pt ? "ouvindo…" : "listening…",
+      liveObjects: [
+        {kind: pt?"Promessa":"Promise", kindBg:SOFT, kindFg:IRIS_S, stamp:"25:44",
+         text: pt?"Levar contraproposta de 6 meses ao jurídico":"Take the 6-month counterproposal to legal",
+         meta: pt?"Marina Costa → interno · hoje":"Marina Costa → internal · today",
+         review: pt?"Precisa de revisão":"Needs review", reviewTone:AMBER},
+        {kind: pt?"Contradição":"Conflict", kindBg:"#FBF6EE", kindFg:AMBER, stamp:"24:31",
+         text: pt?"Exclusividade de 12 meses contradiz a política de julho":"12-month exclusivity contradicts the July policy",
+         meta: pt?"Relacionada à decisão de 15 de julho":"Related to the July 15 decision",
+         review: pt?"Alta severidade":"High severity", reviewTone:DANGER},
+        {kind: pt?"Questão":"Question", kindBg:"#F1EFEA", kindFg:MUTED, stamp:"26:03",
+         text: pt?"Quem cobre o custo da integração?":"Who covers the integration cost?",
+         meta: pt?"Sem dono · levantada pela Atlas":"No owner · raised by Atlas",
+         review: pt?"Sem resposta":"Unanswered", reviewTone:AMBER},
+        {kind: pt?"Decisão":"Decision", kindBg:"#F0F6F4", kindFg:SAGE, stamp:"25:10",
+         text: pt?"Aceitar seis meses de exclusividade, revisar após o piloto":"Accept six months of exclusivity, revisit after the pilot",
+         meta: pt?"Proposta por Rafael · não confirmada":"Proposed by Rafael · unconfirmed",
+         review: pt?"Aguardando confirmação":"Awaiting confirmation", reviewTone:IRIS_S}
+      ],
+      closePanel: !s.closeDismissed && !s.closeApplied,
+      dismissClose: ()=>this.setState({closeDismissed:true}),
+      closeDraft: s.closeDraft,
+      onCloseDraft: (e)=>this.setState({closeDraft:e.target.value}),
+      applyClose: ()=>{ this.setState({closeApplied:true}); this.flash(pt?"Objetos atualizados · 3 itens resolvidos":"Objects updated · 3 items resolved"); },
+      closeItems: pt ? [
+        {text:"2 compromissos estão sem responsável."},
+        {text:"1 prazo está ambíguo (“ainda hoje”)."},
+        {text:"1 questão foi levantada sem conclusão."}
+      ] : [
+        {text:"2 commitments have no owner."},
+        {text:"1 deadline is ambiguous (“today”)."},
+        {text:"1 question was raised without a conclusion."}
+      ],
+
+      prepBlocks:[
+        {label: pt?"Você prometeu":"You promised", tone:DANGER, items:[
+          {text: pt?"Documentação técnica":"Technical documentation", meta: pt?"Prazo era ontem · sem evidência de conclusão":"Due yesterday · no evidence of completion"},
+          {text: pt?"Confirmar preço localizado por escrito":"Confirm localized pricing in writing", meta:this.fmtDate(2026,8,22)}
+        ]},
+        {label: pt?"Eles prometeram":"They promised", tone:IRIS_S, items:[
+          {text: pt?"Dados de volume":"Volume data", meta: pt?"Prazo hoje":"Due today"},
+          {text: pt?"Retorno do jurídico":"Legal feedback", meta: pt?"Entregue há 2 dias":"Delivered 2 days ago"}
+        ]},
+        {label: pt?"Decisões vigentes":"Current decisions", tone:SAGE, items:[
+          {text: pt?"O piloto começa com uma única unidade.":"The pilot starts with a single unit.", meta:this.fmtDate(2026,8,5)+" · Rafael Martins"},
+          {text: pt?"Preço localizado em BRL no Brasil.":"Localized BRL pricing in Brazil.", meta:this.fmtDate(2026,8,12)+" · Marina Costa"}
+        ]},
+        {label: pt?"Questões abertas":"Open questions", tone:AMBER, items:[
+          {text: pt?"Quem paga a integração?":"Who pays for the integration?", meta: pt?"Aberta há 21 dias":"Open for 21 days"},
+          {text: pt?"A exclusividade é por quanto tempo?":"How long does exclusivity last?", meta: pt?"Aberta há 4 dias":"Open for 4 days"}
+        ]},
+        {label: pt?"Contradições":"Contradictions", tone:AMBER, items:[
+          {text: pt?"Política de integrações customizadas":"Custom integration policy", meta: pt?"Precisa de revisão antes da reunião":"Needs review before the meeting"}
+        ]},
+        {label: pt?"Mudou desde a última reunião":"Changed since last meeting", tone:INK, items:[
+          {text: pt?"Jurídico aprovou o contrato":"Legal approved the contract", meta:this.ago(2)},
+          {text: pt?"Novo risco: cláusula de exclusividade":"New risk: exclusivity clause", meta:this.ago(2)}
+        ]}
+      ],
+
+      adminTitle:t.adminTitle,
+      accessRequests: reqDefs.map(rq=>{
+        const st = s.requests[rq.id];
+        const label = st==="approved" ? (pt?"Aprovada":"Approved") : st==="rejected" ? (pt?"Recusada":"Rejected") : (pt?"Em revisão":"In review");
+        return {
+          name:rq.name, email:rq.email, company:rq.company, team:rq.team,
+          statusBg: st==="approved" ? "#F0F6F4" : st==="rejected" ? "#FDF4F4" : "#F1EFEA",
+          statusFg: st==="approved" ? SAGE : st==="rejected" ? DANGER : MUTED,
+          statusLabel: label,
+          approve: ()=>{ this.setState({requests:Object.assign({}, s.requests, {[rq.id]:"approved"})}); this.flash(pt?"Convite enviado para "+rq.email : "Invitation sent to "+rq.email); },
+          reject: ()=>{ this.setState({requests:Object.assign({}, s.requests, {[rq.id]:"rejected"})}); this.flash(pt?"Solicitação recusada":"Request rejected"); }
+        };
+      }),
+      auditLog:[
+        {when:this.ago(0), text: pt?"Convite enviado para tomas@northbay.io":"Invitation sent to tomas@northbay.io", actor:"Rafael Martins"},
+        {when:this.ago(1), text: pt?"Decisão “Pricing internacional” confirmada":"Decision “International pricing” confirmed", actor:"Marina Costa"},
+        {when:this.ago(2), text: pt?"Contradição sobre integrações sinalizada para revisão":"Integration contradiction flagged for review", actor:"Loquia"},
+        {when:this.ago(4), text: pt?"Workspace Northstar mudou idioma padrão para pt-BR":"Workspace Northstar default locale set to pt-BR", actor:"Camila Rocha"}
+      ]
+    };
+    return V;
+  }
+}
+</script>
+</body>
+</html>
