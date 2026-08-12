@@ -4,9 +4,11 @@ import {
   accessRequests,
   aiPacks,
   auditEvents,
+  exportPresets,
   invitations,
   meetings,
   processingJobs,
+  sessions,
   transcriptSegments,
   userSettings,
   users,
@@ -40,15 +42,17 @@ const ATLAS_PACK = [
 export async function seed(databaseUrl: string): Promise<void> {
   const { db, close } = createDb(databaseUrl, { max: 1 });
   try {
-    // Dev/test seed only — clear existing rows.
+    // Dev/test seed only — clear existing rows (respecting FKs).
     await db.delete(auditEvents);
     await db.delete(transcriptSegments);
     await db.delete(aiPacks);
     await db.delete(processingJobs);
+    await db.delete(exportPresets);
     await db.delete(meetings);
     await db.delete(invitations);
     await db.delete(accessRequests);
     await db.delete(userSettings);
+    await db.delete(sessions);
     await db.delete(users);
     await db.delete(workspaces);
 
