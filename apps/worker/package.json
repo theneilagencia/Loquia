@@ -1,0 +1,17 @@
+{
+  "name": "@loquia/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Scaffolding only — the real worker is Milestone 2. No backend logic in Milestone 1.",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@loquia/contracts": "workspace:*",
+    "@loquia/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "5.7.3"
+  }
+}
