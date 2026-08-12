@@ -15,6 +15,10 @@ const nextConfig = {
   experimental: {
     typedRoutes: false,
   },
+  // sharp is not built in this environment; serve images without the optimizer.
+  images: {
+    unoptimized: true,
+  },
 };
 
 export default withNextIntl(nextConfig);

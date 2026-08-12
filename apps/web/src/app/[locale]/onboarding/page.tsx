@@ -17,6 +17,7 @@ export default function OnboardingPage() {
     { title: t('step1Title'), body: t('step1Body') },
     { title: t('step2Title'), body: t('step2Body') },
     { title: t('step3Title'), body: t('step3Body') },
+    { title: t('step4Title'), body: t('step4Body') },
   ];
 
   async function next() {
@@ -56,7 +57,7 @@ export default function OnboardingPage() {
             <p className="text-muted-foreground">{current.body}</p>
           </div>
           <Button onClick={next} className="w-full">
-            {step < steps.length - 1 ? t('title') : t('finish')} <ArrowRight className="size-4" />
+            {step < steps.length - 1 ? t('next') : t('finish')} <ArrowRight className="size-4" />
           </Button>
         </CardContent>
       </Card>

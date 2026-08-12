@@ -1,7 +1,7 @@
 {
   "common": {
     "appName": "Loquia",
-    "tagline": "Transforme reuniões em contexto pronto para IA.",
+    "tagline": "Transforme reuniões em contexto pronto para usar.",
     "loading": "Carregando…",
     "save": "Salvar",
     "cancel": "Cancelar",
@@ -38,8 +38,8 @@
     "logout": "Sair"
   },
   "marketing": {
-    "heroTitle": "Transforme reuniões em contexto pronto para IA.",
-    "heroSubtitle": "A Loquia grava, transcreve e organiza suas conversas em um pacote estruturado e ligado a evidências, pronto para usar em qualquer ferramenta de IA.",
+    "heroTitle": "Transforme reuniões em contexto pronto para usar.",
+    "heroSubtitle": "A Loquia grava reuniões, estrutura a conversa e entrega um pacote que você cola direto no ChatGPT, no Claude ou na IA que preferir.",
     "heroCtaPrimary": "Solicitar acesso",
     "heroCtaSecondary": "Ver como funciona",
     "problemTitle": "O conhecimento das reuniões evapora.",
@@ -93,12 +93,15 @@
   },
   "onboarding": {
     "title": "Bem-vindo à Loquia",
-    "step1Title": "Como a Loquia funciona",
-    "step1Body": "Grave ou envie uma reunião e a Loquia monta um pacote pronto para IA a partir dela.",
-    "step2Title": "Escolha o idioma da reunião",
-    "step2Body": "Você pode alterar isso por reunião depois.",
-    "step3Title": "Tudo pronto",
-    "step3Body": "Vamos criar sua primeira reunião.",
+    "next": "Continuar",
+    "step1Title": "Escolha o idioma da reunião",
+    "step1Body": "É o idioma falado nas suas reuniões. Você pode alterar por reunião depois.",
+    "step2Title": "Como a Loquia funciona",
+    "step2Body": "Grave ou envie uma reunião e a Loquia estrutura a conversa em um AI Pack.",
+    "step3Title": "Escolha um preset de exportação padrão",
+    "step3Body": "O AI Pack é um bom padrão — você pode trocar de preset em cada exportação.",
+    "step4Title": "Tudo pronto",
+    "step4Body": "Vamos criar sua primeira reunião.",
     "finish": "Ir para o app"
   },
   "app": {
@@ -192,8 +195,8 @@
     "noResults": "Nenhum resultado.",
     "edit": "Editar",
     "save": "Salvar",
-    "rename": "Renomear quem falou",
-    "renamePlaceholder": "Nome",
+    "rename": "Renomear participante",
+    "renamePlaceholder": "Nome do participante",
     "addMarker": "Adicionar marcador",
     "editedBadge": "editado"
   },

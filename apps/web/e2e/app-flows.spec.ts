@@ -14,6 +14,15 @@ test('meeting detail opens on the AI Pack tab by default', async ({ page }) => {
   await expect(aiPackTab).toHaveAttribute('data-state', 'active');
 });
 
+test('AI Pack renders canonical sections and evidence stays in the original language', async ({ page }) => {
+  await page.goto('/pt-BR/app/meetings/m1');
+  await expect(page.getByRole('heading', { name: 'Meeting purpose' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Explicit decisions' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Important statements' })).toBeVisible();
+  // Evidence quote preserved in Portuguese even though titles are canonical English.
+  await expect(page.getByText('Sem a integração', { exact: false }).first()).toBeVisible();
+});
+
 test('theme preference persists across reload', async ({ page }) => {
   await page.goto('/pt-BR/login');
   await page.getByRole('radio', { name: 'Escuro' }).click();

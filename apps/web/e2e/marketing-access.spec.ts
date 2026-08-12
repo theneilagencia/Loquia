@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test('home renders hero and CTA', async ({ page }) => {
   await page.goto('/pt-BR');
   await expect(page.getByRole('heading', { level: 1 })).toContainText(
-    'Transforme reuniões em contexto pronto para IA',
+    'Transforme reuniões em contexto pronto para usar',
   );
 });
 

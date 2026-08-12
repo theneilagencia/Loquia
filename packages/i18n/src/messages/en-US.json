@@ -1,7 +1,7 @@
 {
   "common": {
     "appName": "Loquia",
-    "tagline": "Turn meetings into AI-ready context.",
+    "tagline": "Turn meetings into context you can use.",
     "loading": "Loading…",
     "save": "Save",
     "cancel": "Cancel",
@@ -38,8 +38,8 @@
     "logout": "Log out"
   },
   "marketing": {
-    "heroTitle": "Turn meetings into AI-ready context.",
-    "heroSubtitle": "Loquia records, transcribes and organizes your conversations into a structured, evidence-linked pack you can drop straight into any AI tool.",
+    "heroTitle": "Turn meetings into context you can use.",
+    "heroSubtitle": "Loquia records meetings, structures the conversation and hands you a pack you can paste straight into ChatGPT, Claude or any AI you prefer.",
     "heroCtaPrimary": "Request access",
     "heroCtaSecondary": "See how it works",
     "problemTitle": "Meeting knowledge evaporates.",
@@ -93,12 +93,15 @@
   },
   "onboarding": {
     "title": "Welcome to Loquia",
-    "step1Title": "How Loquia works",
-    "step1Body": "Record or upload a meeting and Loquia builds an AI-ready pack from it.",
-    "step2Title": "Choose your meeting language",
-    "step2Body": "You can change this per meeting later.",
-    "step3Title": "You're all set",
-    "step3Body": "Let's create your first meeting.",
+    "next": "Continue",
+    "step1Title": "Choose your meeting language",
+    "step1Body": "This is the language spoken in your meetings. You can change it per meeting later.",
+    "step2Title": "How Loquia works",
+    "step2Body": "Record or upload a meeting and Loquia structures the conversation into an AI Pack.",
+    "step3Title": "Pick a default export preset",
+    "step3Body": "The AI Pack is a good default — you can switch presets on every export.",
+    "step4Title": "You're all set",
+    "step4Body": "Let's create your first meeting.",
     "finish": "Go to app"
   },
   "app": {

@@ -23,5 +23,5 @@ test('export produces a downloadable file from a ready meeting', async ({ page }
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Baixar' }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/roadmap-q3-ai_pack/);
+  expect(download.suggestedFilename()).toMatch(/^loquia-.*-ai-pack\.md$/);
 });

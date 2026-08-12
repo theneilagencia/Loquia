@@ -15,7 +15,7 @@ import {
   Video,
 } from 'lucide-react';
 import type { Session } from '@loquia/domain';
-import { buttonVariants, cn } from '@loquia/ui';
+import { cn } from '@loquia/ui';
 import { Link, useRouter } from '@/i18n/navigation';
 import { useServices } from '@/lib/services-context';
 import { Logo } from '@/components/brand/logo';
@@ -55,8 +55,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-border p-4 md:flex">
-        <Link href="/app" className="mb-6 px-2">
+      {/* Sidebar on inverse-surface (decisions §21 / design-tokens). */}
+      <aside className="hidden w-60 shrink-0 flex-col bg-inverse-surface p-4 text-inverse-fg md:flex">
+        <Link href="/app" className="mb-6 px-2 text-inverse-fg">
           <Logo />
         </Link>
         <nav className="flex-1 space-y-1">
@@ -67,8 +68,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               className={cn(
                 'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
                 isActive(item.href, item.exact)
-                  ? 'bg-secondary font-medium text-secondary-foreground'
-                  : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                  ? 'bg-white/10 font-medium text-inverse-fg'
+                  : 'text-inverse-fg/70 hover:bg-white/5 hover:text-inverse-fg',
               )}
             >
               <item.icon className="size-4" /> {t(item.labelKey)}
@@ -80,15 +81,15 @@ export function AppShell({ children }: { children: ReactNode }) {
               className={cn(
                 'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
                 isActive('/admin')
-                  ? 'bg-secondary font-medium text-secondary-foreground'
-                  : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                  ? 'bg-white/10 font-medium text-inverse-fg'
+                  : 'text-inverse-fg/70 hover:bg-white/5 hover:text-inverse-fg',
               )}
             >
               <LayoutDashboard className="size-4" /> {t('admin')}
             </Link>
           )}
         </nav>
-        <div className="space-y-3 border-t border-border pt-4">
+        <div className="space-y-3 border-t border-white/10 pt-4">
           <div className="flex items-center gap-2">
             <LocaleSwitcher />
           </div>
@@ -97,14 +98,14 @@ export function AppShell({ children }: { children: ReactNode }) {
             <button
               type="button"
               onClick={logout}
-              className={buttonVariants({ variant: 'ghost', size: 'icon' })}
+              className="grid size-10 place-items-center rounded-md text-inverse-fg/70 transition-colors hover:bg-white/5 hover:text-inverse-fg"
               aria-label={t('logout')}
             >
               <LogOut className="size-4" />
             </button>
           </div>
           {session && (
-            <p className="truncate px-1 text-xs text-muted-foreground">{session.user.email}</p>
+            <p className="truncate px-1 text-xs text-inverse-fg/60">{session.user.email}</p>
           )}
         </div>
       </aside>

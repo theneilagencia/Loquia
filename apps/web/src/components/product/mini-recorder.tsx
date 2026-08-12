@@ -26,8 +26,8 @@ export function MiniRecorder() {
   const recording = runState === 'recording';
 
   return (
-    <div className="fixed bottom-4 left-1/2 z-50 w-[min(28rem,92vw)] -translate-x-1/2 animate-fade-in">
-      <div className="flex items-center gap-3 rounded-full border border-border bg-card/95 px-4 py-2 shadow-lg backdrop-blur">
+    <div className="fixed bottom-4 right-4 z-[94] w-[min(24rem,92vw)] animate-loq-in">
+      <div className="flex items-center gap-3 rounded-full border border-border bg-surface/95 px-4 py-2 shadow-elevate backdrop-blur">
         <span className="relative flex size-2.5 shrink-0">
           <span className="absolute inline-flex size-full animate-ping rounded-full bg-destructive/70" />
           <span className="relative inline-flex size-2.5 rounded-full bg-destructive" />
