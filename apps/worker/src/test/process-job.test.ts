@@ -2,21 +2,19 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { schema, type Database } from '@loquia/api/db';
 import {
-  MockTranscriptionAdapter,
   PipelineError,
   type TranscriptionInput,
   type TranscriptionProvider,
   type TranscriptionResult,
 } from '@loquia/pipeline';
 import { processJob } from '../process-job';
-import { makeMockStorage, makeWorkerTestDb, noopLog, seedProcessable, truncateAll } from './helpers';
+import { makeMockStorage, makeWorkerDeps, makeWorkerTestDb, seedProcessable, truncateAll } from './helpers';
 
 const { processingJobs, meetings, transcriptSegments, mediaAssets } = schema;
 
 let db: Database;
 let close: () => Promise<void>;
 const storage = makeMockStorage();
-const transcription = new MockTranscriptionAdapter();
 
 beforeAll(async () => {
   const h = await makeWorkerTestDb();
@@ -33,7 +31,7 @@ beforeEach(async () => {
 describe('processJob — happy path', () => {
   it('transcribes, segments and persists a real transcript; marks the pipeline ready_for_ai_pack', async () => {
     const fx = await seedProcessable(db, storage);
-    const result = await processJob({ db, storage, transcription, log: noopLog }, fx.jobId);
+    const result = await processJob(makeWorkerDeps(db, storage), fx.jobId);
     expect(result.status).toBe('completed');
 
     const job = (await db.select().from(processingJobs).where(eq(processingJobs.id, fx.jobId)))[0]!;
@@ -57,18 +55,18 @@ describe('processJob — happy path', () => {
 describe('idempotency', () => {
   it('re-processing does not duplicate segments and a completed job is a no-op', async () => {
     const fx = await seedProcessable(db, storage);
-    await processJob({ db, storage, transcription, log: noopLog }, fx.jobId);
+    await processJob(makeWorkerDeps(db, storage), fx.jobId);
     const firstCount = (await db.select().from(transcriptSegments).where(eq(transcriptSegments.meetingId, fx.meetingId))).length;
 
     // Re-deliver the same completed job → skipped, no changes.
-    const again = await processJob({ db, storage, transcription, log: noopLog }, fx.jobId);
+    const again = await processJob(makeWorkerDeps(db, storage), fx.jobId);
     expect(again.status).toBe('skipped');
     const secondCount = (await db.select().from(transcriptSegments).where(eq(transcriptSegments.meetingId, fx.meetingId))).length;
     expect(secondCount).toBe(firstCount);
 
     // Force a reprocess (reset to queued) → segments replaced, not duplicated.
     await db.update(processingJobs).set({ status: 'queued' }).where(eq(processingJobs.id, fx.jobId));
-    await processJob({ db, storage, transcription, log: noopLog }, fx.jobId);
+    await processJob(makeWorkerDeps(db, storage), fx.jobId);
     const thirdCount = (await db.select().from(transcriptSegments).where(eq(transcriptSegments.meetingId, fx.meetingId))).length;
     expect(thirdCount).toBe(firstCount);
   });
@@ -84,7 +82,7 @@ describe('retry classification', () => {
 
   it('a transient error re-queues the job (retryable)', async () => {
     const fx = await seedProcessable(db, storage);
-    await expect(processJob({ db, storage, transcription: failing('network'), log: noopLog }, fx.jobId)).rejects.toThrow();
+    await expect(processJob(makeWorkerDeps(db, storage, { transcription: failing('network') }), fx.jobId)).rejects.toThrow();
     const job = (await db.select().from(processingJobs).where(eq(processingJobs.id, fx.jobId)))[0]!;
     expect(job.status).toBe('queued'); // will be retried
     expect(job.errorCode).toBe('network');
@@ -94,7 +92,7 @@ describe('retry classification', () => {
 
   it('a permanent error fails the job and the meeting', async () => {
     const fx = await seedProcessable(db, storage);
-    await expect(processJob({ db, storage, transcription: failing('unsupported_media'), log: noopLog }, fx.jobId)).rejects.toThrow();
+    await expect(processJob(makeWorkerDeps(db, storage, { transcription: failing('unsupported_media') }), fx.jobId)).rejects.toThrow();
     const job = (await db.select().from(processingJobs).where(eq(processingJobs.id, fx.jobId)))[0]!;
     expect(job.status).toBe('failed');
     expect(job.errorCode).toBe('unsupported_media');

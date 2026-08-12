@@ -20,6 +20,11 @@ const schema = z.object({
   R2_BUCKET_NAME: z.string().optional(),
   DEEPGRAM_API_KEY: z.string().optional(),
   DEEPGRAM_MODEL: z.string().optional(),
+  // --- AI Pack generation (Milestone 4) ---
+  AI_PACK_PROVIDER: z.string().optional(),
+  AI_PACK_MODEL: z.string().optional(),
+  AI_PACK_MAX_RETRIES: z.coerce.number().optional(),
+  ANTHROPIC_API_KEY: z.string().optional(),
   MEDIA_MOCK_DIR: z.string().default('/tmp/loquia-media'),
   PUBLIC_API_URL: z.string().optional(),
   MAX_UPLOAD_SIZE_BYTES: z.coerce.number().default(524288000),

@@ -23,6 +23,15 @@ async function loadOwnedMeeting(app: FastifyInstance, auth: ReturnType<typeof re
   return meeting;
 }
 
+/** Insert a queued ai_pack ProcessingJob (the worker generates + persists it). */
+async function createAiPackJob(app: FastifyInstance, workspaceId: string, meetingId: string) {
+  const rows = await app.ctx.db
+    .insert(processingJobs)
+    .values({ workspaceId, meetingId, type: 'ai_pack', status: 'queued', stage: 'ready_for_ai_pack', progress: 0 })
+    .returning();
+  return rows[0]!;
+}
+
 export async function registerMeetingRoutes(app: FastifyInstance): Promise<void> {
   const { db } = app.ctx;
 
@@ -141,8 +150,8 @@ export async function registerMeetingRoutes(app: FastifyInstance): Promise<void>
           if ((existing[0]?.n ?? 0) === 0) {
             const demo = generateDemo(meeting.id, meeting.meetingLanguage);
             await tx.insert(transcriptSegments).values(demo.segments.map((s) => ({ ...s, meetingId: meeting.id })));
-            await tx.insert(aiPacks).values({ meetingId: meeting.id, model: 'demo', sourceSections: demo.sourceSections });
-            await tx.update(meetings).set({ speakerAliases: demo.speakerAliases, participantCount: 2 }).where(eq(meetings.id, meeting.id));
+            await tx.insert(aiPacks).values({ workspaceId: meeting.workspaceId, meetingId: meeting.id, model: 'demo', provider: 'demo', outputLanguage: meeting.meetingLanguage, sourceSections: demo.sourceSections });
+            await tx.update(meetings).set({ speakerAliases: demo.speakerAliases, participantCount: 2, aiPackStatus: 'ready' }).where(eq(meetings.id, meeting.id));
           }
         }
       }
@@ -211,13 +220,68 @@ export async function registerMeetingRoutes(app: FastifyInstance): Promise<void>
     return { id: m.id, atSeconds: m.atSeconds, label: m.label, kind: m.kind, createdAt: new Date(m.createdAt).toISOString() };
   });
 
-  // ---- AI Pack (raw bilingual source; resolved by the shared engine client-side) ----
+  // ---- AI Pack (raw source; resolved by the shared engine client-side) ----
+  // Returns the CURRENT version; older versions stay in history.
   app.get('/:id/aipack', async (request) => {
     const auth = requireAuth(request.auth);
     const meeting = await loadOwnedMeeting(app, auth, (request.params as { id: string }).id);
-    const rows = await db.select().from(aiPacks).where(eq(aiPacks.meetingId, meeting.id)).limit(1);
+    const rows = await db
+      .select()
+      .from(aiPacks)
+      .where(and(eq(aiPacks.meetingId, meeting.id), eq(aiPacks.isCurrent, true)))
+      .orderBy(desc(aiPacks.version))
+      .limit(1);
     if (!rows[0]) return { source: null };
     return { source: { meetingId: meeting.id, sections: rows[0].sourceSections } };
+  });
+
+  // AI Pack generation state (honest states for the UI: not_started/queued/…).
+  app.get('/:id/ai-pack/status', async (request) => {
+    const auth = requireAuth(request.auth);
+    const meeting = await loadOwnedMeeting(app, auth, (request.params as { id: string }).id);
+    const current = (
+      await db.select().from(aiPacks).where(and(eq(aiPacks.meetingId, meeting.id), eq(aiPacks.isCurrent, true))).orderBy(desc(aiPacks.version)).limit(1)
+    )[0];
+    return {
+      status: meeting.aiPackStatus,
+      hasCurrent: Boolean(current),
+      version: current?.version ?? null,
+      provider: current?.provider ?? null,
+      model: current?.model ?? null,
+      generatedAt: current ? new Date(current.createdAt).toISOString() : null,
+    };
+  });
+
+  // Kick off AI Pack generation (async). No-op-ish if one is already in flight.
+  app.post('/:id/ai-pack/generate', async (request) => {
+    const auth = requireAuth(request.auth);
+    const meeting = await loadOwnedMeeting(app, auth, (request.params as { id: string }).id);
+    if (meeting.status !== 'ready') throw errors.badRequest('Transcript is not ready yet', { code: 'transcript_not_ready' });
+
+    // Reuse an in-flight job rather than stacking duplicates.
+    const inflight = await db
+      .select()
+      .from(processingJobs)
+      .where(and(eq(processingJobs.meetingId, meeting.id), eq(processingJobs.type, 'ai_pack'), ne(processingJobs.status, 'completed'), ne(processingJobs.status, 'failed')))
+      .orderBy(desc(processingJobs.createdAt))
+      .limit(1);
+    const job = inflight[0] ?? (await createAiPackJob(app, meeting.workspaceId, meeting.id));
+    if (!inflight[0]) {
+      await db.update(meetings).set({ aiPackStatus: 'queued', updatedAt: new Date() }).where(eq(meetings.id, meeting.id));
+      await app.ctx.enqueue(job.id);
+    }
+    return toProcessingJobDTO(job);
+  });
+
+  // Regenerate: always a NEW job; the current version stays until the new one lands.
+  app.post('/:id/ai-pack/regenerate', async (request) => {
+    const auth = requireAuth(request.auth);
+    const meeting = await loadOwnedMeeting(app, auth, (request.params as { id: string }).id);
+    if (meeting.status !== 'ready') throw errors.badRequest('Transcript is not ready yet', { code: 'transcript_not_ready' });
+    const job = await createAiPackJob(app, meeting.workspaceId, meeting.id);
+    await db.update(meetings).set({ aiPackStatus: 'queued', updatedAt: new Date() }).where(eq(meetings.id, meeting.id));
+    await app.ctx.enqueue(job.id);
+    return toProcessingJobDTO(job);
   });
 
   // ---- Export history (server-side persistence) ----

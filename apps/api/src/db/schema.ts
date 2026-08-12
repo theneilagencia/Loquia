@@ -10,6 +10,7 @@ import {
   index,
 } from 'drizzle-orm/pg-core';
 import type {
+  AIPackStatus,
   AuditAction,
   ExportFormat,
   MeetingSource,
@@ -165,6 +166,11 @@ export const meetings = pgTable(
     title: text('title').notNull(),
     source: text('source').$type<MeetingSource>().notNull(),
     status: text('status').$type<MeetingStatus>().notNull().default('processing'),
+    /** AI Pack generation state, independent of the transcript `status`. */
+    aiPackStatus: text('ai_pack_status')
+      .$type<AIPackStatus>()
+      .notNull()
+      .default('not_started'),
     meetingLanguage: text('meeting_language').notNull().default('pt-BR'),
     /** Language detected by the transcription provider (may differ from declared). */
     detectedLanguage: text('detected_language'),
@@ -261,20 +267,47 @@ export const markers = pgTable('markers', {
 });
 
 /**
- * AI Pack storage. In Milestone 2 the AI Pack content is still demo/mock
- * (no real LLM) — the bilingual pack source is stored as JSONB so the same
- * shared export engine can resolve and render it. Normalised AIPackSection /
- * EvidenceReference tables are deferred to the AI-generation milestone.
+ * AI Pack storage (Milestone 4). Each generation is an immutable VERSION row;
+ * exactly one row per meeting is `isCurrent`. The bilingual pack source is
+ * stored as JSONB (`PackSource.sections`) so the shared export engine resolves
+ * and renders it unchanged. `generationKey` makes persistence idempotent: a
+ * retried job that already wrote its version cannot create a second one.
  */
-export const aiPacks = pgTable('ai_packs', {
-  id: id(),
-  meetingId: text('meeting_id')
-    .notNull()
-    .references(() => meetings.id, { onDelete: 'cascade' }),
-  model: text('model').notNull().default('demo'),
-  sourceSections: jsonb('source_sections').notNull().$type<unknown>(),
-  createdAt: createdAt(),
-});
+export const aiPacks = pgTable(
+  'ai_packs',
+  {
+    id: id(),
+    workspaceId: text('workspace_id'),
+    meetingId: text('meeting_id')
+      .notNull()
+      .references(() => meetings.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull().default(1),
+    /** Exactly one current version per meeting (partial unique index below). */
+    isCurrent: boolean('is_current').notNull().default(true),
+    status: text('status').$type<'ready' | 'failed'>().notNull().default('ready'),
+    /** Language the structured content was generated in. */
+    outputLanguage: text('output_language').notNull().default('pt-BR'),
+    provider: text('provider').notNull().default('demo'),
+    model: text('model').notNull().default('demo'),
+    promptVersion: text('prompt_version').notNull().default('0'),
+    schemaVersion: text('schema_version').notNull().default('0'),
+    /** Idempotency key (the generating job id). */
+    generationKey: text('generation_key'),
+    sourceSections: jsonb('source_sections').notNull().$type<unknown>(),
+    /** Token usage / counts for future cost control (never invented). */
+    metrics: jsonb('metrics').$type<Record<string, number | string>>(),
+    createdAt: createdAt(),
+  },
+  (t) => ({
+    meetingIdx: index('ai_packs_meeting_idx').on(t.meetingId),
+    currentIdx: uniqueIndex('ai_packs_current_idx')
+      .on(t.meetingId)
+      .where(sql`${t.isCurrent}`),
+    genKeyIdx: uniqueIndex('ai_packs_generation_key_idx')
+      .on(t.meetingId, t.generationKey)
+      .where(sql`${t.generationKey} is not null`),
+  }),
+);
 
 export const exportPresets = pgTable('export_presets', {
   id: id(),

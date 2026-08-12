@@ -129,6 +129,7 @@ export function toMeetingDTO(row: typeof meetings.$inferSelect): Meeting {
     updatedAt: new Date(row.updatedAt).toISOString(),
     archivedAt: iso(row.archivedAt),
     recordingId: row.recordingAudioRef ? row.id : undefined,
+    aiPackStatus: row.aiPackStatus,
     summaryLine: row.summaryLine ?? undefined,
   };
 }

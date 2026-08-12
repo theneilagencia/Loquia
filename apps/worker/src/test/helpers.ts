@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { createDb, runMigrations, schema, type Database } from '@loquia/api/db';
-import { MockStorageAdapter } from '@loquia/pipeline';
+import { MockAIPackGenerator, MockStorageAdapter, MockTranscriptionAdapter } from '@loquia/pipeline';
+import type { WorkerDeps } from '../process-job';
 
 const { workspaces, users, meetings, mediaAssets, processingJobs } = schema;
 
@@ -28,6 +29,22 @@ export async function truncateAll(db: Database): Promise<void> {
 
 export function makeMockStorage(): MockStorageAdapter {
   return new MockStorageAdapter('/tmp/loquia-worker-test', 'http://localhost:4000');
+}
+
+/** Build WorkerDeps with all-mock providers for tests. */
+export function makeWorkerDeps(
+  db: Database,
+  storage: MockStorageAdapter,
+  extra?: Partial<WorkerDeps>,
+): WorkerDeps {
+  return {
+    db,
+    storage,
+    transcription: new MockTranscriptionAdapter(),
+    generator: new MockAIPackGenerator(),
+    log: noopLog,
+    ...extra,
+  };
 }
 
 export interface Fixture {

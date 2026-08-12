@@ -15,6 +15,13 @@
       "when": 1786569165170,
       "tag": "0001_huge_nebula",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786572121190,
+      "tag": "0002_cheerful_selene",
+      "breakpoints": true
     }
   ]
 }
