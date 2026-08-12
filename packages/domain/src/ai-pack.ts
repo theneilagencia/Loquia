@@ -1,4 +1,4 @@
-import type { LanguageTag } from './common';
+import type { ISODateString, LanguageTag } from './common';
 
 /**
  * AI Pack — reconciled with the validated handoff (docs/ai-pack-spec.md and the
@@ -127,4 +127,103 @@ export interface AIPack {
  */
 export function visibleSections(pack: AIPack): AIPackSection[] {
   return pack.sections.filter((s) => s.lines.length > 0 || s.required);
+}
+
+// ---------------------------------------------------------------------------
+// Persisted AI Pack source (JSONB) + resolution — shared by web, API and worker
+// ---------------------------------------------------------------------------
+
+/**
+ * Bilingual AI Pack source, the persisted JSONB shape. Synthesized lines carry
+ * `pt`/`en` (rendered in the output language); statements, evidence quotes and
+ * numbers carry `text` (kept as-is regardless of output language — the
+ * evidence-language rule, docs/ai-pack-spec.md §Idiomas).
+ *
+ * Evidence is anchored to real transcript segments: `segmentIds` reference
+ * `TranscriptSegment.id`, and the authoritative `atSeconds`/`speakerId`/excerpt
+ * are resolved from those segments (never invented by the model). The evidence
+ * fields are additive — `resolvePack` only needs `text`/`pt`/`en`/`atSeconds`,
+ * so older packs and the demo generator keep working unchanged.
+ */
+export interface SourceLine {
+  pt?: string;
+  en?: string;
+  /** Original-language text (statements/evidence/numbers) — never translated. */
+  text?: string;
+  /** Seek pointer, in seconds — resolved from the cited segment(s). */
+  atSeconds?: number;
+  /** Evidence: ids of the TranscriptSegment(s) that support this line. */
+  segmentIds?: string[];
+  /** Resolved speaker of the primary cited segment (technical key). */
+  speakerId?: string;
+  /** Per-fact classification (may differ from the section's dominant one). */
+  classification?: SectionConfidence;
+}
+
+export interface SourceSection {
+  key: PackSectionKey;
+  confidence: SectionConfidence;
+  lines: SourceLine[];
+}
+
+export interface PackSource {
+  meetingId: string;
+  sections: SourceSection[];
+}
+
+/** Resolve a bilingual source into an AIPack for a given output language. */
+export function resolvePack(source: PackSource, outputLanguage: string): AIPack {
+  const pt = outputLanguage.toLowerCase().startsWith('pt');
+  return {
+    meetingId: source.meetingId,
+    language: outputLanguage,
+    sections: source.sections.map((s) => ({
+      key: s.key,
+      title: PACK_SECTION_TITLE[s.key],
+      required: PACK_SECTION_REQUIRED[s.key],
+      confidence: s.confidence,
+      lines: s.lines.map((l) => ({
+        text: l.text ?? (pt ? (l.pt ?? l.en ?? '') : (l.en ?? l.pt ?? '')),
+        atSeconds: l.atSeconds,
+      })),
+    })),
+  };
+}
+
+/**
+ * Dominant confidence for a set of per-fact classifications. A section is only
+ * `explicit` when every fact is explicit; a single `uncertain` fact makes the
+ * section uncertain; otherwise it is `inferred`. The model can never upgrade a
+ * fact from inferred to explicit (docs, Milestone 4 §8).
+ */
+export function dominantConfidence(
+  classifications: readonly SectionConfidence[],
+): SectionConfidence {
+  if (classifications.length === 0) return 'explicit';
+  if (classifications.some((c) => c === 'uncertain')) return 'uncertain';
+  if (classifications.some((c) => c === 'inferred')) return 'inferred';
+  return 'explicit';
+}
+
+// ---------------------------------------------------------------------------
+// AI Pack generation lifecycle (Milestone 4)
+// ---------------------------------------------------------------------------
+
+/**
+ * AI Pack generation state, tracked on the meeting independently of the
+ * transcript status. `not_started` = transcript ready but generation not asked
+ * for; `queued`/`generating` = a job is in flight; `ready`/`failed` are terminal
+ * (a `failed` generation always leaves the transcript intact).
+ */
+export type AIPackStatus = 'not_started' | 'queued' | 'generating' | 'ready' | 'failed';
+
+/** Metadata recorded per generated version (reproduction + regeneration). */
+export interface AIPackVersionMeta {
+  version: number;
+  provider: string;
+  model: string;
+  promptVersion: string;
+  schemaVersion: string;
+  outputLanguage: string;
+  generatedAt: ISODateString;
 }

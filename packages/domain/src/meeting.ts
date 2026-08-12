@@ -1,4 +1,5 @@
 import type { Id, ISODateString, LanguageTag } from './common';
+import type { AIPackStatus } from './ai-pack';
 
 /** Source of a meeting's audio. */
 export type MeetingSource = 'recording' | 'upload';
@@ -75,6 +76,8 @@ export interface Meeting {
   updatedAt: ISODateString;
   archivedAt?: ISODateString;
   recordingId?: Id;
+  /** AI Pack generation state, independent of the transcript `status`. */
+  aiPackStatus?: AIPackStatus;
   /** Convenience denormalisation for list rendering. */
   summaryLine?: string;
 }
