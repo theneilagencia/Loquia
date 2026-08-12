@@ -85,13 +85,46 @@ contract (`packages/contracts`); the concrete implementation is a **MockAdapter*
   `ready`, deterministic demo transcript + AI Pack are generated. No real
   STT/diarization/LLM.
 
-### How the future ApiAdapter replaces the MockAdapter
+### MockAdapter ↔ ApiAdapter
 
 Components never import adapters — they consume `useServices()`, which resolves a
-`Services` container from `apps/web/src/lib/services.ts`. In Milestone 2, swapping
-`createMockServices(...)` for a `createApiservices(...)` that implements the same
-`Services` interface is the **only** change required; no UI code changes. The
-same is true for the four browser ports (storage/clipboard/download/recorder).
+`Services` container from `apps/web/src/lib/services.ts`. The adapter is chosen by
+`NEXT_PUBLIC_APP_MODE`:
+
+- `mock` (default) — in-browser MockAdapter (dev, tests, Storybook).
+- `api` — the **real backend** via `ApiAdapter` (`apps/web/src/lib/api`).
+
+No UI code changes between modes.
+
+## Backend (Milestone 2)
+
+A real TypeScript API now exists: **Fastify + Drizzle + PostgreSQL** in
+`apps/api`, with server-side auth/sessions, workspace isolation, the full access
+lifecycle (requests → approval → invitations → activation), server-side
+append-only audit, and real persistence of meetings metadata, settings, export
+presets and ProcessingJobs. See [`docs/backend-architecture.md`](docs/backend-architecture.md).
+
+Still mock by design: transcription/AI-Pack content, email, media upload/storage,
+and the STT/diarization/LLM pipeline (later milestones).
+
+### Run the backend locally
+
+Requires PostgreSQL. Copy `.env.example` and set `DATABASE_URL`, then:
+
+```bash
+pnpm --filter @loquia/api db:migrate
+pnpm --filter @loquia/api db:seed      # dev/test data (seed user: vinicius@apymine.com / password123)
+pnpm --filter @loquia/api dev          # API on :4000
+
+# point the web app at the API
+NEXT_PUBLIC_APP_MODE=api NEXT_PUBLIC_API_URL=http://localhost:4000 pnpm --filter @loquia/web dev
+```
+
+Integration tests use a separate `TEST_DATABASE_URL`; run with
+`pnpm --filter @loquia/api test`. Real-API e2e:
+`pnpm --filter @loquia/web test:e2e:api`.
+
+Deploy config: `render.yaml` (Blueprint) — structurally validated, **not deployed**.
 
 ## Scripts
 

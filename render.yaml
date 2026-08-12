@@ -1,0 +1,86 @@
+# Loquia — Render Blueprint (Milestone 2 foundation).
+# Structurally validated only; no deploy is performed in this milestone.
+# Secrets are never committed — they are injected by Render (generateValue /
+# sync:false / fromDatabase / fromService).
+
+databases:
+  - name: loquia-postgres
+    databaseName: loquia
+    user: loquia
+    plan: basic-256mb
+
+services:
+  # ---- API (Fastify) ----
+  - type: web
+    name: loquia-api
+    runtime: node
+    plan: starter
+    rootDir: .
+    buildCommand: corepack enable && pnpm install --frozen-lockfile
+    preDeployCommand: pnpm --filter @loquia/api db:migrate
+    startCommand: pnpm --filter @loquia/api start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_PORT
+        value: "10000"
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: loquia-postgres
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: APP_URL
+        sync: false # set to the loquia-web public URL
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: loquia-queue
+          property: connectionString
+
+  # ---- Web (Next.js), talking to the API ----
+  - type: web
+    name: loquia-web
+    runtime: node
+    plan: starter
+    rootDir: .
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @loquia/web build
+    startCommand: pnpm --filter @loquia/web start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_APP_MODE
+        value: api
+      - key: NEXT_PUBLIC_API_URL
+        sync: false # set to the loquia-api public URL
+
+  # ---- Worker (prepared; no pipeline runs yet) ----
+  - type: worker
+    name: loquia-worker
+    runtime: node
+    plan: starter
+    rootDir: .
+    buildCommand: corepack enable && pnpm install --frozen-lockfile
+    startCommand: pnpm --filter @loquia/worker start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: loquia-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: loquia-queue
+          property: connectionString
+
+  # ---- Key Value (Redis-compatible), prepared for the future queue ----
+  - type: keyvalue
+    name: loquia-queue
+    plan: starter
+    maxmemoryPolicy: noeviction
+    ipAllowList: [] # only reachable from Render services
