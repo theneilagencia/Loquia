@@ -293,7 +293,7 @@
     "privacy": {
       "storageTitle": "Armazenamento da gravação",
       "storagePolicy": "Somente neste dispositivo",
-      "storageExplain": "A gravação fica neste dispositivo. Para transcrever a reunião, uma cópia temporária é enviada para processamento e removida depois.",
+      "storageExplain": "A gravação fica neste dispositivo. Quando você processa uma reunião, o áudio é enviado temporariamente para transcrição e não é mantido como arquivo permanente pela Loquia.",
       "analytics": "Compartilhar análises de uso anônimas",
       "redact": "Ocultar e-mails nas exportações"
     },

@@ -706,46 +706,24 @@ export function createMockServices(deps: MockDeps): Services {
     // + queued job (mediaAssetId == meetingId) and returns an empty uploadUrl so
     // the shared UI skips the direct PUT; the mock pipeline advances via tick.
     media: {
-      async uploadIntent(input) {
+      async processAudio(input) {
         const db = store.read();
         const user = db.users.find((u) => u.id === db.session?.userId);
         const meeting = this_meetingsCreate(store, {
           workspaceId: user?.workspaceId ?? 'w1',
           ownerId: user?.id ?? 'u1',
-          title: input.title,
+          title: input.title || 'Nova gravação',
           source: input.source,
           meetingLanguage: input.meetingLanguage,
-          durationSeconds: 0,
+          durationSeconds: input.durationSeconds ?? 0,
         });
-        return ok({
-          meetingId: meeting.id,
-          mediaAssetId: meeting.id,
-          uploadUrl: '',
-          requiredHeaders: {},
-          expiresAt: new Date(Date.now() + 900_000).toISOString(),
-        });
+        const job = store.read().jobs.filter((j) => j.meetingId === meeting.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+        return ok({ meetingId: meeting.id, processingJobId: job?.id ?? meeting.id });
       },
-      async reprocessIntent(input) {
-        return ok({
-          meetingId: input.meetingId,
-          mediaAssetId: input.meetingId,
-          uploadUrl: '',
-          requiredHeaders: {},
-          expiresAt: new Date(Date.now() + 900_000).toISOString(),
-        });
-      },
-      async completeUpload(mediaAssetId) {
+      async reprocessAudio(meetingId) {
         const db = store.read();
-        const job = db.jobs
-          .filter((j) => j.meetingId === mediaAssetId)
-          .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-        if (!job) return err({ code: 'not_found', message: 'errors.notFoundBody' });
-        return ok(job);
-      },
-      async getAudioUrl(meetingId) {
-        const db = store.read();
-        const meeting = db.meetings.find((m) => m.id === meetingId);
-        return meeting?.recordingId ? `mock-audio://${meetingId}` : null;
+        const job = db.jobs.filter((j) => j.meetingId === meetingId).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+        return ok({ meetingId, processingJobId: job?.id ?? meetingId });
       },
     },
 

@@ -43,10 +43,6 @@ export default function MeetingDetailPage({
     queryKey: ['transcript', meetingId],
     queryFn: () => services.transcripts.get(meetingId),
   });
-  const audioUrlQ = useQuery({
-    queryKey: ['audioUrl', meetingId],
-    queryFn: () => services.media.getAudioUrl(meetingId),
-  });
   const sessionQ = useQuery({ queryKey: ['session'], queryFn: () => services.auth.getSession() });
   const workspaceId = sessionQ.data?.workspace.id;
   // Honest AI Pack generation state; polls while a job is in flight.
@@ -143,10 +139,8 @@ export default function MeetingDetailPage({
           title={meeting.title}
           durationSeconds={meeting.durationSeconds}
           peaks={recordingPeaks}
-          remoteUrl={audioUrlQ.data}
           seekTo={seekTo}
           onSeeked={() => setSeekTo(null)}
-          onLocalDeleted={() => audioUrlQ.refetch()}
         />
       )}
 

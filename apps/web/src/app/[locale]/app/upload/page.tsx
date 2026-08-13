@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { FileAudio, UploadCloud, X } from 'lucide-react';
 import { Button, Card, CardContent, cn } from '@loquia/ui';
 import { useServices } from '@/lib/services-context';
+import { getLocalMediaStore } from '@/lib/local-media/provider';
 import { useRouter } from '@/i18n/navigation';
 
 const ACCEPTED = ['audio/mpeg', 'audio/wav', 'audio/mp4', 'audio/x-m4a', 'audio/m4a'];
@@ -60,30 +61,32 @@ export default function UploadPage() {
 
   async function finalize(f: File) {
     setPhase('processing');
-    // Real direct-upload flow: intent → PUT to storage → complete → enqueue.
-    const intent = await services.media.uploadIntent({
+    // M5.2 direct processing: send the audio to the API (no object storage), then
+    // keep a local-first copy so playback works on this device.
+    const mimeType = f.type || 'audio/mpeg';
+    const res = await services.media.processAudio({
+      blob: f,
       title: f.name.replace(/\.[^.]+$/, ''),
       source: 'upload',
       meetingLanguage: 'pt-BR',
       filename: f.name,
-      mimeType: f.type || 'audio/mpeg',
-      sizeBytes: f.size,
+      mimeType,
     });
-    if (!intent.ok) {
+    if (!res.ok) {
       setError(t('invalidType'));
       setPhase('error');
       return;
     }
-    // Direct PUT to the presigned URL (skipped when there is none, e.g. mock).
-    if (intent.value.uploadUrl) {
-      await fetch(intent.value.uploadUrl, {
-        method: 'PUT',
-        headers: intent.value.requiredHeaders,
-        body: f,
-      });
+    try {
+      const session = await services.auth.getSession();
+      if (session) {
+        const localStore = await getLocalMediaStore(session.workspace.id);
+        await localStore.save({ meetingId: res.value.meetingId, blob: f, filename: f.name, mimeType });
+      }
+    } catch {
+      /* non-fatal: processing continues even if the local copy can't be saved */
     }
-    await services.media.completeUpload(intent.value.mediaAssetId);
-    router.push(`/app/meetings/${intent.value.meetingId}/processing`);
+    router.push(`/app/meetings/${res.value.meetingId}/processing`);
   }
 
   function reset() {

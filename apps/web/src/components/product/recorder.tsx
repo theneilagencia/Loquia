@@ -17,7 +17,6 @@ const PERMISSION_ERROR_KEYS: Record<string, string> = {
 };
 
 const FINISH_ERROR_KEYS: Record<string, string> = {
-  upload_intent_failed: 'errorUploadIntent',
   local_quota_exceeded: 'errorQuota',
   processing_upload_failed: 'errorProcessingUpload',
 };
@@ -98,7 +97,7 @@ export function Recorder() {
         {recorder.error && (
           <div role="alert" className="space-y-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
             <p>{rec(FINISH_ERROR_KEYS[recorder.error]!)}</p>
-            {recorder.error === 'processing_upload_failed' && recorder.pendingUpload && (
+            {recorder.error === 'processing_upload_failed' && recorder.pendingBlob && (
               <Button size="sm" variant="outline" onClick={() => void recorder.retryProcessing()}>
                 {rec('retryProcessing')}
               </Button>

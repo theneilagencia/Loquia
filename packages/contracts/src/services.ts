@@ -163,40 +163,32 @@ export interface StorageService {
   snapshot(): Promise<Record<string, unknown>>;
 }
 
-export interface UploadIntentInput {
-  title: string;
+export interface ProcessAudioInput {
+  /** The on-device recording. Sent as a raw audio body (never base64). */
+  blob: Blob;
+  title?: string;
   source: MeetingSource;
   meetingLanguage: string;
   filename: string;
   mimeType: string;
-  sizeBytes?: number;
   /** Client-known duration (recorder); enforced against the duration quota. */
   durationSeconds?: number;
 }
 
-export interface UploadIntent {
+export interface ProcessAudioResult {
   meetingId: Id;
-  mediaAssetId: Id;
-  /** Presigned PUT target; empty string when no direct upload is needed (mock). */
-  uploadUrl: string;
-  requiredHeaders: Record<string, string>;
-  expiresAt: string;
+  processingJobId: Id;
 }
 
-export interface ReprocessIntentInput {
-  meetingId: Id;
-  filename: string;
-  mimeType: string;
-  sizeBytes?: number;
-}
-
-/** Real media upload + audio access (Milestone 3; Local First reprocess in M5 REVISADA). */
+/**
+ * Direct temporary audio processing (Milestone 5.2). There is NO object storage:
+ * the browser sends the recording to the API, which transcribes it and discards
+ * the media. Playback is local-first (LocalMediaStore), so there is no audio-URL.
+ */
 export interface MediaService {
-  uploadIntent(input: UploadIntentInput): Promise<Result<UploadIntent>>;
-  /** Local First §39: retry processing for an existing meeting from the local copy. */
-  reprocessIntent(input: ReprocessIntentInput): Promise<Result<UploadIntent>>;
-  completeUpload(mediaAssetId: Id): Promise<Result<ProcessingJob>>;
-  getAudioUrl(meetingId: Id): Promise<string | null>;
+  processAudio(input: ProcessAudioInput): Promise<Result<ProcessAudioResult>>;
+  /** Retry processing for an existing meeting from the on-device recording (§13/§39). */
+  reprocessAudio(meetingId: Id, input: Omit<ProcessAudioInput, 'title' | 'source'>): Promise<Result<ProcessAudioResult>>;
 }
 
 export type DeepPartial<T> = {

@@ -293,7 +293,7 @@
     "privacy": {
       "storageTitle": "Recording storage",
       "storagePolicy": "On this device only",
-      "storageExplain": "The recording stays on this device. To transcribe the meeting, a temporary copy is sent for processing and deleted afterward.",
+      "storageExplain": "The recording stays on this device. When you process a meeting, the audio is sent temporarily for transcription and is not kept by Loquia as a permanent recording.",
       "analytics": "Share anonymous usage analytics",
       "redact": "Hide e-mails in exports"
     },

@@ -18,13 +18,13 @@ interface RecorderState {
   markers: number[];
   title: string;
   meetingLanguage: string;
-  /** Set when finishing/uploading fails, so the recording isn't silently lost (§13/§38). */
-  error: 'upload_intent_failed' | 'local_quota_exceeded' | 'processing_upload_failed' | null;
-  /** Context to retry a failed processing upload from the on-device copy (§39). */
-  pendingUpload: { meetingId: string; localAssetId: string; workspaceId: string; filename: string; mimeType: string } | null;
+  /** Set when finishing/uploading fails, so the recording isn't silently lost (§13/§14). */
+  error: 'local_quota_exceeded' | 'processing_upload_failed' | null;
+  /** The finished recording, retained in hand so a failed first attempt can retry (§14). */
+  pendingBlob: { blob: Blob; mimeType: string; filename: string; durationSeconds: number; meetingLanguage: string } | null;
   setPermission: (p: RecorderPermissionState) => void;
   setError: (e: RecorderState['error']) => void;
-  setPendingUpload: (p: RecorderState['pendingUpload']) => void;
+  setPendingBlob: (p: RecorderState['pendingBlob']) => void;
   start: (title: string, meetingLanguage: string) => void;
   tick: (elapsedSeconds: number, amplitude: number) => void;
   pause: () => void;
@@ -44,10 +44,10 @@ export const useRecorderStore = create<RecorderState>((set) => ({
   title: '',
   meetingLanguage: 'pt-BR',
   error: null,
-  pendingUpload: null,
+  pendingBlob: null,
   setPermission: (permission) => set({ permission }),
   setError: (error) => set({ error }),
-  setPendingUpload: (pendingUpload) => set({ pendingUpload }),
+  setPendingBlob: (pendingBlob) => set({ pendingBlob }),
   start: (title, meetingLanguage) =>
     set({
       runState: 'recording',
@@ -58,6 +58,7 @@ export const useRecorderStore = create<RecorderState>((set) => ({
       title,
       meetingLanguage,
       error: null,
+      pendingBlob: null,
     }),
   tick: (elapsedSeconds, amplitude) =>
     set((state) => ({
@@ -78,6 +79,6 @@ export const useRecorderStore = create<RecorderState>((set) => ({
       markers: [],
       title: '',
       error: null,
-      pendingUpload: null,
+      pendingBlob: null,
     }),
 }));

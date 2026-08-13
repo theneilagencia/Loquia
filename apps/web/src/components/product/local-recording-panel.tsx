@@ -15,27 +15,25 @@ interface Props {
   title: string;
   durationSeconds: number;
   peaks: number[];
-  /** Temporary remote URL (present only while the processing copy still exists). */
-  remoteUrl: string | null | undefined;
   seekTo: number | null;
   onSeeked: () => void;
   onLocalDeleted?: () => void;
 }
 
 /**
- * Local First recording panel (§16–§19, §31, §45). Prefers on-device playback,
- * falls back to the temporary remote copy while it exists, and otherwise shows an
- * honest "stored on another device" state. Offers save-to-computer and
- * remove-from-this-device — neither touches the meeting, transcript or AI Pack.
+ * Local First recording panel (§26–§28, §31, §45). Playback is on-device only —
+ * there is no remote audio (M5.2 removed object storage). When there is no local
+ * copy it shows an honest "stored on another device" state. Offers
+ * save-to-computer and remove-from-this-device — neither touches the meeting,
+ * transcript or AI Pack.
  */
-export function LocalRecordingPanel({ meetingId, workspaceId, title, durationSeconds, peaks, remoteUrl, seekTo, onSeeked, onLocalDeleted }: Props) {
+export function LocalRecordingPanel({ meetingId, workspaceId, title, durationSeconds, peaks, seekTo, onSeeked, onLocalDeleted }: Props) {
   const t = useTranslations('recording');
   const store = useLocalMediaStore(workspaceId);
   const local = useLocalAudio(meetingId, workspaceId);
   const [busy, setBusy] = useState(false);
 
-  const remoteSrc = remoteUrl && remoteUrl.startsWith('http') ? remoteUrl : undefined;
-  const src = local.localUrl ?? remoteSrc;
+  const src = local.localUrl;
   const hasAudio = Boolean(src);
 
   async function saveToComputer() {

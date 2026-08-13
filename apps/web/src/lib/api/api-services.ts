@@ -19,15 +19,42 @@ import type {
   BrowserStorageAdapter,
   ClipboardAdapter,
   DownloadAdapter,
+  ProcessAudioResult,
   Services,
 } from '@loquia/contracts';
-import { ApiHttpError, createApiClient, type ApiClient } from './client';
+import { ApiHttpError, apiBaseUrl, createApiClient, type ApiClient } from './client';
 import { resolvePack, type PackSource } from '../mock/pack-source';
 
 export interface ApiDeps {
   clipboard: ClipboardAdapter;
   download: DownloadAdapter;
   storage: BrowserStorageAdapter;
+}
+
+/**
+ * POST a raw audio body (M5.2 direct processing) with metadata in the query
+ * string. Cookies carry the session; the body is the recording bytes (never
+ * base64). Returns 202 { meetingId, processingJobId }.
+ */
+async function postAudio(path: string, blob: Blob, mimeType: string, meta: Record<string, string>): Promise<Result<ProcessAudioResult>> {
+  const qs = new URLSearchParams(Object.entries(meta).filter(([, v]) => v !== '')).toString();
+  try {
+    const res = await fetch(`${apiBaseUrl()}${path}${qs ? `?${qs}` : ''}`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'content-type': mimeType || 'audio/webm' },
+      body: blob,
+    });
+    const text = await res.text();
+    const parsed = text ? (JSON.parse(text) as unknown) : null;
+    if (!res.ok) {
+      const e = (parsed as { error?: { code?: string; message?: string } } | null)?.error;
+      return { ok: false, error: { code: e?.code ?? 'http_error', message: e?.message ?? res.statusText } };
+    }
+    return { ok: true, value: parsed as ProcessAudioResult };
+  } catch (e) {
+    return { ok: false, error: { code: 'network_error', message: e instanceof Error ? e.message : 'Upload failed' } };
+  }
 }
 
 function durationString(totalSeconds: number): string {
@@ -383,34 +410,21 @@ export function createApiServices(deps: ApiDeps): Services {
     },
 
     media: {
-      async uploadIntent(input) {
-        try {
-          return ok(await api.post<import('@loquia/contracts').UploadIntent>('/api/meetings/upload-intent', input));
-        } catch (e) {
-          if (e instanceof ApiHttpError) return err({ code: e.code, message: e.message });
-          throw e;
-        }
+      async processAudio(input) {
+        return postAudio('/api/meetings/process-audio', input.blob, input.mimeType, {
+          title: input.title ?? '',
+          meetingLanguage: input.meetingLanguage,
+          source: input.source,
+          filename: input.filename,
+          durationSeconds: input.durationSeconds != null ? String(input.durationSeconds) : '',
+        });
       },
-      async reprocessIntent(input) {
-        try {
-          const { meetingId, ...body } = input;
-          return ok(await api.post<import('@loquia/contracts').UploadIntent>(`/api/meetings/${meetingId}/reprocess`, body));
-        } catch (e) {
-          if (e instanceof ApiHttpError) return err({ code: e.code, message: e.message });
-          throw e;
-        }
-      },
-      async completeUpload(mediaAssetId) {
-        try {
-          return ok(await api.post<ProcessingJob>(`/api/media/${mediaAssetId}/complete`));
-        } catch (e) {
-          if (e instanceof ApiHttpError) return err({ code: e.code, message: e.message });
-          throw e;
-        }
-      },
-      async getAudioUrl(meetingId) {
-        const res = await api.get<{ url: string | null }>(`/api/meetings/${meetingId}/audio-url`).catch(() => ({ url: null }));
-        return res.url;
+      async reprocessAudio(meetingId, input) {
+        return postAudio(`/api/meetings/${meetingId}/process-audio`, input.blob, input.mimeType, {
+          meetingLanguage: input.meetingLanguage,
+          filename: input.filename,
+          durationSeconds: input.durationSeconds != null ? String(input.durationSeconds) : '',
+        });
       },
     },
 
