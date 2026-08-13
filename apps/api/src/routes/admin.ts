@@ -21,6 +21,7 @@ import { requireAdmin, assertWorkspace } from '../context';
 import { errors } from '../lib/errors';
 import { generateToken, hashToken } from '../lib/crypto';
 import { writeAudit, type ServerAuditAction } from '../services/audit';
+import { sendInvitationEmail, sendMoreInformationEmail, sendRejectionEmail } from '../services/notifications';
 
 const INVITE_TTL_MS = 1000 * 60 * 60 * 24 * 14;
 
@@ -38,6 +39,7 @@ function slugify(name: string): string {
 
 export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
   const { db } = app.ctx;
+  const ctx = app.ctx;
 
   // ---- Access requests ----
   app.get('/access-requests', async (request) => {
@@ -81,6 +83,10 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
         targetId: id,
         targetLabel: rows[0].email,
       });
+      if (path === 'request-info') {
+        const message = z.object({ message: z.string().optional() }).parse(request.body ?? {}).message;
+        await sendMoreInformationEmail(ctx, request.log, { email: rows[0].email, name: rows[0].name, message, locale: rows[0].preferredLocale });
+      }
       return toAccessRequestDTO(rows[0]);
     });
   }
@@ -141,11 +147,13 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
       await writeAudit(tx, { action: 'approved', actorId: admin.user.id, actorLabel: admin.user.name, targetType: 'access_request', targetId: id, targetLabel: req.email, workspaceId: workspace.id });
       await writeAudit(tx, { action: 'invitation_created', actorId: admin.user.id, actorLabel: admin.user.name, targetType: 'invitation', targetId: invitation.id, targetLabel: req.email, workspaceId: workspace.id });
 
-      return invitation;
+      return { invitation, email: req.email, name: req.name, workspaceName: workspace.name, locale: req.preferredLocale, expiresAt: invitation.expiresAt };
     });
 
+    // Send the real invitation email (best-effort; failure is logged, not fatal).
+    await sendInvitationEmail(ctx, request.log, { email: result.email, name: result.name, workspaceName: result.workspaceName, token, expiresAt: result.expiresAt, locale: result.locale });
     // Echo the plaintext token once (activation link); only the hash is stored.
-    return toInvitationDTO(result, token);
+    return toInvitationDTO(result.invitation, token);
   });
 
   app.post('/access-requests/:id/reject', async (request) => {
@@ -159,8 +167,15 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
       .returning();
     if (!rows[0]) throw errors.notFound();
     await writeAudit(db, { action: 'rejected', actorId: admin.user.id, actorLabel: admin.user.name, targetType: 'access_request', targetId: id, targetLabel: rows[0].email });
+    await sendRejectionEmail(ctx, request.log, { email: rows[0].email, name: rows[0].name, reason: input.reason, locale: rows[0].preferredLocale });
     return toAccessRequestDTO(rows[0]);
   });
+
+  /** Resolve a workspace name + an invited-user display name for emails. */
+  async function invitationEmailFields(workspaceId: string, email: string): Promise<{ workspaceName: string; name: string }> {
+    const ws = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+    return { workspaceName: ws[0]?.name ?? 'Loquia', name: email.split('@')[0] ?? email };
+  }
 
   // ---- Invitations (workspace-scoped) ----
   app.get('/invitations', async (request) => {
@@ -190,6 +205,8 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
       })
       .returning();
     await writeAudit(db, { action: 'invitation_created', actorId: admin.user.id, actorLabel: admin.user.name, targetType: 'invitation', targetId: rows[0]!.id, targetLabel: input.email, workspaceId: admin.user.workspaceId });
+    const f = await invitationEmailFields(admin.user.workspaceId, input.email.toLowerCase());
+    await sendInvitationEmail(ctx, request.log, { email: input.email.toLowerCase(), name: f.name, workspaceName: f.workspaceName, token, expiresAt: rows[0]!.expiresAt, locale: admin.user.locale });
     return toInvitationDTO(rows[0]!, token);
   });
 
@@ -206,6 +223,8 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
       .where(eq(invitations.id, id))
       .returning();
     await writeAudit(db, { action: 'invitation_resent', actorId: admin.user.id, actorLabel: admin.user.name, targetType: 'invitation', targetId: id, targetLabel: rows[0]!.email, workspaceId: admin.user.workspaceId });
+    const f = await invitationEmailFields(rows[0]!.workspaceId, rows[0]!.email);
+    await sendInvitationEmail(ctx, request.log, { email: rows[0]!.email, name: f.name, workspaceName: f.workspaceName, token, expiresAt: rows[0]!.expiresAt, locale: admin.user.locale });
     return toInvitationDTO(rows[0]!, token);
   });
 

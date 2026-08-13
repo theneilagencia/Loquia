@@ -30,6 +30,26 @@ const schema = z.object({
   MAX_UPLOAD_SIZE_BYTES: z.coerce.number().default(524288000),
   MEDIA_UPLOAD_URL_TTL_SECONDS: z.coerce.number().default(900),
   MEDIA_DOWNLOAD_URL_TTL_SECONDS: z.coerce.number().default(3600),
+
+  // --- Email (Milestone 5) ---
+  EMAIL_PROVIDER: z.string().optional(), // resend | console
+  EMAIL_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().optional(),
+  EMAIL_REPLY_TO: z.string().optional(),
+  PASSWORD_RESET_TTL_MINUTES: z.coerce.number().default(60),
+
+  // --- Operational quotas (Milestone 5; protection, not billing) ---
+  MAX_MEETING_DURATION_SECONDS: z.coerce.number().default(14400), // 4h
+  MAX_ACTIVE_PROCESSING_JOBS_PER_WORKSPACE: z.coerce.number().default(20),
+  MAX_AI_PACK_REGENERATIONS_PER_HOUR: z.coerce.number().default(10),
+
+  // --- Retention (Milestone 5) ---
+  // Default media retention in days for users who keep audio (0 = never auto-delete).
+  MEDIA_RETENTION_DAYS: z.coerce.number().default(0),
+
+  // --- Security ---
+  // Comma-separated allowed origins for CORS; defaults to APP_URL.
+  CORS_ORIGINS: z.string().optional(),
 });
 
 export type Env = z.infer<typeof schema>;

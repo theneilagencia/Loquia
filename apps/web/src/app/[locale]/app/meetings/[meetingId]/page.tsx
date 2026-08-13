@@ -3,10 +3,10 @@
 import { use, useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
-import { Archive, ArrowLeft, Download, RefreshCw, Sparkles } from 'lucide-react';
+import { Archive, ArrowLeft, Download, RefreshCw, Sparkles, Trash2 } from 'lucide-react';
 import { Button, buttonVariants, Card, CardContent, Skeleton } from '@loquia/ui';
 import { useServices } from '@/lib/services-context';
-import { Link } from '@/i18n/navigation';
+import { Link, useRouter } from '@/i18n/navigation';
 import { formatDate, minutesOf } from '@/lib/format';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AudioPlayer } from '@/components/product/audio-player';
@@ -27,6 +27,7 @@ export default function MeetingDetailPage({
   const processingT = useTranslations('processing');
   const locale = useLocale();
   const services = useServices();
+  const router = useRouter();
   const [seekTo, setSeekTo] = useState<number | null>(null);
 
   const meetingQ = useQuery({
@@ -227,13 +228,26 @@ export default function MeetingDetailPage({
               <Detail label={t('durationLabel', { minutes: minutesOf(meeting.durationSeconds) })} value={`${meeting.participantCount}`} />
               <Detail label="Idioma" value={meeting.meetingLanguage} />
               <Detail label="Criada" value={formatDate(meeting.createdAt, locale)} />
-              <div className="pt-2">
+              <div className="flex gap-2 pt-2 sm:col-span-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => void services.meetings.archive(meetingId).then(() => meetingQ.refetch())}
                 >
                   <Archive className="size-3.5" /> {t('archive')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => {
+                    if (!window.confirm(t('deleteConfirm'))) return;
+                    void services.meetings.remove(meetingId).then((res) => {
+                      if (res.ok) router.push('/app/meetings');
+                    });
+                  }}
+                >
+                  <Trash2 className="size-3.5" /> {t('delete')}
                 </Button>
               </div>
             </CardContent>

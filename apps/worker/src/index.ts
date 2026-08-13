@@ -53,6 +53,25 @@ async function main(): Promise<void> {
 
   worker.on('failed', (job, err) => log('bullmq_job_failed', { jobId: job?.id, error: err.message }));
   worker.on('ready', () => log('worker_ready', { queue: MEETING_QUEUE }));
+
+  // Graceful shutdown: stop consuming, let the in-flight job finish, close conns.
+  let closing = false;
+  const shutdown = async (signal: string): Promise<void> => {
+    if (closing) return;
+    closing = true;
+    log('shutdown_started', { signal });
+    try {
+      await worker.close(); // waits for the active job to complete
+      await producer.close();
+      log('shutdown_complete', {});
+      process.exit(0);
+    } catch (err) {
+      log('shutdown_failed', { error: err instanceof Error ? err.message : String(err) });
+      process.exit(1);
+    }
+  };
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
+  process.on('SIGINT', () => void shutdown('SIGINT'));
 }
 
 main().catch((err) => {

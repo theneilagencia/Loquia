@@ -88,6 +88,22 @@ export const sessions = pgTable(
   (t) => ({ userIdx: index('sessions_user_idx').on(t.userId) }),
 );
 
+export const passwordResetTokens = pgTable(
+  'password_reset_tokens',
+  {
+    id: id(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** sha256 of the reset token — plaintext is never stored/logged. */
+    tokenHash: text('token_hash').notNull(),
+    createdAt: createdAt(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+  },
+  (t) => ({ tokenIdx: index('password_reset_token_idx').on(t.tokenHash) }),
+);
+
 export const accessRequests = pgTable('access_requests', {
   id: id(),
   name: text('name').notNull(),
@@ -246,7 +262,9 @@ export const mediaAssets = pgTable(
       .notNull()
       .default('pending_upload'),
     sha256: text('sha256'),
-    /** Retention expiry (privacy settings); a cleanup job can act on it. */
+    /** Retention policy applied to this asset (keep | 7d | 30d | 90d | discard_after_processing). */
+    retentionPolicy: text('retention_policy').notNull().default('keep'),
+    /** Retention expiry (privacy settings); the cleanup job acts on it. */
     expiresAt: timestamp('expires_at', { withTimezone: true }),
     createdAt: createdAt(),
     uploadedAt: timestamp('uploaded_at', { withTimezone: true }),

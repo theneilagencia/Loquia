@@ -6,6 +6,7 @@ import {
   aiPacks,
   exportHistory,
   markers,
+  mediaAssets,
   meetings,
   processingJobs,
   transcriptSegments,
@@ -14,6 +15,8 @@ import { toMeetingDTO, toProcessingJobDTO } from '../dto';
 import { requireAuth, assertWorkspace } from '../context';
 import { errors } from '../lib/errors';
 import { generateDemo, SPEAKER_PALETTE } from '../services/demo';
+import { assertRegenerationLimit } from '../services/quotas';
+import { writeAudit } from '../services/audit';
 
 async function loadOwnedMeeting(app: FastifyInstance, auth: ReturnType<typeof requireAuth>, id: string) {
   const rows = await app.ctx.db.select().from(meetings).where(eq(meetings.id, id)).limit(1);
@@ -119,6 +122,44 @@ export async function registerMeetingRoutes(app: FastifyInstance): Promise<void>
     const status = (hasPack[0]?.n ?? 0) > 0 ? 'ready' : 'draft';
     const rows = await db.update(meetings).set({ status, archivedAt: null, updatedAt: new Date() }).where(eq(meetings.id, meeting.id)).returning();
     return toMeetingDTO(rows[0]!);
+  });
+
+  // Delete a meeting end-to-end (Milestone 5 §36/§37). Object storage is deleted
+  // FIRST — if any object fails to delete, the DB rows are kept so a retry can
+  // finish the job (no orphaned R2 object, no fake completion). Only when all
+  // media is gone from storage do we delete the meeting (cascade removes
+  // transcript segments, AI packs, jobs, markers, participants and media rows)
+  // and its export-history metadata.
+  app.delete('/:id', async (request) => {
+    const auth = requireAuth(request.auth);
+    const meeting = await loadOwnedMeeting(app, auth, (request.params as { id: string }).id);
+    const { storage } = app.ctx;
+
+    const assets = await db.select().from(mediaAssets).where(eq(mediaAssets.meetingId, meeting.id));
+    let failed = 0;
+    for (const asset of assets) {
+      if (asset.status === 'deleted') continue;
+      try {
+        await storage.deleteObject(asset.objectKey);
+        await db.update(mediaAssets).set({ status: 'deleted', deletedAt: new Date() }).where(eq(mediaAssets.id, asset.id));
+        request.log.info({ event: 'media_deleted', meetingId: meeting.id, mediaAssetId: asset.id, reason: 'meeting_delete' }, 'media deleted');
+      } catch (err) {
+        failed += 1;
+        request.log.warn({ event: 'cleanup_failed', meetingId: meeting.id, mediaAssetId: asset.id, error: err instanceof Error ? err.message : String(err) }, 'media delete failed');
+      }
+    }
+    if (failed > 0) {
+      // Do not claim completion; the caller (or a retry) can call delete again.
+      throw errors.storage('Some media could not be deleted; please retry.');
+    }
+
+    await db.transaction(async (tx) => {
+      await tx.delete(exportHistory).where(eq(exportHistory.meetingId, meeting.id));
+      await tx.delete(meetings).where(eq(meetings.id, meeting.id)); // cascades to the rest
+      await writeAudit(tx, { action: 'meeting_deleted', actorId: auth.user.id, actorLabel: auth.user.name, targetType: 'meeting', targetId: meeting.id, targetLabel: meeting.title, workspaceId: meeting.workspaceId });
+    });
+    request.log.info({ event: 'meeting_deleted', meetingId: meeting.id, workspaceId: meeting.workspaceId, mediaCount: assets.length }, 'meeting deleted');
+    return { deleted: true };
   });
 
   // ---- Processing job (demo pipeline; no real STT) ----
@@ -253,7 +294,7 @@ export async function registerMeetingRoutes(app: FastifyInstance): Promise<void>
   });
 
   // Kick off AI Pack generation (async). No-op-ish if one is already in flight.
-  app.post('/:id/ai-pack/generate', async (request) => {
+  app.post('/:id/ai-pack/generate', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (request) => {
     const auth = requireAuth(request.auth);
     const meeting = await loadOwnedMeeting(app, auth, (request.params as { id: string }).id);
     if (meeting.status !== 'ready') throw errors.badRequest('Transcript is not ready yet', { code: 'transcript_not_ready' });
@@ -274,10 +315,11 @@ export async function registerMeetingRoutes(app: FastifyInstance): Promise<void>
   });
 
   // Regenerate: always a NEW job; the current version stays until the new one lands.
-  app.post('/:id/ai-pack/regenerate', async (request) => {
+  app.post('/:id/ai-pack/regenerate', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (request) => {
     const auth = requireAuth(request.auth);
     const meeting = await loadOwnedMeeting(app, auth, (request.params as { id: string }).id);
     if (meeting.status !== 'ready') throw errors.badRequest('Transcript is not ready yet', { code: 'transcript_not_ready' });
+    await assertRegenerationLimit(db, app.ctx.env, meeting.id);
     const job = await createAiPackJob(app, meeting.workspaceId, meeting.id);
     await db.update(meetings).set({ aiPackStatus: 'queued', updatedAt: new Date() }).where(eq(meetings.id, meeting.id));
     await app.ctx.enqueue(job.id);

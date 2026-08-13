@@ -12,6 +12,8 @@ import { toProcessingJobDTO } from '../dto';
 import { requireAuth, assertWorkspace } from '../context';
 import { errors } from '../lib/errors';
 import { newId } from '../lib/crypto';
+import { assertActiveJobLimit, assertDurationLimit } from '../services/quotas';
+import { computeRetention, ownerStoreAudio } from '../services/retention';
 
 export async function registerMediaRoutes(app: FastifyInstance): Promise<void> {
   const { db, env, storage, enqueue } = app.ctx;
@@ -30,6 +32,8 @@ export async function registerMediaRoutes(app: FastifyInstance): Promise<void> {
     filename: z.string().min(1),
     mimeType: z.string(),
     sizeBytes: z.number().int().positive().optional(),
+    /** Optional client-known duration hint (recorder); enforced against the quota. */
+    durationSeconds: z.number().int().nonnegative().optional(),
   });
 
   // Create the meeting + a pending MediaAsset and return a presigned PUT URL.
@@ -42,6 +46,10 @@ export async function registerMediaRoutes(app: FastifyInstance): Promise<void> {
 
       const validation = validateUpload({ mimeType: input.mimeType, sizeBytes: input.sizeBytes, maxBytes: env.MAX_UPLOAD_SIZE_BYTES });
       if (!validation.ok) throw errors.badRequest(validation.message ?? 'Invalid upload', { code: validation.code });
+
+      // Operational quotas (protection, not billing).
+      assertDurationLimit(env, input.durationSeconds);
+      await assertActiveJobLimit(db, env, auth.user.workspaceId);
 
       const [meeting] = await db
         .insert(meetings)
@@ -91,8 +99,14 @@ export async function registerMediaRoutes(app: FastifyInstance): Promise<void> {
       const overMax = stat.sizeBytes > env.MAX_UPLOAD_SIZE_BYTES;
       if (overMax) throw errors.badRequest('Uploaded object too large', { code: 'file_too_large' });
 
+      // Retention: derive from the meeting owner's privacy setting + deployment default.
+      const meetingRow = (await db.select().from(meetings).where(eq(meetings.id, asset.meetingId)).limit(1))[0];
+      const uploadedAt = new Date();
+      const storeAudio = meetingRow ? await ownerStoreAudio(db, meetingRow.ownerId) : true;
+      const retention = computeRetention(env, storeAudio, uploadedAt);
+
       const job = await db.transaction(async (tx) => {
-        await tx.update(mediaAssets).set({ status: 'uploaded', sizeBytes: stat.sizeBytes, uploadedAt: new Date() }).where(eq(mediaAssets.id, id));
+        await tx.update(mediaAssets).set({ status: 'uploaded', sizeBytes: stat.sizeBytes, uploadedAt, retentionPolicy: retention.retentionPolicy, expiresAt: retention.expiresAt }).where(eq(mediaAssets.id, id));
         const [created] = await tx
           .insert(processingJobs)
           .values({ workspaceId: asset.workspaceId, meetingId: asset.meetingId, mediaAssetId: asset.id, type: 'media_processing', status: 'queued', stage: 'received', progress: 0 })

@@ -27,6 +27,7 @@ import type {
 import type {
   ActivateAccountInput,
   ForgotPasswordInput,
+  ResetPasswordInput,
   InviteUserInput,
   LoginInput,
   RejectAccessInput,
@@ -44,6 +45,7 @@ export interface AuthService {
   login(input: LoginInput): Promise<Result<Session>>;
   logout(): Promise<void>;
   forgotPassword(input: ForgotPasswordInput): Promise<Result<{ sent: true }>>;
+  resetPassword(input: ResetPasswordInput): Promise<Result<{ reset: true }>>;
   activateAccount(input: ActivateAccountInput): Promise<Result<Session>>;
   getInvitationByToken(token: string): Promise<Invitation | null>;
 }
@@ -90,6 +92,8 @@ export interface MeetingService {
   create(input: CreateMeetingInput): Promise<Meeting>;
   archive(id: Id): Promise<Result<Meeting>>;
   unarchive(id: Id): Promise<Result<Meeting>>;
+  /** Delete a meeting end-to-end (media, transcript, AI pack, exports). */
+  remove(id: Id): Promise<Result<{ deleted: true }>>;
   getProcessingJob(meetingId: Id): Promise<ProcessingJob | null>;
   /** Advance the mock pipeline one tick; returns the updated job. */
   tickProcessing(meetingId: Id): Promise<ProcessingJob | null>;
@@ -166,6 +170,8 @@ export interface UploadIntentInput {
   filename: string;
   mimeType: string;
   sizeBytes?: number;
+  /** Client-known duration (recorder); enforced against the duration quota. */
+  durationSeconds?: number;
 }
 
 export interface UploadIntent {

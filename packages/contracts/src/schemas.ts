@@ -35,6 +35,18 @@ export const forgotPasswordSchema = z.object({
 });
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().min(1),
+    password: z.string().min(8, 'validation.password_min'),
+    confirmPassword: z.string().min(8, 'validation.password_min'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'validation.password_mismatch',
+    path: ['confirmPassword'],
+  });
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
 export const activateAccountSchema = z
   .object({
     token: z.string().min(1),

@@ -55,6 +55,14 @@ export async function revokeSessionByToken(db: Database, token: string): Promise
     .where(eq(sessions.tokenHash, hashToken(token)));
 }
 
+/** Revoke every active session for a user (e.g. after a password reset). */
+export async function revokeAllSessionsForUser(db: Database, userId: string): Promise<void> {
+  await db
+    .update(sessions)
+    .set({ revokedAt: new Date() })
+    .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)));
+}
+
 export function setSessionCookie(
   reply: FastifyReply,
   token: string,

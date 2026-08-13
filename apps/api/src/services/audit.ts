@@ -21,7 +21,11 @@ export type ServerAuditAction =
   | 'user_deactivated'
   | 'workspace_suspended'
   | 'workspace_reactivated'
-  | 'export_created';
+  | 'export_created'
+  | 'password_reset_requested'
+  | 'password_reset_completed'
+  | 'meeting_deleted'
+  | 'media_deleted';
 
 export interface AuditInput {
   action: ServerAuditAction;

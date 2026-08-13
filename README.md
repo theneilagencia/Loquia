@@ -190,19 +190,30 @@ Built with the `@storybook/react-vite` framework and intl+theme toolbar globals.
 Stories cover UI primitives and key product components (ProcessingTimeline,
 AIPackView, Waveform) across light/dark and pt-BR/en-US.
 
-## Limitations (by design, through Milestone 4)
+## Production (Milestone 5)
 
-- **Email** (invitations/reset) is not sent; activation tokens are surfaced via
-  the approve API response.
-- **STT/diarization** and **AI Pack generation** run through the mock providers
-  in this environment (no R2/Deepgram/Anthropic credentials); the real adapters
-  are implemented and selected in production. Live R2/Deepgram/Anthropic smokes
-  are marked *NOT RUN* when credentials are absent. **FFmpeg** audio
-  normalization is deferred.
+Controlled-production hardening of the existing product (no new features): real
+transactional email (Resend), real password reset with session revocation, CORS
+allowlist + security headers + secure cookies, rate limits and operational
+quotas, media retention with an hourly cleanup cron, robust meeting/media
+deletion, `/health` + `/ready`, graceful shutdown, structured observability, and
+a deterministic golden AI-Pack integrity gate. See `docs/production.md`,
+`docs/render-deployment.md`, `docs/provider-operations.md`, `docs/email.md`,
+`docs/retention.md`, `docs/golden-test.md`, and the runbook
+`docs/incident-basics.md`.
+
+## Limitations (by design, through Milestone 5)
+
+- **STT/diarization**, **AI Pack generation** and **email** run through the
+  mock/console providers in this environment (no R2/Deepgram/Anthropic/Resend
+  credentials); the real adapters are implemented and selected in production with
+  **no silent fallback**. Live provider smokes and the Render deploy are marked
+  *NOT RUN — credentials unavailable* when secrets are absent (never a false
+  PASS). **FFmpeg** audio normalization is deferred.
 - Planned locales (es/fr/de) are routable but fall back to en-US messages.
 
-## Next milestone
+## Beyond the milestones
 
-Beyond the core loop (record → transcribe → structure → export): richer AI Pack
-editing, cost controls and retention workflows — intentionally **not** started
-here.
+The product is intentionally scoped to **record → transcribe → structure →
+export**. Out of scope (not started): chatbots, RAG/semantic search, MCP, CRM,
+task/decision agents, cross-meeting memory, collaboration, complex billing.

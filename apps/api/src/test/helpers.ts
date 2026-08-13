@@ -19,12 +19,9 @@ export interface TestApp {
   close: () => Promise<void>;
 }
 
-export async function makeTestApp(): Promise<TestApp> {
-  if (!migrated) {
-    await runMigrations(TEST_DB_URL);
-    migrated = true;
-  }
-  const env = loadEnv({
+/** Full env for tests. Pass `extra` to override individual keys without losing the base config. */
+export function testEnv(extra?: Partial<NodeJS.ProcessEnv>): ReturnType<typeof loadEnv> {
+  return loadEnv({
     DATABASE_URL: TEST_DB_URL,
     NODE_ENV: 'test',
     SESSION_SECRET: 'test-secret-0123456789-abcdef',
@@ -32,7 +29,16 @@ export async function makeTestApp(): Promise<TestApp> {
     MEDIA_MOCK_DIR: `/tmp/loquia-media-test`,
     PUBLIC_API_URL: 'http://localhost:4000',
     REDIS_URL: process.env.TEST_REDIS_URL ?? 'redis://127.0.0.1:6380',
+    ...extra,
   });
+}
+
+export async function makeTestApp(): Promise<TestApp> {
+  if (!migrated) {
+    await runMigrations(TEST_DB_URL);
+    migrated = true;
+  }
+  const env = testEnv();
   const { db, close } = createDb(TEST_DB_URL, { max: 3 });
   const app = await buildApp({ env, db });
   await app.ready();

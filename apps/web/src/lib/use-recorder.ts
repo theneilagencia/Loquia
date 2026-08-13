@@ -70,6 +70,7 @@ export function useRecorder() {
       filename: 'recording.webm',
       mimeType: 'audio/webm',
       sizeBytes: 2048,
+      durationSeconds: Math.round(state.elapsedSeconds ?? 0),
     });
     if (!intent.ok) {
       state.reset();

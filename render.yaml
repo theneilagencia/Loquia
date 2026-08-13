@@ -1,8 +1,15 @@
-# Loquia — Render Blueprint (Milestone 4: media pipeline + AI Pack generation).
-# Structurally validated only; no deploy is performed in this milestone.
-# Secrets are never committed — they are injected by Render (generateValue /
-# sync:false / fromDatabase / fromService). R2 and Deepgram credentials are set
-# in the Render dashboard (sync:false); production never silently uses mocks.
+# Loquia — Render Blueprint (Milestone 5: controlled production).
+# Structurally validated only; no deploy is performed in this milestone (no real
+# credentials in this environment). Secrets are never committed — they are
+# injected by Render (generateValue / sync:false / fromDatabase / fromService).
+# R2, Deepgram, Anthropic and Resend credentials are set in the Render dashboard
+# (sync:false); production never silently uses mocks/console.
+#
+# Region: pin every service and the database to the SAME region (e.g. `oregon`)
+# so the API↔DB↔queue↔worker hops stay in-region. Set it per service with a
+# `region:` key (omitted here so the blueprint stays account-default; choose one
+# region and apply it uniformly before the first deploy). The R2 bucket should be
+# in (or near) the same region to keep upload/download latency low.
 
 databases:
   - name: loquia-postgres
@@ -20,7 +27,9 @@ services:
     buildCommand: corepack enable && pnpm install --frozen-lockfile
     preDeployCommand: pnpm --filter @loquia/api db:migrate
     startCommand: pnpm --filter @loquia/api start
-    healthCheckPath: /health
+    # Readiness gate: /ready verifies the DB (hard) and reports the queue.
+    # Liveness is /health (no dependencies) for uptime probes.
+    healthCheckPath: /ready
     envVars:
       - key: NODE_ENV
         value: production
@@ -38,6 +47,10 @@ services:
         sync: false # set to the loquia-web public URL
       - key: PUBLIC_API_URL
         sync: false # set to the loquia-api public URL (used for storage callbacks)
+      # Comma-separated CORS allowlist. Defaults to APP_URL when unset; set
+      # explicitly if the web app is served from more than one origin.
+      - key: CORS_ORIGINS
+        sync: false
       - key: REDIS_URL
         fromService:
           type: keyvalue
@@ -69,6 +82,27 @@ services:
         value: "2"
       - key: ANTHROPIC_API_KEY
         sync: false
+      # --- Transactional email (real; console is dev/test only) ---
+      - key: EMAIL_PROVIDER
+        value: resend
+      - key: EMAIL_API_KEY
+        sync: false # Resend API key
+      - key: EMAIL_FROM
+        sync: false # e.g. "Loquia <no-reply@yourdomain.com>" (verified sender)
+      - key: EMAIL_REPLY_TO
+        sync: false # optional
+      - key: PASSWORD_RESET_TTL_MINUTES
+        value: "60"
+      # --- Operational quotas (protection, not billing) ---
+      - key: MAX_MEETING_DURATION_SECONDS
+        value: "14400"
+      - key: MAX_ACTIVE_PROCESSING_JOBS_PER_WORKSPACE
+        value: "20"
+      - key: MAX_AI_PACK_REGENERATIONS_PER_HOUR
+        value: "10"
+      # --- Retention (0 = never auto-delete kept audio) ---
+      - key: MEDIA_RETENTION_DAYS
+        value: "0"
 
   # ---- Web (Next.js), talking to the API ----
   - type: web
@@ -86,7 +120,7 @@ services:
       - key: NEXT_PUBLIC_API_URL
         sync: false # set to the loquia-api public URL
 
-  # ---- Worker (BullMQ consumer: STT + diarization → transcript segments) ----
+  # ---- Worker (BullMQ consumer: STT + diarization → transcript → AI Pack) ----
   - type: worker
     name: loquia-worker
     runtime: node
@@ -125,7 +159,7 @@ services:
         sync: false
       - key: DEEPGRAM_MODEL
         value: nova-2
-      # --- AI Pack generation (real; no silent mock fallback in prod) ---
+      # --- AI Pack generation (must match the API service) ---
       - key: AI_PACK_PROVIDER
         value: anthropic
       - key: AI_PACK_MODEL
@@ -133,6 +167,36 @@ services:
       - key: AI_PACK_MAX_RETRIES
         value: "2"
       - key: ANTHROPIC_API_KEY
+        sync: false
+
+  # ---- Cleanup cron: delete media whose retention window has expired ----
+  # Runs the credential-independent cleanup job hourly. Deletes storage objects
+  # first, then marks the asset row deleted (transcripts/AI Packs are never
+  # touched). Needs the DB + the SAME storage credentials as the API/worker.
+  - type: cronjob
+    name: loquia-cleanup
+    runtime: node
+    plan: starter
+    rootDir: .
+    schedule: "0 * * * *" # hourly
+    buildCommand: corepack enable && pnpm install --frozen-lockfile
+    startCommand: pnpm --filter @loquia/api cleanup
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: loquia-postgres
+          property: connectionString
+      - key: STORAGE_PROVIDER
+        value: r2
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
         sync: false
 
   # ---- Key Value (Redis-compatible) backing the BullMQ queue ----

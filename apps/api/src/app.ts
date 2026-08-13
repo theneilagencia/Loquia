@@ -9,6 +9,7 @@ import type { AppContext } from './context';
 import type { Database } from './db/client';
 import type { Env } from './env';
 import { isProd } from './env';
+import { createEmailProvider } from './email/factory';
 import { ApiError, type ErrorResponseBody } from './lib/errors';
 import { loadAuth, SESSION_COOKIE } from './auth/session';
 import { newId } from './lib/crypto';
@@ -40,7 +41,8 @@ export function createContext(env: Env, db: Database): AppContext {
     );
   };
 
-  return { env, db, storage, enqueue };
+  const email = createEmailProvider(env);
+  return { env, db, storage, email, enqueue };
 }
 
 export async function buildApp(input: AppContext | { env: Env; db: Database }): Promise<FastifyInstance> {
@@ -61,6 +63,12 @@ export async function buildApp(input: AppContext | { env: Env; db: Database }): 
           '*.token',
           '*.passwordHash',
           '*.tokenHash',
+          '*.apiKey',
+          '*.secretAccessKey',
+          '*.access_token',
+          '*.uploadUrl',
+          '*.downloadUrl',
+          '*.presignedUrl',
         ],
         remove: true,
       },
@@ -76,14 +84,32 @@ export async function buildApp(input: AppContext | { env: Env; db: Database }): 
   app.decorateRequest('auth', null);
 
   await app.register(cookie, { secret: ctx.env.SESSION_SECRET });
+  // CORS: an explicit allowlist (defaults to APP_URL) — never `*` with credentials.
+  const allowedOrigins = (ctx.env.CORS_ORIGINS ?? ctx.env.APP_URL)
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
   await app.register(cors, {
-    origin: ctx.env.APP_URL,
+    origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins,
     credentials: true,
   });
   await app.register(rateLimit, {
     global: false,
     max: ctx.env.RATE_LIMIT_MAX,
     timeWindow: '1 minute',
+  });
+
+  // Security headers (no extra dependency; tuned not to break uploads/player).
+  // The API serves JSON only, so a strict CSP is safe here.
+  app.addHook('onSend', async (_request, reply) => {
+    reply.header('X-Content-Type-Options', 'nosniff');
+    reply.header('Referrer-Policy', 'no-referrer');
+    reply.header('X-Frame-Options', 'DENY');
+    reply.header('Cross-Origin-Resource-Policy', 'same-site');
+    reply.header('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
+    if (isProd(ctx.env)) {
+      reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
   });
 
   // Load the session (if any) on every request.

@@ -119,6 +119,10 @@ export function createMockServices(deps: MockDeps): Services {
         // Always succeed generically — never disclose whether the email exists.
         return ok({ sent: true as const });
       },
+      async resetPassword() {
+        await delay();
+        return ok({ reset: true as const });
+      },
       async getInvitationByToken(token) {
         const db = store.read();
         return db.invitations.find((i) => i.token === token) ?? null;
@@ -472,6 +476,20 @@ export function createMockServices(deps: MockDeps): Services {
           return m;
         });
         return ok(updated);
+      },
+      async remove(id) {
+        const db = store.read();
+        if (!db.meetings.find((m) => m.id === id)) {
+          return err({ code: 'not_found', message: 'errors.notFoundBody' });
+        }
+        store.write((d) => {
+          d.meetings = d.meetings.filter((m) => m.id !== id);
+          d.transcripts = d.transcripts.filter((t) => t.meetingId !== id);
+          d.packSources = d.packSources.filter((p) => p.meetingId !== id);
+          d.jobs = d.jobs.filter((j) => j.meetingId !== id);
+          return null;
+        });
+        return ok({ deleted: true as const });
       },
       async getProcessingJob(meetingId) {
         const db = store.read();

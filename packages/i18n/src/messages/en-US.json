@@ -89,7 +89,14 @@
     "activateSubtitle": "Set your name and password to finish.",
     "activateSubmit": "Activate account",
     "activateInvalid": "This invitation link is invalid or has expired.",
-    "confirmPassword": "Confirm password"
+    "confirmPassword": "Confirm password",
+    "resetTitle": "Set a new password",
+    "resetSubtitle": "Choose a new password for your account.",
+    "resetSubmit": "Reset password",
+    "resetDone": "Your password has been reset. You can now log in.",
+    "resetInvalid": "This reset link is invalid or has expired.",
+    "newPassword": "New password",
+    "backToLogin": "Back to log in"
   },
   "onboarding": {
     "title": "Welcome to Loquia",
@@ -120,6 +127,8 @@
     "showArchived": "Show archived",
     "archive": "Archive",
     "unarchive": "Unarchive",
+    "delete": "Delete meeting",
+    "deleteConfirm": "Delete this meeting permanently? The recording, transcript and AI Pack will be removed. This cannot be undone.",
     "durationLabel": "{minutes} min",
     "participants": "{count} participants",
     "status": {

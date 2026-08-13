@@ -103,9 +103,19 @@ export function createApiServices(deps: ApiDeps): Services {
       async logout() {
         await api.post('/api/auth/logout').catch(() => undefined);
       },
-      async forgotPassword() {
-        // Password reset delivery is a later milestone — always resolve generically.
+      async forgotPassword(input) {
+        // Always resolves generically (server never reveals whether the email exists).
+        await api.post('/api/auth/forgot-password', input).catch(() => undefined);
         return ok({ sent: true as const });
+      },
+      async resetPassword(input) {
+        try {
+          await api.post('/api/auth/reset-password', input);
+          return ok({ reset: true as const });
+        } catch (e) {
+          if (e instanceof ApiHttpError) return err({ code: e.code, message: 'auth.resetInvalid' });
+          throw e;
+        }
       },
       async getInvitationByToken(token) {
         const res = await api
@@ -250,6 +260,15 @@ export function createApiServices(deps: ApiDeps): Services {
       async unarchive(id) {
         try {
           return ok(await api.post<Meeting>(`/api/meetings/${id}/unarchive`));
+        } catch (e) {
+          if (e instanceof ApiHttpError) return err({ code: e.code, message: e.message });
+          throw e;
+        }
+      },
+      async remove(id) {
+        try {
+          await api.del(`/api/meetings/${id}`);
+          return ok({ deleted: true as const });
         } catch (e) {
           if (e instanceof ApiHttpError) return err({ code: e.code, message: e.message });
           throw e;

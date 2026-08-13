@@ -1,0 +1,18 @@
+{
+  "_comment": "Invariants for the golden AI Pack — not exact LLM text. See docs/golden-test.md.",
+  "allEvidenceReferencesValid": true,
+  "timestampsDerivedFromSegments": true,
+  "excerptsDerivedFromSegments": true,
+  "unsupportedCriticalClaims": 0,
+  "decisionCount": 1,
+  "suggestionMustNotBecomeDecision": true,
+  "openQuestionDetected": true,
+  "numbersPreserved": ["120", "150"],
+  "datesPreserved": ["12 de março", "20 de março"],
+  "crossLanguage": {
+    "outputLanguage": "en-US",
+    "evidenceStaysOriginalLanguage": true,
+    "numbersPreserved": true,
+    "datesPreserved": true
+  }
+}

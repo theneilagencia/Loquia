@@ -21,6 +21,8 @@ export const errors = {
   validation: (details: unknown) => new ApiError(422, 'validation_error', 'Validation failed', details),
   invalidState: (msg = 'Invalid state') => new ApiError(409, 'invalid_state', msg),
   rateLimited: (msg = 'Too many requests') => new ApiError(429, 'rate_limited', msg),
+  quota: (quota: string, msg = 'Quota exceeded') => new ApiError(429, 'quota_exceeded', msg, { quota }),
+  storage: (msg = 'Storage operation failed') => new ApiError(502, 'storage_error', msg),
 };
 
 export interface ErrorResponseBody {

@@ -1,0 +1,25 @@
+{
+  "meeting": {
+    "id": "golden-m1",
+    "workspaceId": "golden-w1",
+    "title": "Planejamento do piloto Atlas",
+    "language": "pt-BR",
+    "source": "upload",
+    "durationSeconds": 95
+  },
+  "participants": [
+    { "name": "Ana Ribeiro", "organization": "Loquia" },
+    { "name": "Bruno Souza", "organization": "Loquia" },
+    { "name": "Carla Nunes", "organization": "Atlas", "isExternal": true }
+  ],
+  "segments": [
+    { "id": "seg_a1", "speakerKey": "sp1", "speakerLabel": "Ana Ribeiro", "startSeconds": 2, "endSeconds": 9, "text": "Bom dia a todos. Vamos revisar o planejamento do piloto Atlas." },
+    { "id": "seg_a2", "speakerKey": "sp2", "speakerLabel": "Bruno Souza", "startSeconds": 10, "endSeconds": 21, "text": "A decisão é lançar o piloto no dia 12 de março com o orçamento de R$ 120 mil." },
+    { "id": "seg_a3", "speakerKey": "sp1", "speakerLabel": "Ana Ribeiro", "startSeconds": 22, "endSeconds": 31, "text": "Eu sugiro considerarmos um segundo fornecedor para reduzir risco." },
+    { "id": "seg_a4", "speakerKey": "sp3", "speakerLabel": "Carla Nunes", "startSeconds": 32, "endSeconds": 43, "text": "Se o orçamento permitir, talvez possamos dobrar a equipe de suporte." },
+    { "id": "seg_a5", "speakerKey": "sp2", "speakerLabel": "Bruno Souza", "startSeconds": 44, "endSeconds": 57, "text": "Não tenho certeza se o valor final é R$ 120 mil ou R$ 150 mil, precisamos confirmar." },
+    { "id": "seg_a6", "speakerKey": "sp1", "speakerLabel": "Ana Ribeiro", "startSeconds": 58, "endSeconds": 66, "text": "Podemos confirmar o fornecedor até sexta-feira?" },
+    { "id": "seg_a7", "speakerKey": "sp3", "speakerLabel": "Carla Nunes", "startSeconds": 67, "endSeconds": 80, "text": "Na verdade, mudei de ideia: prefiro adiar o lançamento para 20 de março." },
+    { "id": "seg_a8", "speakerKey": "sp2", "speakerLabel": "Bruno Souza", "startSeconds": 81, "endSeconds": 92, "text": "Discordo de adiar, acho arriscado perder a janela comercial deste trimestre." }
+  ]
+}

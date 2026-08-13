@@ -140,9 +140,32 @@ production**. See `docs/ai-pack-pipeline.md`.
   (no `ANTHROPIC_API_KEY`); the real Anthropic adapter is implemented and
   selected in production. **STT/diarization** likewise run through the mock
   providers here; the real R2/Deepgram adapters are selected in production.
-- **Email** (invitations/reset) — not sent; activation tokens are surfaced via
-  the approve API response for now.
 - **FFmpeg** audio normalization is deferred.
+
+## Milestone 5 — controlled production hardening
+
+- **Real email**: `EmailProvider` interface with a real **Resend** adapter
+  (`ConsoleEmailProvider` for dev/test only; no silent prod fallback). Bilingual
+  invitation / password-reset / more-info / rejection messages. See
+  `docs/email.md`.
+- **Password reset**: real `forgot-password` / `reset-password` with hashed,
+  single-use, expiring tokens; a reset revokes all sessions and audits
+  `password_reset_*`.
+- **Security**: CORS allowlist (`CORS_ORIGINS`), security headers on every
+  response (nosniff / no-referrer / DENY / CORP / CSP / HSTS), secure cookies,
+  rate limits, and configurable operational quotas (duration, active jobs,
+  regenerations).
+- **Retention & cleanup**: per-asset `retentionPolicy` + `expiresAt`; an hourly
+  cleanup job deletes expired media storage-first (transcripts/AI Packs
+  untouched). See `docs/retention.md`.
+- **Delete meeting**: `DELETE /api/meetings/:id` removes storage first, then
+  rows; a storage failure returns `502` and keeps rows for retry.
+- **Health**: `GET /health` (liveness) + `GET /ready` (DB hard gate; queue
+  reported; providers not probed). Graceful SIGTERM/SIGINT shutdown.
+- **Observability**: request ids, structured stage events, provider ids in logs,
+  and redaction of secrets/tokens/URLs/transcript/AI Pack bodies.
+- **Golden integrity gate**: deterministic evidence-anchoring tests. See
+  `docs/golden-test.md`, `docs/production.md`, `docs/provider-operations.md`.
 
 ## Deploy (Render)
 

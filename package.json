@@ -17,6 +17,8 @@
     "test:e2e": "pnpm --filter @loquia/web test:e2e",
     "storybook": "pnpm --filter @loquia/web storybook",
     "build-storybook": "pnpm --filter @loquia/web build-storybook",
+    "smoke:production": "pnpm --filter @loquia/api smoke:production",
+    "smoke:providers": "pnpm --filter @loquia/pipeline smoke",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\""
   },

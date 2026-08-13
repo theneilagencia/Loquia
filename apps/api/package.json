@@ -21,7 +21,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:check": "drizzle-kit check",
-    "db:seed": "tsx src/db/seed.ts"
+    "db:seed": "tsx src/db/seed.ts",
+    "cleanup": "tsx src/cleanup.ts",
+    "smoke:production": "tsx scripts/smoke-production.ts"
   },
   "dependencies": {
     "@fastify/cookie": "11.0.2",

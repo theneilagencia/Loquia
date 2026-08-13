@@ -89,7 +89,14 @@
     "activateSubtitle": "Defina seu nome e senha para concluir.",
     "activateSubmit": "Ativar conta",
     "activateInvalid": "Este link de convite é inválido ou expirou.",
-    "confirmPassword": "Confirmar senha"
+    "confirmPassword": "Confirmar senha",
+    "resetTitle": "Definir nova senha",
+    "resetSubtitle": "Escolha uma nova senha para sua conta.",
+    "resetSubmit": "Redefinir senha",
+    "resetDone": "Sua senha foi redefinida. Agora você pode entrar.",
+    "resetInvalid": "Este link de redefinição é inválido ou expirou.",
+    "newPassword": "Nova senha",
+    "backToLogin": "Voltar para o login"
   },
   "onboarding": {
     "title": "Bem-vindo à Loquia",
@@ -120,6 +127,8 @@
     "showArchived": "Mostrar arquivadas",
     "archive": "Arquivar",
     "unarchive": "Desarquivar",
+    "delete": "Excluir reunião",
+    "deleteConfirm": "Excluir esta reunião permanentemente? A gravação, a transcrição e o AI Pack serão removidos. Esta ação não pode ser desfeita.",
     "durationLabel": "{minutes} min",
     "participants": "{count} participantes",
     "status": {
