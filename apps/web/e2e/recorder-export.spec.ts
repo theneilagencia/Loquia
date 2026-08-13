@@ -16,6 +16,35 @@ test('recorder runs and the mini-recorder persists across navigation', async ({ 
   await expect(page.getByLabel('Concluir')).toBeVisible();
 });
 
+test('recording is persisted on-device and survives a reload (Local First)', async ({ page, context }) => {
+  await context.grantPermissions(['microphone']);
+  await page.goto('/pt-BR/app/record');
+  await page.getByLabel('Gravar').fill('Local first recording');
+  await page.getByRole('button', { name: 'Iniciar gravação' }).click();
+  await expect(page.getByText('Gravando')).toBeVisible();
+  await page.getByRole('button', { name: 'Concluir' }).click();
+  // finish() navigates to the processing page once the local copy is persisted.
+  await expect(page).toHaveURL(/\/app\/meetings\/.+\/processing$/);
+
+  const hasLocal = async () =>
+    page.evaluate(() =>
+      Object.keys(window.localStorage)
+        .filter((k) => k.includes('localmedia:'))
+        .some((k) => {
+          const v = window.localStorage.getItem(k);
+          return v != null && Object.keys(JSON.parse(v)).length > 0;
+        }),
+    );
+  expect(await hasLocal()).toBe(true);
+  await page.reload();
+  expect(await hasLocal()).toBe(true); // survives refresh (§8/§50)
+});
+
+test('a meeting with no on-device recording shows the honest second-device state', async ({ page }) => {
+  await page.goto('/pt-BR/app/meetings/m1');
+  await expect(page.getByText(/armazenada em outro dispositivo/i)).toBeVisible();
+});
+
 test('export produces a downloadable file from a ready meeting', async ({ page }) => {
   await page.goto('/pt-BR/app/meetings/m1');
   await page.getByRole('button', { name: 'Exportar' }).click();

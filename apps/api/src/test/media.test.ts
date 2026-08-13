@@ -50,6 +50,36 @@ describe('direct upload flow', () => {
     expect(jobs).toHaveLength(1);
   });
 
+  it('reprocess (§39) mints a fresh temporary asset for an existing meeting from the local copy', async () => {
+    const { cookie } = await ownerCookie('Reproc');
+    const intent = await t.app.inject({ method: 'POST', url: '/api/meetings/upload-intent', headers: { cookie }, payload: { title: 'Retry me', source: 'recording', meetingLanguage: 'pt-BR', filename: 'r.webm', mimeType: 'audio/webm', sizeBytes: 4 } });
+    const { meetingId, mediaAssetId: firstAsset } = JSON.parse(intent.body);
+
+    const re = await t.app.inject({ method: 'POST', url: `/api/meetings/${meetingId}/reprocess`, headers: { cookie }, payload: { filename: 'r.webm', mimeType: 'audio/webm', sizeBytes: 4 } });
+    expect(re.statusCode).toBe(200);
+    const body = JSON.parse(re.body);
+    expect(body.meetingId).toBe(meetingId);
+    expect(body.mediaAssetId).not.toBe(firstAsset); // a new temporary copy
+    expect(body.uploadUrl).toContain('/api/_mock-storage?key=');
+
+    // The new asset exists for the SAME meeting; no new meeting was created.
+    const assets = await t.db.select().from(mediaAssets).where(eq(mediaAssets.meetingId, meetingId));
+    expect(assets.length).toBe(2);
+    const put = await t.app.inject({ method: 'PUT', url: mockStoragePath(body.uploadUrl), headers: { 'content-type': 'audio/webm' }, payload: Buffer.from([1, 2, 3, 4]) });
+    expect(put.statusCode).toBe(200);
+    const complete = await t.app.inject({ method: 'POST', url: `/api/media/${body.mediaAssetId}/complete`, headers: { cookie } });
+    expect(complete.statusCode).toBe(200);
+  });
+
+  it('reprocess is workspace-isolated', async () => {
+    const a = await ownerCookie('RA');
+    const intent = await t.app.inject({ method: 'POST', url: '/api/meetings/upload-intent', headers: { cookie: a.cookie }, payload: { title: 'x', source: 'recording', meetingLanguage: 'pt-BR', filename: 'x.webm', mimeType: 'audio/webm', sizeBytes: 4 } });
+    const { meetingId } = JSON.parse(intent.body);
+    const b = await ownerCookie('RB');
+    const re = await t.app.inject({ method: 'POST', url: `/api/meetings/${meetingId}/reprocess`, headers: { cookie: b.cookie }, payload: { filename: 'x.webm', mimeType: 'audio/webm', sizeBytes: 4 } });
+    expect(re.statusCode).toBe(404);
+  });
+
   it('rejects unsupported media types at intent', async () => {
     const { cookie } = await ownerCookie('Org2');
     const res = await t.app.inject({ method: 'POST', url: '/api/meetings/upload-intent', headers: { cookie }, payload: { title: 'x', filename: 'x.zip', mimeType: 'application/zip', sizeBytes: 10 } });
