@@ -105,20 +105,22 @@ describe('password reset', () => {
 
 describe('retention + cleanup', () => {
   it('computes policy from the store-audio setting and cleans expired media', async () => {
-    const env = testEnv({ MEDIA_RETENTION_DAYS: '30' });
-    expect(computeRetention(env, false, new Date()).retentionPolicy).toBe('discard_after_processing');
-    const kept = computeRetention(env, true, new Date());
-    expect(kept.retentionPolicy).toBe('30d');
-    expect(kept.expiresAt).toBeInstanceOf(Date);
+    // Local First: the remote copy is always a temporary discard-after-processing
+    // copy with a TTL backstop derived from REMOTE_MEDIA_MAX_TTL_HOURS.
+    const env = testEnv({ REMOTE_MEDIA_MAX_TTL_HOURS: '12' });
+    const computed = computeRetention(env, new Date());
+    expect(computed.retentionPolicy).toBe('discard_after_processing');
+    expect(computed.expiresAt).toBeInstanceOf(Date);
+    expect(computed.expiresAt!.getTime()).toBeGreaterThan(Date.now());
 
-    // Seed an expired asset and run cleanup with mock storage.
+    // Seed a copy pending remote cleanup and run the sweep with mock storage.
     const ws = await createWorkspace(h.db);
     const uid = await createUser(h.db, { email: 'r@acme.com', workspaceId: ws });
     const [m] = await h.db.insert(meetings).values({ workspaceId: ws, ownerId: uid, title: 'M', source: 'upload', status: 'ready', meetingLanguage: 'pt-BR', durationSeconds: 1, participantCount: 1 }).returning();
     const storage = new MockStorageAdapter('/tmp/loquia-cleanup-test', 'http://localhost:4000');
     const key = `workspace/${ws}/meetings/${m!.id}/a/audio.webm`;
     storage.putObjectSync(key, new Uint8Array([1, 2, 3]), 'audio/webm');
-    await h.db.insert(mediaAssets).values({ workspaceId: ws, meetingId: m!.id, storageProvider: 'mock', bucket: 'mock', objectKey: key, originalFilename: 'a.webm', mimeType: 'audio/webm', status: 'ready', retentionPolicy: '7d', expiresAt: new Date(Date.now() - 1000) });
+    await h.db.insert(mediaAssets).values({ workspaceId: ws, meetingId: m!.id, storageProvider: 'mock', bucket: 'mock', objectKey: key, originalFilename: 'a.webm', mimeType: 'audio/webm', status: 'deletion_pending', retentionPolicy: 'discard_after_processing' });
 
     const result = await runMediaCleanup({ db: h.db, storage });
     expect(result.deleted).toBe(1);

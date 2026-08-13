@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { schema, type Database } from '@loquia/api/db';
 import {
   PipelineError,
@@ -47,8 +47,13 @@ describe('processJob — happy path', () => {
     const segs = await db.select().from(transcriptSegments).where(eq(transcriptSegments.meetingId, fx.meetingId));
     expect(segs.length).toBeGreaterThan(0);
     expect(segs.every((s) => typeof s.startMs === 'number' && s.startMs! >= 0)).toBe(true);
+    // Local First: the temporary remote copy is now marked for deletion, and a
+    // delete_processing_media job was created + enqueued alongside the ai_pack job.
     const asset = (await db.select().from(mediaAssets).where(eq(mediaAssets.id, fx.mediaAssetId)))[0]!;
-    expect(asset.status).toBe('ready');
+    expect(asset.status).toBe('deletion_pending');
+    const delJobs = await db.select().from(processingJobs).where(and(eq(processingJobs.meetingId, fx.meetingId), eq(processingJobs.type, 'delete_processing_media')));
+    expect(delJobs).toHaveLength(1);
+    expect(delJobs[0]!.status).toBe('queued');
   });
 });
 

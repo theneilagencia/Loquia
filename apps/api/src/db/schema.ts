@@ -257,13 +257,21 @@ export const mediaAssets = pgTable(
     mimeType: text('mime_type').notNull(),
     sizeBytes: integer('size_bytes'),
     durationMs: integer('duration_ms'),
+    // Local First lifecycle: the remote asset is a TEMPORARY processing copy, not
+    // the permanent archive. `deletion_pending`/`delete_failed`/`deleted` track the
+    // remote cleanup that runs once the transcript is persisted. `ready` is legacy
+    // (pre-Local-First permanent storage) and no longer set for new uploads.
     status: text('status')
-      .$type<'pending_upload' | 'uploaded' | 'processing' | 'ready' | 'failed' | 'deleted'>()
+      .$type<'pending_upload' | 'uploaded' | 'processing' | 'ready' | 'deletion_pending' | 'delete_failed' | 'failed' | 'deleted'>()
       .notNull()
       .default('pending_upload'),
     sha256: text('sha256'),
-    /** Retention policy applied to this asset (keep | 7d | 30d | 90d | discard_after_processing). */
-    retentionPolicy: text('retention_policy').notNull().default('keep'),
+    /**
+     * Retention policy. Under Local First the remote copy is temporary, so new
+     * assets are `discard_after_processing`. `keep`/`7d`/`30d`/`90d` are legacy
+     * (pre-Local-First) and kept only for backward compatibility of old rows.
+     */
+    retentionPolicy: text('retention_policy').notNull().default('discard_after_processing'),
     /** Retention expiry (privacy settings); the cleanup job acts on it. */
     expiresAt: timestamp('expires_at', { withTimezone: true }),
     createdAt: createdAt(),

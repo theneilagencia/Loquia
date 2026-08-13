@@ -15,7 +15,9 @@ export type ProcessingJobType =
   | 'diarization'
   | 'ai_pack'
   | 'translation'
-  | 'export';
+  | 'export'
+  /** Local First: delete the temporary remote processing copy after transcript persists. */
+  | 'delete_processing_media';
 
 export type ProcessingJobStatus =
   | 'queued'

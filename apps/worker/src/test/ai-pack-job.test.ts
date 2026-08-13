@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { schema, type Database } from '@loquia/api/db';
 import { resolvePack, type PackSource } from '@loquia/domain';
 import { MockAIPackGenerator, PipelineError, type AIPackGenerator } from '@loquia/pipeline';
@@ -29,10 +29,11 @@ async function runFullPipeline(gen?: AIPackGenerator): Promise<{ meetingId: stri
   const fx = await seedProcessable(db, storage);
   const enqueued: string[] = [];
   await processJob(makeWorkerDeps(db, storage, { generator: gen ?? new MockAIPackGenerator(), enqueue: async (id) => void enqueued.push(id) }), fx.jobId);
-  expect(enqueued).toHaveLength(1);
-  const aiPackJobId = enqueued[0]!;
-  const job = (await db.select().from(processingJobs).where(eq(processingJobs.id, aiPackJobId)))[0]!;
-  expect(job.type).toBe('ai_pack');
+  // Local First: transcription enqueues BOTH the ai_pack job and the remote-cleanup job.
+  expect(enqueued).toHaveLength(2);
+  const jobs = await db.select().from(processingJobs).where(inArray(processingJobs.id, enqueued));
+  const aiPackJobId = jobs.find((j) => j.type === 'ai_pack')!.id;
+  expect(jobs.some((j) => j.type === 'delete_processing_media')).toBe(true);
   await processJob(makeWorkerDeps(db, storage, { generator: gen ?? new MockAIPackGenerator() }), aiPackJobId);
   return { meetingId: fx.meetingId, aiPackJobId };
 }

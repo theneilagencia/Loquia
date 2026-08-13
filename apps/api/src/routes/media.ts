@@ -13,7 +13,7 @@ import { requireAuth, assertWorkspace } from '../context';
 import { errors } from '../lib/errors';
 import { newId } from '../lib/crypto';
 import { assertActiveJobLimit, assertDurationLimit } from '../services/quotas';
-import { computeRetention, ownerStoreAudio } from '../services/retention';
+import { computeRetention } from '../services/retention';
 
 export async function registerMediaRoutes(app: FastifyInstance): Promise<void> {
   const { db, env, storage, enqueue } = app.ctx;
@@ -99,11 +99,10 @@ export async function registerMediaRoutes(app: FastifyInstance): Promise<void> {
       const overMax = stat.sizeBytes > env.MAX_UPLOAD_SIZE_BYTES;
       if (overMax) throw errors.badRequest('Uploaded object too large', { code: 'file_too_large' });
 
-      // Retention: derive from the meeting owner's privacy setting + deployment default.
-      const meetingRow = (await db.select().from(meetings).where(eq(meetings.id, asset.meetingId)).limit(1))[0];
+      // Local First: the remote copy is a temporary processing buffer — always
+      // discard-after-processing with a TTL backstop. The primary recording is local.
       const uploadedAt = new Date();
-      const storeAudio = meetingRow ? await ownerStoreAudio(db, meetingRow.ownerId) : true;
-      const retention = computeRetention(env, storeAudio, uploadedAt);
+      const retention = computeRetention(env, uploadedAt);
 
       const job = await db.transaction(async (tx) => {
         await tx.update(mediaAssets).set({ status: 'uploaded', sizeBytes: stat.sizeBytes, uploadedAt, retentionPolicy: retention.retentionPolicy, expiresAt: retention.expiresAt }).where(eq(mediaAssets.id, id));
@@ -120,7 +119,11 @@ export async function registerMediaRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // Short-lived audio URL for playback (private bucket).
+  // Short-lived audio URL for the TEMPORARY remote copy. Local First: playback
+  // prefers the on-device recording; this is only a fallback while the processing
+  // copy still exists remotely (before cleanup). Once it is pending/failed deletion
+  // or deleted, we return null — the client must not depend on the remote copy.
+  const REMOTE_AVAILABLE = new Set(['uploaded', 'processing', 'ready']);
   app.get('/api/meetings/:id/audio-url', async (request) => {
     const auth = requireAuth(request.auth);
     const { id } = request.params as { id: string };
@@ -129,7 +132,7 @@ export async function registerMediaRoutes(app: FastifyInstance): Promise<void> {
     assertWorkspace(auth, meetingRows[0].workspaceId);
     const assetRows = await db.select().from(mediaAssets).where(eq(mediaAssets.meetingId, id)).orderBy(desc(mediaAssets.createdAt)).limit(1);
     const asset = assetRows[0];
-    if (!asset || asset.status === 'pending_upload' || asset.status === 'deleted') return { url: null };
+    if (!asset || !REMOTE_AVAILABLE.has(asset.status)) return { url: null };
     const presigned = await storage.createDownloadUrl({ objectKey: asset.objectKey, ttlSeconds: env.MEDIA_DOWNLOAD_URL_TTL_SECONDS });
     return { url: presigned.url, expiresAt: presigned.expiresAt };
   });

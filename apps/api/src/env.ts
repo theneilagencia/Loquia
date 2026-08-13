@@ -45,7 +45,14 @@ const schema = z.object({
 
   // --- Retention (Milestone 5) ---
   // Default media retention in days for users who keep audio (0 = never auto-delete).
+  // Legacy under Local First: the remote copy is temporary, so this only affects
+  // any pre-Local-First rows that were kept.
   MEDIA_RETENTION_DAYS: z.coerce.number().default(0),
+  // Local First safety net: the maximum time a temporary remote processing copy may
+  // live before the cleanup sweep force-deletes it, regardless of job state. This is
+  // a second layer behind the explicit delete_processing_media job (mirror it in the
+  // R2 bucket lifecycle rule). Keep it short — just enough for processing + retries.
+  REMOTE_MEDIA_MAX_TTL_HOURS: z.coerce.number().default(24),
 
   // --- Security ---
   // Comma-separated allowed origins for CORS; defaults to APP_URL.

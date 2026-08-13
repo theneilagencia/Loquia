@@ -1,44 +1,30 @@
-import { and, eq, isNotNull, lte, ne, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, lte, ne, or, sql } from 'drizzle-orm';
 import type { ObjectStorageProvider } from '@loquia/pipeline';
 import type { Database } from '../db/client';
 import type { Env } from '../env';
-import { mediaAssets, userSettings } from '../db/schema';
+import { mediaAssets } from '../db/schema';
 import { writeAudit } from './audit';
 
 /**
- * Media retention (Milestone 5 §34/§35). The policy is derived at upload-complete
- * time from the owner's privacy setting and the deployment default:
- * - storeAudioAfterProcessing = false → `discard_after_processing` (deleted once the
- *   meeting is processed);
- * - else the deployment default `MEDIA_RETENTION_DAYS` (0 = keep forever, else Nd).
- * The transcript and AI Pack are NEVER auto-deleted — only the audio media.
+ * Media retention under **Local First** (Milestone 5 REVISADA). The remote object
+ * is a TEMPORARY processing copy, never the archive: the primary recording lives
+ * on the user's device. So every new upload is `discard_after_processing` and gets
+ * a hard `expiresAt` = uploadedAt + REMOTE_MEDIA_MAX_TTL_HOURS as a safety backstop
+ * behind the explicit `delete_processing_media` job. `keep`/`7d`/`30d`/`90d` are
+ * LEGACY (pre-Local-First) and only ever read from old rows — never written.
+ * The transcript and AI Pack are NEVER auto-deleted — only the temporary media.
  */
 export type RetentionPolicy = 'keep' | '7d' | '30d' | '90d' | 'discard_after_processing';
-
-export function policyForDays(days: number): RetentionPolicy {
-  if (days <= 0) return 'keep';
-  if (days <= 7) return '7d';
-  if (days <= 30) return '30d';
-  return '90d';
-}
 
 export interface ComputedRetention {
   retentionPolicy: RetentionPolicy;
   expiresAt: Date | null;
 }
 
-export function computeRetention(env: Env, storeAudio: boolean, uploadedAt: Date): ComputedRetention {
-  if (!storeAudio) return { retentionPolicy: 'discard_after_processing', expiresAt: null };
-  const days = env.MEDIA_RETENTION_DAYS;
-  if (days <= 0) return { retentionPolicy: 'keep', expiresAt: null };
-  return { retentionPolicy: policyForDays(days), expiresAt: new Date(uploadedAt.getTime() + days * 86400_000) };
-}
-
-/** Load the meeting owner's "keep audio after processing" preference (default keep). */
-export async function ownerStoreAudio(db: Database, ownerId: string): Promise<boolean> {
-  const rows = await db.select({ privacy: userSettings.privacy }).from(userSettings).where(eq(userSettings.userId, ownerId)).limit(1);
-  const privacy = rows[0]?.privacy as { storeAudioAfterProcessing?: boolean } | undefined;
-  return privacy?.storeAudioAfterProcessing ?? true;
+/** Retention for the temporary remote processing copy: always discard, with a TTL backstop. */
+export function computeRetention(env: Env, uploadedAt: Date): ComputedRetention {
+  const ttlHours = env.REMOTE_MEDIA_MAX_TTL_HOURS > 0 ? env.REMOTE_MEDIA_MAX_TTL_HOURS : 24;
+  return { retentionPolicy: 'discard_after_processing', expiresAt: new Date(uploadedAt.getTime() + ttlHours * 3_600_000) };
 }
 
 export interface CleanupDeps {
@@ -69,12 +55,12 @@ export async function runMediaCleanup(deps: CleanupDeps): Promise<CleanupResult>
       and(
         ne(mediaAssets.status, 'deleted'),
         or(
+          // TTL backstop: any temporary copy past its hard expiry (covers stuck uploads).
           and(isNotNull(mediaAssets.expiresAt), lte(mediaAssets.expiresAt, now)),
-          // discard-after-processing: delete once the meeting has been processed.
-          and(
-            eq(mediaAssets.retentionPolicy, 'discard_after_processing'),
-            eq(mediaAssets.status, 'ready'),
-          ),
+          // Local First: retry the delete for copies pending/failed cleanup.
+          inArray(mediaAssets.status, ['deletion_pending', 'delete_failed']),
+          // Legacy: discard-after-processing rows left in the old `ready` state.
+          and(eq(mediaAssets.retentionPolicy, 'discard_after_processing'), eq(mediaAssets.status, 'ready')),
         ),
       ),
     )
@@ -103,6 +89,6 @@ export async function countEligibleForCleanup(db: Database): Promise<number> {
   const rows = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(mediaAssets)
-    .where(and(ne(mediaAssets.status, 'deleted'), or(and(isNotNull(mediaAssets.expiresAt), lte(mediaAssets.expiresAt, now)), and(eq(mediaAssets.retentionPolicy, 'discard_after_processing'), eq(mediaAssets.status, 'ready')))));
+    .where(and(ne(mediaAssets.status, 'deleted'), or(and(isNotNull(mediaAssets.expiresAt), lte(mediaAssets.expiresAt, now)), inArray(mediaAssets.status, ['deletion_pending', 'delete_failed']), and(eq(mediaAssets.retentionPolicy, 'discard_after_processing'), eq(mediaAssets.status, 'ready')))));
   return rows[0]?.n ?? 0;
 }

@@ -41,6 +41,7 @@ export async function processJob(deps: WorkerDeps, processingJobId: string): Pro
   if (job.status === 'completed') return { status: 'skipped', reason: 'already_completed' };
 
   if (job.type === 'ai_pack') return processAiPackJob(deps, job);
+  if (job.type === 'delete_processing_media') return processDeleteMediaJob(deps, job);
   return processTranscriptionJob(deps, job);
 }
 
@@ -66,6 +67,7 @@ async function processTranscriptionJob(deps: WorkerDeps, job: JobRow): Promise<P
   log('job_started', { processingJobId, meetingId: job.meetingId, workspaceId: job.workspaceId, type: 'transcription' });
 
   let aiPackJobId: string | null = null;
+  let deleteJobId: string | null = null;
   try {
     const assetRows = job.mediaAssetId
       ? await db.select().from(mediaAssets).where(eq(mediaAssets.id, job.mediaAssetId)).limit(1)
@@ -92,7 +94,7 @@ async function processTranscriptionJob(deps: WorkerDeps, job: JobRow): Promise<P
     const detectedLanguage = result.detectedLanguage ?? meeting.meetingLanguage;
     const durationMs = result.durationMs ?? (segments.length ? segments[segments.length - 1]!.endMs : 0);
 
-    aiPackJobId = await db.transaction(async (tx) => {
+    const jobIds = await db.transaction(async (tx) => {
       await tx.delete(transcriptSegments).where(eq(transcriptSegments.meetingId, job.meetingId));
       if (segments.length > 0) {
         await tx.insert(transcriptSegments).values(
@@ -116,7 +118,9 @@ async function processTranscriptionJob(deps: WorkerDeps, job: JobRow): Promise<P
         .update(meetings)
         .set({ status: 'ready', detectedLanguage, durationSeconds: Math.round(durationMs / 1000), participantCount: speakers.length, speakerAliases: {}, aiPackStatus: 'queued', updatedAt: new Date() })
         .where(eq(meetings.id, job.meetingId));
-      await tx.update(mediaAssets).set({ status: 'ready', durationMs }).where(eq(mediaAssets.id, asset.id));
+      // Local First: the remote copy is a temporary processing buffer. Now that the
+      // transcript is committed, mark it for deletion and schedule the cleanup job.
+      await tx.update(mediaAssets).set({ status: 'deletion_pending', durationMs }).where(eq(mediaAssets.id, asset.id));
       await tx
         .update(processingJobs)
         .set({
@@ -138,13 +142,26 @@ async function processTranscriptionJob(deps: WorkerDeps, job: JobRow): Promise<P
         .insert(processingJobs)
         .values({ workspaceId: job.workspaceId, meetingId: job.meetingId, mediaAssetId: job.mediaAssetId, type: 'ai_pack', status: 'queued', stage: 'ready_for_ai_pack', progress: 0 })
         .returning();
-      return aiJob!.id;
+      // Local First: schedule deletion of the temporary remote processing copy. This
+      // is durably recorded here (after the transcript commit) so a crash before the
+      // enqueue still leaves the job to be swept by the cleanup cron / TTL.
+      const [delJob] = await tx
+        .insert(processingJobs)
+        .values({ workspaceId: job.workspaceId, meetingId: job.meetingId, mediaAssetId: job.mediaAssetId, type: 'delete_processing_media', status: 'queued', stage: 'ready_for_ai_pack', progress: 0 })
+        .returning();
+      return { aiPackJobId: aiJob!.id, deleteJobId: delJob!.id };
     });
+    aiPackJobId = jobIds.aiPackJobId;
+    deleteJobId = jobIds.deleteJobId;
 
     log('transcript_persisted', { processingJobId, meetingId: job.meetingId, segmentCount: segments.length, speakerCount: speakers.length });
     if (aiPackJobId && deps.enqueue) {
       await deps.enqueue(aiPackJobId);
       log('ai_pack_enqueued', { processingJobId, meetingId: job.meetingId, aiPackJobId });
+    }
+    if (deleteJobId && deps.enqueue) {
+      await deps.enqueue(deleteJobId);
+      log('remote_cleanup_scheduled', { processingJobId, meetingId: job.meetingId, deleteJobId });
     }
     log('job_completed', { processingJobId, meetingId: job.meetingId });
     return { status: 'completed', segmentCount: segments.length };
@@ -271,6 +288,56 @@ async function processAiPackJob(deps: WorkerDeps, job: JobRow): Promise<ProcessR
     if (!isRetryable(err)) {
       await db.update(meetings).set({ aiPackStatus: 'failed', updatedAt: new Date() }).where(eq(meetings.id, job.meetingId));
     }
+    throw err;
+  }
+}
+
+/**
+ * Delete the temporary remote processing copy (Local First §24/§25). Runs only
+ * after the transcript is already persisted, so it NEVER blocks or reprocesses
+ * transcription. Storage delete happens first; on success the asset is marked
+ * `deleted`. A storage failure marks the asset `delete_failed` and rethrows so
+ * BullMQ retries with backoff — the transcript and AI Pack are untouched.
+ */
+async function processDeleteMediaJob(deps: WorkerDeps, job: JobRow): Promise<ProcessResult> {
+  const { db, storage, log } = deps;
+  const processingJobId = job.id;
+
+  const now = new Date();
+  const claimed = await db
+    .update(processingJobs)
+    .set({ status: 'running', stage: 'ready_for_ai_pack', startedAt: job.startedAt ?? now, attempt: job.attempt ?? 1, updatedAt: now })
+    .where(and(eq(processingJobs.id, processingJobId), ne(processingJobs.status, 'completed')))
+    .returning();
+  if (!claimed[0]) return { status: 'skipped', reason: 'claimed_elsewhere' };
+
+  const assetRows = job.mediaAssetId
+    ? await db.select().from(mediaAssets).where(eq(mediaAssets.id, job.mediaAssetId)).limit(1)
+    : [];
+  const asset = assetRows[0];
+  // Nothing to delete (already gone / never uploaded) — treat as success.
+  if (!asset || asset.status === 'deleted') {
+    await db.update(processingJobs).set({ status: 'completed', progress: 100, completedAt: new Date(), updatedAt: new Date() }).where(eq(processingJobs.id, processingJobId));
+    log('remote_cleanup_noop', { processingJobId, meetingId: job.meetingId });
+    return { status: 'completed', reason: 'nothing_to_delete' };
+  }
+
+  log('remote_cleanup_started', { processingJobId, meetingId: job.meetingId, mediaAssetId: asset.id });
+  try {
+    await storage.deleteObject(asset.objectKey); // storage first
+    await db.transaction(async (tx) => {
+      await tx.update(mediaAssets).set({ status: 'deleted', deletedAt: new Date() }).where(eq(mediaAssets.id, asset.id));
+      await tx.update(processingJobs).set({ status: 'completed', progress: 100, completedAt: new Date(), errorCode: null, errorMessage: null, updatedAt: new Date() }).where(eq(processingJobs.id, processingJobId));
+    });
+    log('remote_media_deleted', { processingJobId, meetingId: job.meetingId, mediaAssetId: asset.id });
+    return { status: 'completed' };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    // Mark the asset delete_failed and requeue (retryable) — the cleanup cron / TTL
+    // is the backstop if retries are exhausted. Transcript/AI Pack stay valid.
+    await db.update(mediaAssets).set({ status: 'delete_failed' }).where(eq(mediaAssets.id, asset.id));
+    await db.update(processingJobs).set({ status: 'queued', errorCode: 'remote_delete_failed', errorMessage: message.slice(0, 500), attempt: (job.attempt ?? 1) + 1, updatedAt: new Date() }).where(eq(processingJobs.id, processingJobId));
+    log('remote_media_delete_failed', { processingJobId, meetingId: job.meetingId, mediaAssetId: asset.id, error: message });
     throw err;
   }
 }

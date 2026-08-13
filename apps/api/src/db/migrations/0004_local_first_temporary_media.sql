@@ -1,0 +1,1 @@
+ALTER TABLE "media_assets" ALTER COLUMN "retention_policy" SET DEFAULT 'discard_after_processing';

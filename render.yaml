@@ -100,9 +100,11 @@ services:
         value: "20"
       - key: MAX_AI_PACK_REGENERATIONS_PER_HOUR
         value: "10"
-      # --- Retention (0 = never auto-delete kept audio) ---
+      # --- Retention (Local First: remote copy is temporary) ---
       - key: MEDIA_RETENTION_DAYS
-        value: "0"
+        value: "0" # legacy; only affects pre-Local-First rows
+      - key: REMOTE_MEDIA_MAX_TTL_HOURS
+        value: "24" # safety backstop; mirror in the R2 bucket lifecycle rule
 
   # ---- Web (Next.js), talking to the API ----
   - type: web

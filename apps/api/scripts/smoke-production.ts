@@ -60,21 +60,27 @@ async function main(): Promise<void> {
   try {
     const storage = createStorageProvider(env, { dir: env.MEDIA_MOCK_DIR, baseUrl: env.PUBLIC_API_URL ?? `http://localhost:${env.API_PORT}` });
     if (storage.name === 'r2') {
+      // Local First §47: full temporary-processing lifecycle — presign PUT → upload
+      // → HEAD (present) → DELETE → HEAD (absent). This mirrors the real remote
+      // cleanup after a transcript is persisted.
       const key = `smoke/${Date.now()}.txt`;
       const up = await storage.createUploadUrl({ objectKey: key, contentType: 'text/plain', ttlSeconds: 120 });
       const put = await fetch(up.url, { method: 'PUT', headers: up.headers, body: new TextEncoder().encode('loquia-smoke') });
       if (!put.ok) throw new Error(`PUT ${put.status}`);
-      const stat = await storage.headObject(key);
+      const present = await storage.headObject(key);
       await storage.deleteObject(key);
-      rec('storage round-trip (r2)', stat.exists ? 'PASS' : 'FAIL', 'PUT → HEAD → DELETE');
+      const absent = await storage.headObject(key);
+      const ok = present.exists && !absent.exists;
+      rec('R2 temporary-processing lifecycle', ok ? 'PASS' : 'FAIL', 'presign PUT → HEAD(present) → DELETE → HEAD(absent)');
     } else {
-      // Mock provider: putObjectSync is available; exercise HEAD/GET/DELETE.
+      // Mock provider: exercise the same lifecycle shape (put → HEAD → delete → HEAD).
       const key = `smoke/${Date.now()}.txt`;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (storage as any).putObjectSync(key, new TextEncoder().encode('loquia-smoke'), 'text/plain');
-      const stat = await storage.headObject(key);
+      const present = await storage.headObject(key);
       await storage.deleteObject(key);
-      rec('storage round-trip (mock)', stat.exists ? 'PASS' : 'FAIL');
+      const absent = await storage.headObject(key);
+      rec('storage lifecycle (mock)', present.exists && !absent.exists ? 'PASS' : 'FAIL', 'put → HEAD(present) → delete → HEAD(absent)');
     }
   } catch (err) {
     rec('storage round-trip', 'FAIL', (err as Error).message);
