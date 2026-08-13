@@ -42,6 +42,14 @@ export interface RecorderResult {
   durationSeconds: number;
   audioRef: string;
   waveformPeaks: number[];
+  /**
+   * Local First: the real captured recording. Present whenever the browser
+   * captured audio (or a deterministic fallback blob on machines without a mic).
+   * The caller persists this to the on-device LocalMediaStore before processing.
+   */
+  blob?: Blob;
+  /** MIME type of `blob` (e.g. "audio/webm"); coherent with the real container. */
+  mimeType?: string;
 }
 
 export interface MediaRecorderAdapter {

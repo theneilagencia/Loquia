@@ -80,6 +80,38 @@ export async function registerMediaRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
+  // Retry processing for an EXISTING meeting from the on-device recording (§39).
+  // Mints a fresh temporary remote asset + presigned PUT without creating a new
+  // meeting, so a failed processing upload can be re-attempted from the local copy.
+  const reprocessSchema = z.object({ filename: z.string().min(1), mimeType: z.string(), sizeBytes: z.number().int().positive().optional() });
+  app.post(
+    '/api/meetings/:id/reprocess',
+    { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
+    async (request) => {
+      const auth = requireAuth(request.auth);
+      const { id } = request.params as { id: string };
+      const input = reprocessSchema.parse(request.body);
+      const meetingRows = await db.select().from(meetings).where(eq(meetings.id, id)).limit(1);
+      const meeting = meetingRows[0];
+      if (!meeting) throw errors.notFound();
+      assertWorkspace(auth, meeting.workspaceId);
+
+      const validation = validateUpload({ mimeType: input.mimeType, sizeBytes: input.sizeBytes, maxBytes: env.MAX_UPLOAD_SIZE_BYTES });
+      if (!validation.ok) throw errors.badRequest(validation.message ?? 'Invalid upload', { code: validation.code });
+      await assertActiveJobLimit(db, env, meeting.workspaceId);
+
+      const mediaAssetId = newId();
+      const bucket = env.R2_BUCKET_NAME ?? 'mock';
+      const objectKey = generateObjectKey({ workspaceId: meeting.workspaceId, meetingId: meeting.id, mediaAssetId, filename: input.filename, mimeType: input.mimeType });
+      await db.insert(mediaAssets).values({ id: mediaAssetId, workspaceId: meeting.workspaceId, meetingId: meeting.id, storageProvider: storage.name, bucket, objectKey, originalFilename: input.filename, mimeType: input.mimeType, sizeBytes: input.sizeBytes, status: 'pending_upload' });
+      await db.update(meetings).set({ status: 'processing', updatedAt: new Date() }).where(eq(meetings.id, meeting.id));
+
+      const presigned = await storage.createUploadUrl({ objectKey, contentType: input.mimeType, sizeBytes: input.sizeBytes, ttlSeconds: env.MEDIA_UPLOAD_URL_TTL_SECONDS });
+      request.log.info({ event: 'reprocess_intent_created', meetingId: meeting.id, workspaceId: meeting.workspaceId, mediaAssetId }, 'reprocess intent');
+      return { meetingId: meeting.id, mediaAssetId, uploadUrl: presigned.url, requiredHeaders: presigned.headers, expiresAt: presigned.expiresAt };
+    },
+  );
+
   // Confirm the upload: HEAD the object, then create + enqueue the ProcessingJob.
   app.post(
     '/api/media/:id/complete',

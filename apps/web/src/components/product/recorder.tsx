@@ -16,8 +16,15 @@ const PERMISSION_ERROR_KEYS: Record<string, string> = {
   error: 'error',
 };
 
+const FINISH_ERROR_KEYS: Record<string, string> = {
+  upload_intent_failed: 'errorUploadIntent',
+  local_quota_exceeded: 'errorQuota',
+  processing_upload_failed: 'errorProcessingUpload',
+};
+
 export function Recorder() {
   const t = useTranslations('recorder');
+  const rec = useTranslations('recording');
   const recorder = useRecorder();
   const { runState, elapsedSeconds, liveWaveform, permission, markers } = recorder;
   const [title, setTitle] = useState('');
@@ -86,6 +93,17 @@ export function Recorder() {
           <p role="alert" className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
             {t(errorKey)}
           </p>
+        )}
+
+        {recorder.error && (
+          <div role="alert" className="space-y-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            <p>{rec(FINISH_ERROR_KEYS[recorder.error]!)}</p>
+            {recorder.error === 'processing_upload_failed' && recorder.pendingUpload && (
+              <Button size="sm" variant="outline" onClick={() => void recorder.retryProcessing()}>
+                {rec('retryProcessing')}
+              </Button>
+            )}
+          </div>
         )}
 
         <div className="flex flex-wrap items-center justify-center gap-3">

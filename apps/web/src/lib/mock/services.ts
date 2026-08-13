@@ -725,6 +725,15 @@ export function createMockServices(deps: MockDeps): Services {
           expiresAt: new Date(Date.now() + 900_000).toISOString(),
         });
       },
+      async reprocessIntent(input) {
+        return ok({
+          meetingId: input.meetingId,
+          mediaAssetId: input.meetingId,
+          uploadUrl: '',
+          requiredHeaders: {},
+          expiresAt: new Date(Date.now() + 900_000).toISOString(),
+        });
+      },
       async completeUpload(mediaAssetId) {
         const db = store.read();
         const job = db.jobs

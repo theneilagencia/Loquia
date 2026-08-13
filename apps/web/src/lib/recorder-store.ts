@@ -18,7 +18,13 @@ interface RecorderState {
   markers: number[];
   title: string;
   meetingLanguage: string;
+  /** Set when finishing/uploading fails, so the recording isn't silently lost (§13/§38). */
+  error: 'upload_intent_failed' | 'local_quota_exceeded' | 'processing_upload_failed' | null;
+  /** Context to retry a failed processing upload from the on-device copy (§39). */
+  pendingUpload: { meetingId: string; localAssetId: string; workspaceId: string; filename: string; mimeType: string } | null;
   setPermission: (p: RecorderPermissionState) => void;
+  setError: (e: RecorderState['error']) => void;
+  setPendingUpload: (p: RecorderState['pendingUpload']) => void;
   start: (title: string, meetingLanguage: string) => void;
   tick: (elapsedSeconds: number, amplitude: number) => void;
   pause: () => void;
@@ -37,7 +43,11 @@ export const useRecorderStore = create<RecorderState>((set) => ({
   markers: [],
   title: '',
   meetingLanguage: 'pt-BR',
+  error: null,
+  pendingUpload: null,
   setPermission: (permission) => set({ permission }),
+  setError: (error) => set({ error }),
+  setPendingUpload: (pendingUpload) => set({ pendingUpload }),
   start: (title, meetingLanguage) =>
     set({
       runState: 'recording',
@@ -47,6 +57,7 @@ export const useRecorderStore = create<RecorderState>((set) => ({
       amplitude: 0,
       title,
       meetingLanguage,
+      error: null,
     }),
   tick: (elapsedSeconds, amplitude) =>
     set((state) => ({
@@ -66,5 +77,7 @@ export const useRecorderStore = create<RecorderState>((set) => ({
       liveWaveform: [],
       markers: [],
       title: '',
+      error: null,
+      pendingUpload: null,
     }),
 }));

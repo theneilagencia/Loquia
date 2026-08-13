@@ -291,7 +291,9 @@
       "export": "Idioma de exportação"
     },
     "privacy": {
-      "storeAudio": "Manter áudio após o processamento",
+      "storageTitle": "Armazenamento da gravação",
+      "storagePolicy": "Somente neste dispositivo",
+      "storageExplain": "A gravação fica neste dispositivo. Para transcrever a reunião, uma cópia temporária é enviada para processamento e removida depois.",
       "analytics": "Compartilhar análises de uso anônimas",
       "redact": "Ocultar e-mails nas exportações"
     },
@@ -380,5 +382,16 @@
     "password_min": "Use ao menos 8 caracteres.",
     "password_mismatch": "As senhas não coincidem.",
     "reason_min": "Informe um motivo."
+  },
+  "recording": {
+    "availableOnThisDevice": "Áudio disponível neste dispositivo",
+    "saveToComputer": "Salvar cópia no computador",
+    "removeFromDevice": "Remover deste dispositivo",
+    "removeConfirm": "Remover esta gravação deste dispositivo? A reunião, a transcrição e o AI Pack continuam disponíveis.",
+    "storedOnAnotherDevice": "A gravação original está armazenada em outro dispositivo. A transcrição e o AI Pack continuam disponíveis aqui.",
+    "errorQuota": "Não há espaço suficiente para guardar esta gravação no dispositivo.",
+    "errorUploadIntent": "Não foi possível iniciar o processamento. A gravação continua com você.",
+    "errorProcessingUpload": "Não foi possível enviar a gravação para processamento. O áudio continua salvo neste dispositivo.",
+    "retryProcessing": "Tentar processar novamente"
   }
 }

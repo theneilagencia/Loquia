@@ -9,7 +9,8 @@ import { useServices } from '@/lib/services-context';
 import { Link, useRouter } from '@/i18n/navigation';
 import { formatDate, minutesOf } from '@/lib/format';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AudioPlayer } from '@/components/product/audio-player';
+import { LocalRecordingPanel } from '@/components/product/local-recording-panel';
+import { getLocalMediaStore } from '@/lib/local-media/provider';
 import { AIPackView } from '@/components/product/ai-pack-view';
 import { TranscriptView } from '@/components/product/transcript-view';
 import { MeetingStatusBadge } from '@/components/product/meeting-status-badge';
@@ -46,6 +47,8 @@ export default function MeetingDetailPage({
     queryKey: ['audioUrl', meetingId],
     queryFn: () => services.media.getAudioUrl(meetingId),
   });
+  const sessionQ = useQuery({ queryKey: ['session'], queryFn: () => services.auth.getSession() });
+  const workspaceId = sessionQ.data?.workspace.id;
   // Honest AI Pack generation state; polls while a job is in flight.
   const aiPackStatusQ = useQuery({
     queryKey: ['aiPackStatus', meetingId],
@@ -89,11 +92,7 @@ export default function MeetingDetailPage({
   // Static waveform peaks — real per-sample peaks aren't computed in this
   // milestone; the player still drives seeking against the real audio element.
   const recordingPeaks = [0.3, 0.6, 0.8, 0.5, 0.9, 0.4, 0.7, 0.6];
-  // Presigned URLs from real storage are http(s); the mock provider returns a
-  // `mock-audio://` URL, which falls back to simulated playback.
-  const audioSrc =
-    audioUrlQ.data && audioUrlQ.data.startsWith('http') ? audioUrlQ.data : undefined;
-  const showAudio = Boolean(audioUrlQ.data) && meeting.status !== 'processing';
+  const showRecording = meeting.status !== 'processing';
 
   return (
     <div className="space-y-6">
@@ -137,13 +136,17 @@ export default function MeetingDetailPage({
         </Card>
       )}
 
-      {showAudio && (
-        <AudioPlayer
+      {showRecording && (
+        <LocalRecordingPanel
+          meetingId={meetingId}
+          workspaceId={workspaceId}
+          title={meeting.title}
           durationSeconds={meeting.durationSeconds}
           peaks={recordingPeaks}
+          remoteUrl={audioUrlQ.data}
           seekTo={seekTo}
           onSeeked={() => setSeekTo(null)}
-          src={audioSrc}
+          onLocalDeleted={() => audioUrlQ.refetch()}
         />
       )}
 
@@ -242,9 +245,20 @@ export default function MeetingDetailPage({
                   className="text-destructive hover:text-destructive"
                   onClick={() => {
                     if (!window.confirm(t('deleteConfirm'))) return;
-                    void services.meetings.remove(meetingId).then((res) => {
+                    void (async () => {
+                      // §32: deleting the meeting also removes the on-device copy.
+                      if (workspaceId) {
+                        try {
+                          const localStore = await getLocalMediaStore(workspaceId);
+                          const localAsset = localStore.getByMeeting(meetingId);
+                          if (localAsset) await localStore.delete(localAsset.id);
+                        } catch {
+                          /* best effort */
+                        }
+                      }
+                      const res = await services.meetings.remove(meetingId);
                       if (res.ok) router.push('/app/meetings');
-                    });
+                    })();
                   }}
                 >
                   <Trash2 className="size-3.5" /> {t('delete')}

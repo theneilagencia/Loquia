@@ -291,9 +291,11 @@
       "export": "Export language"
     },
     "privacy": {
-      "storeAudio": "Keep audio after processing",
+      "storageTitle": "Recording storage",
+      "storagePolicy": "On this device only",
+      "storageExplain": "The recording stays on this device. To transcribe the meeting, a temporary copy is sent for processing and deleted afterward.",
       "analytics": "Share anonymous usage analytics",
-      "redact": "Redact emails in exports"
+      "redact": "Hide e-mails in exports"
     },
     "appearance": {
       "theme": "Theme",
@@ -380,5 +382,16 @@
     "password_min": "Use at least 8 characters.",
     "password_mismatch": "Passwords don't match.",
     "reason_min": "Enter a reason."
+  },
+  "recording": {
+    "availableOnThisDevice": "Audio available on this device",
+    "saveToComputer": "Save a copy to your computer",
+    "removeFromDevice": "Remove from this device",
+    "removeConfirm": "Remove this recording from this device? The meeting, transcript and AI Pack stay available.",
+    "storedOnAnotherDevice": "The original recording is stored on another device. The transcript and AI Pack are still available here.",
+    "errorQuota": "There isn't enough space to store this recording on your device.",
+    "errorUploadIntent": "We couldn't start processing. Your recording is still with you.",
+    "errorProcessingUpload": "We couldn't send the recording for processing. The audio is still saved on this device.",
+    "retryProcessing": "Try processing again"
   }
 }

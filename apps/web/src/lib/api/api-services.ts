@@ -391,6 +391,15 @@ export function createApiServices(deps: ApiDeps): Services {
           throw e;
         }
       },
+      async reprocessIntent(input) {
+        try {
+          const { meetingId, ...body } = input;
+          return ok(await api.post<import('@loquia/contracts').UploadIntent>(`/api/meetings/${meetingId}/reprocess`, body));
+        } catch (e) {
+          if (e instanceof ApiHttpError) return err({ code: e.code, message: e.message });
+          throw e;
+        }
+      },
       async completeUpload(mediaAssetId) {
         try {
           return ok(await api.post<ProcessingJob>(`/api/media/${mediaAssetId}/complete`));

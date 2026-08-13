@@ -183,9 +183,18 @@ export interface UploadIntent {
   expiresAt: string;
 }
 
-/** Real media upload + audio access (Milestone 3). */
+export interface ReprocessIntentInput {
+  meetingId: Id;
+  filename: string;
+  mimeType: string;
+  sizeBytes?: number;
+}
+
+/** Real media upload + audio access (Milestone 3; Local First reprocess in M5 REVISADA). */
 export interface MediaService {
   uploadIntent(input: UploadIntentInput): Promise<Result<UploadIntent>>;
+  /** Local First §39: retry processing for an existing meeting from the local copy. */
+  reprocessIntent(input: ReprocessIntentInput): Promise<Result<UploadIntent>>;
   completeUpload(mediaAssetId: Id): Promise<Result<ProcessingJob>>;
   getAudioUrl(meetingId: Id): Promise<string | null>;
 }

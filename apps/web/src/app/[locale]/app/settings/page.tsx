@@ -143,11 +143,13 @@ export default function SettingsPage() {
 
         <TabsContent value="privacy">
           <SettingsCard>
-            <ToggleRow
-              label={t('privacy.storeAudio')}
-              checked={settings.privacy.storeAudioAfterProcessing}
-              onChange={(v) => patch({ privacy: { storeAudioAfterProcessing: v } })}
-            />
+            {/* Local First: recording storage is on-device by default; the remote
+                copy is temporary. No permanent remote-retention options (§28–§30). */}
+            <div className="space-y-1.5 border-b border-border/60 pb-4">
+              <p className="text-sm font-medium">{t('privacy.storageTitle')}</p>
+              <p className="text-sm text-foreground">{t('privacy.storagePolicy')}</p>
+              <p className="text-xs text-muted-foreground">{t('privacy.storageExplain')}</p>
+            </div>
             <ToggleRow
               label={t('privacy.analytics')}
               checked={settings.privacy.analyticsOptIn}
