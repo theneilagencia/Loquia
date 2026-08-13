@@ -77,3 +77,12 @@ are `discard_after_processing` and are deleted once the transcript persists
 backstop (mirror it in the R2 bucket lifecycle rule). The smoke exercises the
 full temporary-processing lifecycle: presign PUT → HEAD (present) → DELETE →
 HEAD (absent). See `docs/local-first-media.md`.
+
+## Milestone 5.2 — object storage removed
+
+The MVP no longer uses object storage. `ObjectStorageProvider`, the R2 adapter,
+the mock storage adapter, object-key generation and the `@aws-sdk/*` dependencies
+were removed. The API receives the recording as a raw audio body, streams it to a
+per-instance temp file, submits the bytes to Deepgram, persists the transcript,
+and deletes the temp file. Playback is on-device only (`LocalMediaStore`). See
+`docs/local-first-media.md` and `docs/media-pipeline.md`.

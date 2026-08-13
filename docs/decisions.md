@@ -62,3 +62,20 @@
 32. Privacy language is factual: the audio DOES leave the device for cloud STT,
     so absolute claims ("nunca sai do dispositivo", "100% privado") are forbidden.
     Permanent remote-retention options are removed.
+
+## Milestone 5.2 — Object storage removed from the MVP
+
+33. **Canonical:** object storage (Cloudflare R2) is removed from the MVP. The
+    original audio is Local First on the device; processing uses temporary media
+    received directly by Loquia's infrastructure. No feature depends on R2 and no
+    R2 credentials are required.
+34. Because the API and worker are separate Render instances (no shared disk) and
+    Deepgram accepts raw bytes, the API ingests the audio and transcribes it
+    in-process (detached, returns 202 fast), persists the transcript, then
+    enqueues the AI Pack job. The worker's only job is now AI Pack generation.
+35. Retry uses the on-device recording: a transient/timeout failure discards the
+    temporary media, so the client re-uploads the local copy (needs_reupload);
+    a provider rejection is permanent. No remote media is kept just for retry.
+36. `MediaAsset` is deprecated (no longer written); `ProcessingJob` is the record
+    of a processing attempt (§30). The table is left in place (non-destructive)
+    but carries no runtime meaning.

@@ -85,3 +85,14 @@ honest "stored on another device" state, not a backend error (§18/§45).
 No cross-device audio sync (§46) — backups are the user's "save a copy to your
 computer" action. No custom client-side crypto (§35). No permanent remote
 retention options (§28).
+
+## Update — Milestone 5.2 (object storage removed)
+
+The remote **temporary processing copy** is no longer stored in object storage.
+The browser sends the recording directly to the API, which transcribes it and
+discards the media (see `docs/media-pipeline.md`). Everything else about Local
+First is unchanged: the on-device recording is the primary copy, playback is
+local-first (now local-*only* — there is no remote audio URL), save-to-computer
+and remove-from-device behave the same, and another device shows the transcript /
+AI Pack with an honest "stored on another device" state for audio. Retry after a
+failed processing attempt re-sends the on-device recording (`needs_reupload`).

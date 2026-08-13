@@ -54,3 +54,10 @@ External-provider outages must not take the platform down:
 - Infra + email smoke: `pnpm --filter @loquia/api smoke:production`.
 
 Both are honest: missing credentials → `NOT RUN`, never a false PASS.
+
+## Update — Milestone 5.2
+
+Object storage (R2) was removed. The provider families are now **Transcription**
+(Deepgram; the API submits raw audio bytes directly), **AI Pack** (Anthropic; on
+the worker), and **Email** (Resend). No storage provider, no `@aws-sdk/*`. The
+"no silent fallback" rule is unchanged for the remaining providers.

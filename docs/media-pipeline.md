@@ -116,3 +116,14 @@ reprocesses transcription — the transcript and AI Pack are already persisted a
 are never touched. Media-asset statuses: `pending_upload → uploaded → processing
 → deletion_pending → deleted` (or `delete_failed` → retry). `ready` is legacy.
 See `docs/local-first-media.md`.
+
+## Milestone 5.2 — direct processing, no object storage
+
+R2 is gone. The browser POSTs the on-device recording to
+`POST /api/meetings/process-audio` (raw body; metadata in the query). The API
+streams it to a temp file, creates a `transcription` ProcessingJob, returns 202,
+then — detached — reads the bytes, calls Deepgram directly (`audio` bytes, no
+URL), persists `TranscriptSegment[]`, enqueues the `ai_pack` job, and deletes the
+temp file. The worker now only runs the AI Pack job. Failures: transient/timeout
+→ `needs_reupload` (retry from the local copy); provider rejection → permanent.
+A per-instance sweep clears stale temp files (`TEMP_MEDIA_MAX_AGE_MS`).
