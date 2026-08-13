@@ -1,7 +1,6 @@
 export * from './errors';
-export * from './storage';
 export * from './transcription';
-export * from './object-key';
+export * from './media-format';
 export * from './segmentation';
 export * from './factory';
 export * from './queue';
@@ -12,8 +11,6 @@ export * from './ai-pack-chunk';
 export * from './ai-pack-consolidate';
 export * from './ai-pack-evidence';
 export * from './ai-pack-integrity';
-export { MockStorageAdapter } from './adapters/mock-storage';
-export { R2StorageAdapter, type R2Config } from './adapters/r2-storage';
 export { MockTranscriptionAdapter } from './adapters/mock-transcription';
 export { DeepgramTranscriptionAdapter, type DeepgramConfig } from './adapters/deepgram-transcription';
 export { MockAIPackGenerator } from './adapters/mock-ai-pack';

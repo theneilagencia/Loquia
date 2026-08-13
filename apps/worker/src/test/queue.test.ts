@@ -4,14 +4,13 @@ import { Queue, Worker } from 'bullmq';
 import { schema, type Database } from '@loquia/api/db';
 import { createRedis, MEETING_QUEUE, type MeetingJobData } from '@loquia/pipeline';
 import { processJob } from '../process-job';
-import { makeMockStorage, makeWorkerDeps, makeWorkerTestDb, seedProcessable, truncateAll } from './helpers';
+import { makeWorkerDeps, makeWorkerTestDb, seedAiPackReady, truncateAll } from './helpers';
 
 const REDIS_URL = process.env.TEST_REDIS_URL ?? 'redis://127.0.0.1:6380';
-const { processingJobs, transcriptSegments } = schema;
+const { processingJobs, aiPacks } = schema;
 
 let db: Database;
 let close: () => Promise<void>;
-const storage = makeMockStorage();
 
 beforeAll(async () => {
   const h = await makeWorkerTestDb();
@@ -26,8 +25,8 @@ beforeEach(async () => {
 });
 
 describe('BullMQ queue → worker (real Redis)', () => {
-  it('enqueues a job and the worker consumes it, persisting the transcript', async () => {
-    const fx = await seedProcessable(db, storage);
+  it('enqueues an ai_pack job and the worker consumes it, persisting the AI Pack', async () => {
+    const fx = await seedAiPackReady(db);
 
     const queueConn = createRedis(REDIS_URL);
     const queue = new Queue(MEETING_QUEUE, { connection: queueConn });
@@ -36,26 +35,25 @@ describe('BullMQ queue → worker (real Redis)', () => {
     const worker = new Worker<MeetingJobData>(
       MEETING_QUEUE,
       async (job) => {
-        await processJob(makeWorkerDeps(db, storage), job.data.processingJobId);
+        await processJob(makeWorkerDeps(db), job.data.processingJobId);
       },
       { connection: createRedis(REDIS_URL), concurrency: 1 },
     );
 
     try {
-      await queue.add('process', { processingJobId: fx.jobId }, { jobId: fx.jobId });
+      await queue.add('process', { processingJobId: fx.aiPackJobId }, { jobId: fx.aiPackJobId });
 
-      // Wait until the DB job is completed.
       const deadline = Date.now() + 15_000;
       let status = 'queued';
       while (Date.now() < deadline) {
-        const row = (await db.select().from(processingJobs).where(eq(processingJobs.id, fx.jobId)))[0];
+        const row = (await db.select().from(processingJobs).where(eq(processingJobs.id, fx.aiPackJobId)))[0];
         status = row?.status ?? 'queued';
         if (status === 'completed' || status === 'failed') break;
         await new Promise((r) => setTimeout(r, 200));
       }
       expect(status).toBe('completed');
-      const segs = await db.select().from(transcriptSegments).where(eq(transcriptSegments.meetingId, fx.meetingId));
-      expect(segs.length).toBeGreaterThan(0);
+      const packs = await db.select().from(aiPacks).where(eq(aiPacks.meetingId, fx.meetingId));
+      expect(packs.length).toBe(1);
     } finally {
       await worker.close();
       await queue.close();

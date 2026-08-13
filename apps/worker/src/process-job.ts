@@ -4,172 +4,41 @@ import { schema } from '@loquia/api/db';
 import {
   PipelineError,
   isRetryable,
-  segmentTranscription,
   buildPackSource,
   type AIPackGenerator,
   type AIPackGenerationInput,
   type GenSegment,
-  type ObjectStorageProvider,
-  type TranscriptionProvider,
 } from '@loquia/pipeline';
 
-const { processingJobs, meetings, mediaAssets, transcriptSegments, aiPacks } = schema;
+const { processingJobs, meetings, transcriptSegments, aiPacks } = schema;
 
 export interface WorkerDeps {
   db: Database;
-  storage: ObjectStorageProvider;
-  transcription: TranscriptionProvider;
   generator: AIPackGenerator;
   log: (event: string, fields: Record<string, unknown>) => void;
-  downloadTtlSeconds?: number;
-  /** Enqueue a follow-up job (e.g. the ai_pack job after transcription). */
-  enqueue?: (processingJobId: string) => Promise<void>;
 }
 
 export interface ProcessResult {
   status: 'completed' | 'failed' | 'skipped';
-  segmentCount?: number;
   sectionCount?: number;
   reason?: string;
 }
 
-/** Dispatch a job by type. The worker learned to branch on `job.type` in M4. */
+/**
+ * Worker job dispatch (Milestone 5.2). Since R2 was removed and transcription now
+ * happens inline in the API ingest, the worker's ONLY job is AI Pack generation
+ * (async, storage-independent, Anthropic-backed). Any other job type is a no-op.
+ */
 export async function processJob(deps: WorkerDeps, processingJobId: string): Promise<ProcessResult> {
   const jobRows = await deps.db.select().from(processingJobs).where(eq(processingJobs.id, processingJobId)).limit(1);
   const job = jobRows[0];
   if (!job) return { status: 'skipped', reason: 'not_found' };
   if (job.status === 'completed') return { status: 'skipped', reason: 'already_completed' };
-
-  if (job.type === 'ai_pack') return processAiPackJob(deps, job);
-  if (job.type === 'delete_processing_media') return processDeleteMediaJob(deps, job);
-  return processTranscriptionJob(deps, job);
+  if (job.type !== 'ai_pack') return { status: 'skipped', reason: `unsupported_type:${job.type}` };
+  return processAiPackJob(deps, job);
 }
 
 type JobRow = typeof processingJobs.$inferSelect;
-
-/**
- * Media → transcript. Idempotent: re-delivery of a completed job is a no-op, and
- * reprocessing replaces (never duplicates) segments. On success it enqueues a
- * separate `ai_pack` job so AI Pack generation runs asynchronously (§24, §25).
- */
-async function processTranscriptionJob(deps: WorkerDeps, job: JobRow): Promise<ProcessResult> {
-  const { db, storage, transcription, log } = deps;
-  const processingJobId = job.id;
-
-  const now = new Date();
-  const claimed = await db
-    .update(processingJobs)
-    .set({ status: 'running', stage: 'preparing_audio', startedAt: job.startedAt ?? now, attempt: job.attempt ?? 1, updatedAt: now })
-    .where(and(eq(processingJobs.id, processingJobId), ne(processingJobs.status, 'completed')))
-    .returning();
-  if (!claimed[0]) return { status: 'skipped', reason: 'claimed_elsewhere' };
-
-  log('job_started', { processingJobId, meetingId: job.meetingId, workspaceId: job.workspaceId, type: 'transcription' });
-
-  let aiPackJobId: string | null = null;
-  let deleteJobId: string | null = null;
-  try {
-    const assetRows = job.mediaAssetId
-      ? await db.select().from(mediaAssets).where(eq(mediaAssets.id, job.mediaAssetId)).limit(1)
-      : [];
-    const asset = assetRows[0];
-    if (!asset) throw new PipelineError('invalid_audio', 'Media asset missing');
-
-    const meetingRows = await db.select().from(meetings).where(eq(meetings.id, job.meetingId)).limit(1);
-    const meeting = meetingRows[0];
-    if (!meeting) throw new PipelineError('invalid_audio', 'Meeting missing');
-
-    await db.update(processingJobs).set({ stage: 'transcribing', updatedAt: new Date() }).where(eq(processingJobs.id, processingJobId));
-
-    const download = await storage.createDownloadUrl({ objectKey: asset.objectKey, ttlSeconds: deps.downloadTtlSeconds ?? 3600 });
-    const languageHint = meeting.meetingLanguage && meeting.meetingLanguage !== 'auto' ? meeting.meetingLanguage : undefined;
-
-    log('transcription_started', { processingJobId, provider: transcription.name });
-    const result = await transcription.transcribe({ audioUrl: download.url, mimeType: asset.mimeType, languageHint, diarize: true });
-    log('transcription_completed', { processingJobId, provider: result.provider, providerRequestId: result.providerRequestId, wordCount: result.words.length });
-
-    await db.update(processingJobs).set({ stage: 'identifying_speakers', updatedAt: new Date() }).where(eq(processingJobs.id, processingJobId));
-    const { speakers, segments } = segmentTranscription(result.words);
-
-    const detectedLanguage = result.detectedLanguage ?? meeting.meetingLanguage;
-    const durationMs = result.durationMs ?? (segments.length ? segments[segments.length - 1]!.endMs : 0);
-
-    const jobIds = await db.transaction(async (tx) => {
-      await tx.delete(transcriptSegments).where(eq(transcriptSegments.meetingId, job.meetingId));
-      if (segments.length > 0) {
-        await tx.insert(transcriptSegments).values(
-          segments.map((seg) => ({
-            workspaceId: job.workspaceId,
-            meetingId: job.meetingId,
-            speakerKey: seg.speakerKey,
-            orderIndex: seg.sequence,
-            sequence: seg.sequence,
-            startSeconds: Math.round(seg.startMs / 1000),
-            endSeconds: Math.round(seg.endMs / 1000),
-            startMs: seg.startMs,
-            endMs: seg.endMs,
-            text: seg.text,
-            confidence: seg.avgConfidence != null ? seg.avgConfidence.toFixed(3) : null,
-            language: detectedLanguage,
-          })),
-        );
-      }
-      await tx
-        .update(meetings)
-        .set({ status: 'ready', detectedLanguage, durationSeconds: Math.round(durationMs / 1000), participantCount: speakers.length, speakerAliases: {}, aiPackStatus: 'queued', updatedAt: new Date() })
-        .where(eq(meetings.id, job.meetingId));
-      // Local First: the remote copy is a temporary processing buffer. Now that the
-      // transcript is committed, mark it for deletion and schedule the cleanup job.
-      await tx.update(mediaAssets).set({ status: 'deletion_pending', durationMs }).where(eq(mediaAssets.id, asset.id));
-      await tx
-        .update(processingJobs)
-        .set({
-          status: 'completed',
-          stage: 'ready_for_ai_pack',
-          progress: 100,
-          completedAt: new Date(),
-          errorCode: null,
-          errorMessage: null,
-          provider: result.provider,
-          providerRequestId: result.providerRequestId,
-          model: result.model,
-          metrics: { segmentCount: segments.length, wordCount: result.words.length, speakerCount: speakers.length, providerDurationMs: result.durationMs ?? 0 },
-          updatedAt: new Date(),
-        })
-        .where(eq(processingJobs.id, processingJobId));
-      // Enqueue AI Pack generation as its own job (async; not in the HTTP request).
-      const [aiJob] = await tx
-        .insert(processingJobs)
-        .values({ workspaceId: job.workspaceId, meetingId: job.meetingId, mediaAssetId: job.mediaAssetId, type: 'ai_pack', status: 'queued', stage: 'ready_for_ai_pack', progress: 0 })
-        .returning();
-      // Local First: schedule deletion of the temporary remote processing copy. This
-      // is durably recorded here (after the transcript commit) so a crash before the
-      // enqueue still leaves the job to be swept by the cleanup cron / TTL.
-      const [delJob] = await tx
-        .insert(processingJobs)
-        .values({ workspaceId: job.workspaceId, meetingId: job.meetingId, mediaAssetId: job.mediaAssetId, type: 'delete_processing_media', status: 'queued', stage: 'ready_for_ai_pack', progress: 0 })
-        .returning();
-      return { aiPackJobId: aiJob!.id, deleteJobId: delJob!.id };
-    });
-    aiPackJobId = jobIds.aiPackJobId;
-    deleteJobId = jobIds.deleteJobId;
-
-    log('transcript_persisted', { processingJobId, meetingId: job.meetingId, segmentCount: segments.length, speakerCount: speakers.length });
-    if (aiPackJobId && deps.enqueue) {
-      await deps.enqueue(aiPackJobId);
-      log('ai_pack_enqueued', { processingJobId, meetingId: job.meetingId, aiPackJobId });
-    }
-    if (deleteJobId && deps.enqueue) {
-      await deps.enqueue(deleteJobId);
-      log('remote_cleanup_scheduled', { processingJobId, meetingId: job.meetingId, deleteJobId });
-    }
-    log('job_completed', { processingJobId, meetingId: job.meetingId });
-    return { status: 'completed', segmentCount: segments.length };
-  } catch (err) {
-    await failJob(deps, job, err, { failMeeting: true });
-    throw err;
-  }
-}
 
 /**
  * Transcript → AI Pack. Idempotent (generationKey is unique per meeting; a
@@ -284,7 +153,7 @@ async function processAiPackJob(deps: WorkerDeps, job: JobRow): Promise<ProcessR
     return { status: 'completed', sectionCount: source.sections.length };
   } catch (err) {
     // Failure preserves the transcript AND any current AI Pack; only mark status.
-    await failJob(deps, job, err, { failMeeting: false });
+    await failJob(deps, job, err);
     if (!isRetryable(err)) {
       await db.update(meetings).set({ aiPackStatus: 'failed', updatedAt: new Date() }).where(eq(meetings.id, job.meetingId));
     }
@@ -292,58 +161,8 @@ async function processAiPackJob(deps: WorkerDeps, job: JobRow): Promise<ProcessR
   }
 }
 
-/**
- * Delete the temporary remote processing copy (Local First §24/§25). Runs only
- * after the transcript is already persisted, so it NEVER blocks or reprocesses
- * transcription. Storage delete happens first; on success the asset is marked
- * `deleted`. A storage failure marks the asset `delete_failed` and rethrows so
- * BullMQ retries with backoff — the transcript and AI Pack are untouched.
- */
-async function processDeleteMediaJob(deps: WorkerDeps, job: JobRow): Promise<ProcessResult> {
-  const { db, storage, log } = deps;
-  const processingJobId = job.id;
-
-  const now = new Date();
-  const claimed = await db
-    .update(processingJobs)
-    .set({ status: 'running', stage: 'ready_for_ai_pack', startedAt: job.startedAt ?? now, attempt: job.attempt ?? 1, updatedAt: now })
-    .where(and(eq(processingJobs.id, processingJobId), ne(processingJobs.status, 'completed')))
-    .returning();
-  if (!claimed[0]) return { status: 'skipped', reason: 'claimed_elsewhere' };
-
-  const assetRows = job.mediaAssetId
-    ? await db.select().from(mediaAssets).where(eq(mediaAssets.id, job.mediaAssetId)).limit(1)
-    : [];
-  const asset = assetRows[0];
-  // Nothing to delete (already gone / never uploaded) — treat as success.
-  if (!asset || asset.status === 'deleted') {
-    await db.update(processingJobs).set({ status: 'completed', progress: 100, completedAt: new Date(), updatedAt: new Date() }).where(eq(processingJobs.id, processingJobId));
-    log('remote_cleanup_noop', { processingJobId, meetingId: job.meetingId });
-    return { status: 'completed', reason: 'nothing_to_delete' };
-  }
-
-  log('remote_cleanup_started', { processingJobId, meetingId: job.meetingId, mediaAssetId: asset.id });
-  try {
-    await storage.deleteObject(asset.objectKey); // storage first
-    await db.transaction(async (tx) => {
-      await tx.update(mediaAssets).set({ status: 'deleted', deletedAt: new Date() }).where(eq(mediaAssets.id, asset.id));
-      await tx.update(processingJobs).set({ status: 'completed', progress: 100, completedAt: new Date(), errorCode: null, errorMessage: null, updatedAt: new Date() }).where(eq(processingJobs.id, processingJobId));
-    });
-    log('remote_media_deleted', { processingJobId, meetingId: job.meetingId, mediaAssetId: asset.id });
-    return { status: 'completed' };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    // Mark the asset delete_failed and requeue (retryable) — the cleanup cron / TTL
-    // is the backstop if retries are exhausted. Transcript/AI Pack stay valid.
-    await db.update(mediaAssets).set({ status: 'delete_failed' }).where(eq(mediaAssets.id, asset.id));
-    await db.update(processingJobs).set({ status: 'queued', errorCode: 'remote_delete_failed', errorMessage: message.slice(0, 500), attempt: (job.attempt ?? 1) + 1, updatedAt: new Date() }).where(eq(processingJobs.id, processingJobId));
-    log('remote_media_delete_failed', { processingJobId, meetingId: job.meetingId, mediaAssetId: asset.id, error: message });
-    throw err;
-  }
-}
-
 /** Shared failure handling: classify retryable vs permanent, record for audit. */
-async function failJob(deps: WorkerDeps, job: JobRow, err: unknown, opts: { failMeeting: boolean }): Promise<void> {
+async function failJob(deps: WorkerDeps, job: JobRow, err: unknown): Promise<void> {
   const { db, log } = deps;
   const retryable = isRetryable(err);
   const category = err instanceof PipelineError ? err.category : 'unknown';
@@ -353,9 +172,5 @@ async function failJob(deps: WorkerDeps, job: JobRow, err: unknown, opts: { fail
     .update(processingJobs)
     .set({ status: retryable ? 'queued' : 'failed', errorCode: category, errorMessage: message.slice(0, 500), attempt: (job.attempt ?? 1) + 1, updatedAt: new Date() })
     .where(eq(processingJobs.id, job.id));
-  if (!retryable && opts.failMeeting) {
-    await db.update(meetings).set({ status: 'failed', updatedAt: new Date() }).where(eq(meetings.id, job.meetingId));
-    if (job.mediaAssetId) await db.update(mediaAssets).set({ status: 'failed' }).where(eq(mediaAssets.id, job.mediaAssetId));
-  }
   log('job_failed', { processingJobId: job.id, type: job.type, category, retryable });
 }

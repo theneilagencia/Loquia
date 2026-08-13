@@ -1,31 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { generateObjectKey, sanitizeFilename, validateUpload } from './object-key';
+import { isAcceptedAudioMime } from './media-format';
 import { segmentTranscription } from './segmentation';
 import { PipelineError, isRetryable } from './errors';
 import { MockTranscriptionAdapter } from './adapters/mock-transcription';
-import { createStorageProvider, createTranscriptionProvider } from './factory';
+import { createTranscriptionProvider } from './factory';
 import type { TranscriptionWord } from './transcription';
 
-describe('object key + filename', () => {
-  it('sanitizes filenames and strips paths/accents', () => {
-    expect(sanitizeFilename('../../etc/pásswd.mp3')).toBe('passwd.mp3');
-    expect(sanitizeFilename('Reunião final.WAV')).toBe('Reuniao-final.wav');
-    expect(sanitizeFilename('no-ext', 'audio/mpeg')).toBe('no-ext.mp3');
-  });
-
-  it('builds a workspace-scoped key that never trusts a client path', () => {
-    const key = generateObjectKey({ workspaceId: 'w1', meetingId: 'm1', mediaAssetId: 'a1', filename: '/tmp/evil/x.webm', mimeType: 'audio/webm' });
-    expect(key).toBe('workspace/w1/meetings/m1/a1/x.webm');
-    expect(key).not.toContain('..');
-  });
-});
-
-describe('upload validation', () => {
-  it('rejects unsupported types and oversize files', () => {
-    expect(validateUpload({ mimeType: 'application/zip', sizeBytes: 10, maxBytes: 100 }).ok).toBe(false);
-    expect(validateUpload({ mimeType: 'audio/mpeg', sizeBytes: 200, maxBytes: 100 }).code).toBe('file_too_large');
-    expect(validateUpload({ mimeType: 'audio/mpeg', sizeBytes: 0, maxBytes: 100 }).code).toBe('empty_file');
-    expect(validateUpload({ mimeType: 'audio/wav', sizeBytes: 50, maxBytes: 100 }).ok).toBe(true);
+describe('accepted audio MIME (M5.2)', () => {
+  it('accepts audio types (with codecs) and rejects others', () => {
+    expect(isAcceptedAudioMime('audio/webm;codecs=opus')).toBe(true);
+    expect(isAcceptedAudioMime('audio/wav')).toBe(true);
+    expect(isAcceptedAudioMime('audio/mpeg')).toBe(true);
+    expect(isAcceptedAudioMime('application/zip')).toBe(false);
+    expect(isAcceptedAudioMime('text/plain')).toBe(false);
   });
 });
 
@@ -98,11 +85,9 @@ describe('provider factory (no silent prod fallback)', () => {
   it('defaults to mock in dev but throws in production without config', () => {
     expect(createTranscriptionProvider({ NODE_ENV: 'development' }).name).toBe('mock');
     expect(() => createTranscriptionProvider({ NODE_ENV: 'production' })).toThrow();
-    expect(() => createStorageProvider({ NODE_ENV: 'production' }, { dir: '/tmp/x', baseUrl: 'http://x' })).toThrow();
   });
 
   it('throws when a real provider is selected but misconfigured', () => {
     expect(() => createTranscriptionProvider({ TRANSCRIPTION_PROVIDER: 'deepgram' })).toThrow();
-    expect(() => createStorageProvider({ STORAGE_PROVIDER: 'r2' }, { dir: '/tmp/x', baseUrl: 'http://x' })).toThrow();
   });
 });

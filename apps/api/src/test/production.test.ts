@@ -1,13 +1,17 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
-import { MockStorageAdapter } from '@loquia/pipeline';
+import { MockTranscriptionAdapter } from '@loquia/pipeline';
 import { buildApp } from '../app';
 import type { AppContext } from '../context';
-import { aiPacks, mediaAssets, meetings, passwordResetTokens, processingJobs, sessions, transcriptSegments } from '../db/schema';
+import { aiPacks, meetings, passwordResetTokens, processingJobs, sessions, transcriptSegments } from '../db/schema';
 import { hashToken } from '../lib/crypto';
 import { ConsoleEmailProvider } from '../email/console';
-import { computeRetention, runMediaCleanup } from '../services/retention';
 import { createUser, createWorkspace, login, makeTestApp, testEnv, truncateAll, type TestApp } from './helpers';
+
+/** A full AppContext with all-mock providers for building custom test apps. */
+function testCtx(env: ReturnType<typeof testEnv>, db: TestApp['db']): AppContext {
+  return { env, db, transcription: new MockTranscriptionAdapter(), email: new ConsoleEmailProvider(), enqueue: async () => {} };
+}
 
 let h: TestApp;
 const emailBox = () => h.app.ctx.email as ConsoleEmailProvider;
@@ -103,93 +107,43 @@ describe('password reset', () => {
   });
 });
 
-describe('retention + cleanup', () => {
-  it('computes policy from the store-audio setting and cleans expired media', async () => {
-    // Local First: the remote copy is always a temporary discard-after-processing
-    // copy with a TTL backstop derived from REMOTE_MEDIA_MAX_TTL_HOURS.
-    const env = testEnv({ REMOTE_MEDIA_MAX_TTL_HOURS: '12' });
-    const computed = computeRetention(env, new Date());
-    expect(computed.retentionPolicy).toBe('discard_after_processing');
-    expect(computed.expiresAt).toBeInstanceOf(Date);
-    expect(computed.expiresAt!.getTime()).toBeGreaterThan(Date.now());
-
-    // Seed a copy pending remote cleanup and run the sweep with mock storage.
-    const ws = await createWorkspace(h.db);
-    const uid = await createUser(h.db, { email: 'r@acme.com', workspaceId: ws });
-    const [m] = await h.db.insert(meetings).values({ workspaceId: ws, ownerId: uid, title: 'M', source: 'upload', status: 'ready', meetingLanguage: 'pt-BR', durationSeconds: 1, participantCount: 1 }).returning();
-    const storage = new MockStorageAdapter('/tmp/loquia-cleanup-test', 'http://localhost:4000');
-    const key = `workspace/${ws}/meetings/${m!.id}/a/audio.webm`;
-    storage.putObjectSync(key, new Uint8Array([1, 2, 3]), 'audio/webm');
-    await h.db.insert(mediaAssets).values({ workspaceId: ws, meetingId: m!.id, storageProvider: 'mock', bucket: 'mock', objectKey: key, originalFilename: 'a.webm', mimeType: 'audio/webm', status: 'deletion_pending', retentionPolicy: 'discard_after_processing' });
-
-    const result = await runMediaCleanup({ db: h.db, storage });
-    expect(result.deleted).toBe(1);
-    const asset = (await h.db.select().from(mediaAssets).where(eq(mediaAssets.meetingId, m!.id)))[0]!;
-    expect(asset.status).toBe('deleted');
-    expect(await storage.headObject(key).then((s) => s.exists)).toBe(false);
-    // Transcript/meeting are never touched by retention.
-    const meeting = (await h.db.select().from(meetings).where(eq(meetings.id, m!.id)))[0]!;
-    expect(meeting.status).toBe('ready');
-  });
-});
-
 describe('delete meeting', () => {
-  it('deletes storage first, then all rows; a storage failure keeps the rows (retryable)', async () => {
+  it('removes the meeting and all server-side rows (no remote audio to delete)', async () => {
     const ws = await createWorkspace(h.db);
     const uid = await createUser(h.db, { email: 'del@acme.com', workspaceId: ws, role: 'owner' });
     const cookie = await login(h.app, 'del@acme.com');
 
-    async function seedMeeting(): Promise<string> {
-      const [m] = await h.db.insert(meetings).values({ workspaceId: ws, ownerId: uid, title: 'To delete', source: 'upload', status: 'ready', meetingLanguage: 'pt-BR', durationSeconds: 1, participantCount: 1 }).returning();
-      await h.db.insert(mediaAssets).values({ workspaceId: ws, meetingId: m!.id, storageProvider: 'mock', bucket: 'mock', objectKey: `k/${m!.id}`, originalFilename: 'a.webm', mimeType: 'audio/webm', status: 'ready' });
-      await h.db.insert(transcriptSegments).values({ workspaceId: ws, meetingId: m!.id, speakerKey: 'sp1', orderIndex: 0, sequence: 0, startSeconds: 0, endSeconds: 1, text: 'oi', language: 'pt-BR' });
-      await h.db.insert(aiPacks).values({ workspaceId: ws, meetingId: m!.id, version: 1, isCurrent: true, sourceSections: [] });
-      return m!.id;
-    }
+    const [m] = await h.db.insert(meetings).values({ workspaceId: ws, ownerId: uid, title: 'To delete', source: 'recording', status: 'ready', meetingLanguage: 'pt-BR', durationSeconds: 1, participantCount: 1 }).returning();
+    await h.db.insert(transcriptSegments).values({ workspaceId: ws, meetingId: m!.id, speakerKey: 'sp1', orderIndex: 0, sequence: 0, startSeconds: 0, endSeconds: 1, text: 'oi', language: 'pt-BR' });
+    await h.db.insert(aiPacks).values({ workspaceId: ws, meetingId: m!.id, version: 1, isCurrent: true, sourceSections: [] });
 
-    // Success path on the default (mock) storage.
-    const okId = await seedMeeting();
-    const del = await h.app.inject({ method: 'DELETE', url: `/api/meetings/${okId}`, headers: { cookie } });
+    const del = await h.app.inject({ method: 'DELETE', url: `/api/meetings/${m!.id}`, headers: { cookie } });
     expect(del.statusCode).toBe(200);
-    expect((await h.db.select().from(meetings).where(eq(meetings.id, okId)))).toHaveLength(0);
-    expect((await h.db.select().from(transcriptSegments).where(eq(transcriptSegments.meetingId, okId)))).toHaveLength(0);
-    expect((await h.db.select().from(aiPacks).where(eq(aiPacks.meetingId, okId)))).toHaveLength(0);
-
-    // Failure path: a storage that throws on delete → 502, rows preserved.
-    const failId = await seedMeeting();
-    const env = testEnv();
-    const failingStorage = { name: 'mock', createUploadUrl: async () => ({ url: '', method: 'PUT' as const, headers: {}, expiresAt: '' }), createDownloadUrl: async () => ({ url: '', expiresAt: '' }), headObject: async () => ({ exists: false }), getObject: async () => new Uint8Array(), deleteObject: async () => { throw new Error('R2 down'); } };
-    const ctx: AppContext = { env, db: h.db, storage: failingStorage, email: new ConsoleEmailProvider(), enqueue: async () => {} };
-    const failApp = await buildApp(ctx);
-    await failApp.ready();
-    const failCookie = await login(failApp, 'del@acme.com');
-    const failDel = await failApp.inject({ method: 'DELETE', url: `/api/meetings/${failId}`, headers: { cookie: failCookie } });
-    expect(failDel.statusCode).toBe(502);
-    expect((await h.db.select().from(meetings).where(eq(meetings.id, failId)))).toHaveLength(1); // kept for retry
-    await failApp.close();
+    expect((await h.db.select().from(meetings).where(eq(meetings.id, m!.id)))).toHaveLength(0);
+    expect((await h.db.select().from(transcriptSegments).where(eq(transcriptSegments.meetingId, m!.id)))).toHaveLength(0);
+    expect((await h.db.select().from(aiPacks).where(eq(aiPacks.meetingId, m!.id)))).toHaveLength(0);
   });
 });
 
-describe('quotas + idempotency', () => {
-  it('rejects a new upload once the workspace active-job limit is reached', async () => {
+describe('quotas', () => {
+  it('rejects a new process-audio once the workspace active-job limit is reached', async () => {
     const env = testEnv({ MAX_ACTIVE_PROCESSING_JOBS_PER_WORKSPACE: '1' });
-    const ctx: AppContext = { env, db: h.db, storage: new MockStorageAdapter('/tmp/loquia-quota-test', 'http://localhost:4000'), email: new ConsoleEmailProvider(), enqueue: async () => {} };
-    const app = await buildApp(ctx);
+    const app = await buildApp(testCtx(env, h.db));
     await app.ready();
     const ws = await createWorkspace(h.db);
     const uid = await createUser(h.db, { email: 'q@acme.com', workspaceId: ws, role: 'owner' });
     const cookie = await login(app, 'q@acme.com');
 
-    const intent = () => app.inject({ method: 'POST', url: '/api/meetings/upload-intent', headers: { cookie }, payload: { title: 'A', source: 'upload', meetingLanguage: 'pt-BR', filename: 'a.mp3', mimeType: 'audio/mpeg', sizeBytes: 1000 } });
+    const send = () => app.inject({ method: 'POST', url: '/api/meetings/process-audio?title=A&meetingLanguage=pt-BR', headers: { cookie, 'content-type': 'audio/webm' }, payload: Buffer.from([1, 2, 3, 4]) });
 
-    // With no jobs in flight, an upload intent is accepted.
-    expect((await intent()).statusCode).toBe(200);
+    // With no jobs in flight, an ingest is accepted (202, processed detached).
+    expect((await send()).statusCode).toBe(202);
 
     // Seed a queued processing job so the workspace is at its (=1) limit.
-    const [m] = await h.db.insert(meetings).values({ workspaceId: ws, ownerId: uid, title: 'Busy', source: 'upload', status: 'processing', meetingLanguage: 'pt-BR', durationSeconds: 1, participantCount: 0 }).returning();
-    await h.db.insert(processingJobs).values({ workspaceId: ws, meetingId: m!.id, type: 'media_processing', status: 'queued', stage: 'received', progress: 0 });
+    const [m] = await h.db.insert(meetings).values({ workspaceId: ws, ownerId: uid, title: 'Busy', source: 'recording', status: 'processing', meetingLanguage: 'pt-BR', durationSeconds: 1, participantCount: 0 }).returning();
+    await h.db.insert(processingJobs).values({ workspaceId: ws, meetingId: m!.id, type: 'transcription', status: 'queued', stage: 'received', progress: 0 });
 
-    const blocked = await intent();
+    const blocked = await send();
     expect(blocked.statusCode).toBe(429);
     expect(blocked.json().error.code).toBe('quota_exceeded');
     await app.close();

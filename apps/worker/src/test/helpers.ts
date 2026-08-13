@@ -1,9 +1,9 @@
 import { sql } from 'drizzle-orm';
 import { createDb, runMigrations, schema, type Database } from '@loquia/api/db';
-import { MockAIPackGenerator, MockStorageAdapter, MockTranscriptionAdapter } from '@loquia/pipeline';
+import { MockAIPackGenerator } from '@loquia/pipeline';
 import type { WorkerDeps } from '../process-job';
 
-const { workspaces, users, meetings, mediaAssets, processingJobs } = schema;
+const { workspaces, users, meetings, transcriptSegments, processingJobs } = schema;
 
 export const TEST_DB_URL =
   process.env.TEST_DATABASE_URL ?? 'postgres://postgres@127.0.0.1:5433/loquia_test';
@@ -27,20 +27,10 @@ export async function truncateAll(db: Database): Promise<void> {
   `);
 }
 
-export function makeMockStorage(): MockStorageAdapter {
-  return new MockStorageAdapter('/tmp/loquia-worker-test', 'http://localhost:4000');
-}
-
-/** Build WorkerDeps with all-mock providers for tests. */
-export function makeWorkerDeps(
-  db: Database,
-  storage: MockStorageAdapter,
-  extra?: Partial<WorkerDeps>,
-): WorkerDeps {
+/** Build WorkerDeps (AI-Pack-only) with a mock generator for tests. */
+export function makeWorkerDeps(db: Database, extra?: Partial<WorkerDeps>): WorkerDeps {
   return {
     db,
-    storage,
-    transcription: new MockTranscriptionAdapter(),
     generator: new MockAIPackGenerator(),
     log: noopLog,
     ...extra,
@@ -50,33 +40,31 @@ export function makeWorkerDeps(
 export interface Fixture {
   workspaceId: string;
   meetingId: string;
-  mediaAssetId: string;
-  jobId: string;
+  /** A queued ai_pack job ready for the worker. */
+  aiPackJobId: string;
 }
 
-/** Seed a workspace/user/meeting/uploaded-media/queued-job ready for processing. */
-export async function seedProcessable(
-  db: Database,
-  storage: MockStorageAdapter,
-  opts?: { meetingLanguage?: string },
-): Promise<Fixture> {
+/**
+ * Seed a workspace/user/meeting with a persisted transcript and a queued ai_pack
+ * job — the exact state the API ingest leaves behind for the worker (M5.2).
+ */
+export async function seedAiPackReady(db: Database, opts?: { meetingLanguage?: string }): Promise<Fixture> {
   const [ws] = await db.insert(workspaces).values({ name: 'Org', slug: 'org', plan: 'pro', seats: 5 }).returning();
   const [user] = await db.insert(users).values({ email: 'o@org.com', name: 'O', role: 'owner', status: 'active', workspaceId: ws!.id }).returning();
+  const lang = opts?.meetingLanguage ?? 'pt-BR';
   const [meeting] = await db
     .insert(meetings)
-    .values({ workspaceId: ws!.id, ownerId: user!.id, title: 'Uploaded meeting', source: 'upload', status: 'processing', meetingLanguage: opts?.meetingLanguage ?? 'pt-BR', durationSeconds: 0, participantCount: 0 })
+    .values({ workspaceId: ws!.id, ownerId: user!.id, title: 'Recorded meeting', source: 'recording', status: 'ready', meetingLanguage: lang, detectedLanguage: lang, durationSeconds: 12, participantCount: 2, aiPackStatus: 'queued' })
     .returning();
-  const objectKey = `workspace/${ws!.id}/meetings/${meeting!.id}/asset/audio.webm`;
-  storage.putObjectSync(objectKey, new Uint8Array([1, 2, 3, 4]), 'audio/webm');
-  const [asset] = await db
-    .insert(mediaAssets)
-    .values({ workspaceId: ws!.id, meetingId: meeting!.id, storageProvider: 'mock', bucket: 'mock', objectKey, originalFilename: 'audio.webm', mimeType: 'audio/webm', sizeBytes: 4, status: 'uploaded', uploadedAt: new Date() })
-    .returning();
+  await db.insert(transcriptSegments).values([
+    { workspaceId: ws!.id, meetingId: meeting!.id, speakerKey: 'sp1', orderIndex: 0, sequence: 0, startSeconds: 0, endSeconds: 4, startMs: 0, endMs: 4000, text: 'A decisão é lançar o piloto.', language: lang },
+    { workspaceId: ws!.id, meetingId: meeting!.id, speakerKey: 'sp2', orderIndex: 1, sequence: 1, startSeconds: 4, endSeconds: 8, startMs: 4000, endMs: 8000, text: 'Concordo, vamos seguir.', language: lang },
+  ]);
   const [job] = await db
     .insert(processingJobs)
-    .values({ workspaceId: ws!.id, meetingId: meeting!.id, mediaAssetId: asset!.id, type: 'media_processing', status: 'queued', stage: 'received', progress: 0 })
+    .values({ workspaceId: ws!.id, meetingId: meeting!.id, type: 'ai_pack', status: 'queued', stage: 'ready_for_ai_pack', progress: 0 })
     .returning();
-  return { workspaceId: ws!.id, meetingId: meeting!.id, mediaAssetId: asset!.id, jobId: job!.id };
+  return { workspaceId: ws!.id, meetingId: meeting!.id, aiPackJobId: job!.id };
 }
 
 export const noopLog = () => {};

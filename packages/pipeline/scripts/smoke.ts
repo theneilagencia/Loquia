@@ -9,7 +9,6 @@
  *
  * Run: pnpm --filter @loquia/pipeline smoke
  */
-import { R2StorageAdapter } from '../src/adapters/r2-storage';
 import { DeepgramTranscriptionAdapter } from '../src/adapters/deepgram-transcription';
 import { LLMAIPackGenerator } from '../src/adapters/llm-ai-pack';
 import { validateCandidate, LLM_SECTION_KEYS } from '../src/ai-pack-schema';
@@ -43,35 +42,6 @@ function silenceWav(): Uint8Array {
   buf.write('data', 36);
   buf.writeUInt32LE(dataLen, 40);
   return new Uint8Array(buf);
-}
-
-async function smokeR2(): Promise<void> {
-  const { R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME } = process.env;
-  if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_BUCKET_NAME) {
-    record('R2 storage round-trip', 'NOT RUN', 'credentials unavailable');
-    return;
-  }
-  try {
-    const r2 = new R2StorageAdapter({
-      accountId: R2_ACCOUNT_ID,
-      accessKeyId: R2_ACCESS_KEY_ID,
-      secretAccessKey: R2_SECRET_ACCESS_KEY,
-      bucket: R2_BUCKET_NAME,
-    });
-    const key = `smoke/${Date.now()}-${Math.round(Math.random() * 1e6)}.txt`;
-    const body = new TextEncoder().encode('loquia-smoke');
-    const up = await r2.createUploadUrl({ objectKey: key, contentType: 'text/plain', ttlSeconds: 120 });
-    const put = await fetch(up.url, { method: 'PUT', headers: up.headers, body });
-    if (!put.ok) throw new Error(`PUT ${put.status}`);
-    const stat = await r2.headObject(key);
-    if (!stat.exists || stat.sizeBytes !== body.byteLength) throw new Error('HEAD mismatch');
-    const got = await r2.getObject(key);
-    if (new TextDecoder().decode(got) !== 'loquia-smoke') throw new Error('GET mismatch');
-    await r2.deleteObject(key);
-    record('R2 storage round-trip', 'PASS', 'PUT → HEAD → GET → DELETE');
-  } catch (err) {
-    record('R2 storage round-trip', 'FAIL', err instanceof Error ? err.message : String(err));
-  }
 }
 
 async function smokeDeepgram(): Promise<void> {
@@ -128,7 +98,6 @@ async function smokeAIPack(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  await smokeR2();
   await smokeDeepgram();
   await smokeAIPack();
 

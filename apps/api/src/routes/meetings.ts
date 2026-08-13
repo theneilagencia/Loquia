@@ -6,7 +6,6 @@ import {
   aiPacks,
   exportHistory,
   markers,
-  mediaAssets,
   meetings,
   processingJobs,
   transcriptSegments,
@@ -133,32 +132,16 @@ export async function registerMeetingRoutes(app: FastifyInstance): Promise<void>
   app.delete('/:id', async (request) => {
     const auth = requireAuth(request.auth);
     const meeting = await loadOwnedMeeting(app, auth, (request.params as { id: string }).id);
-    const { storage } = app.ctx;
 
-    const assets = await db.select().from(mediaAssets).where(eq(mediaAssets.meetingId, meeting.id));
-    let failed = 0;
-    for (const asset of assets) {
-      if (asset.status === 'deleted') continue;
-      try {
-        await storage.deleteObject(asset.objectKey);
-        await db.update(mediaAssets).set({ status: 'deleted', deletedAt: new Date() }).where(eq(mediaAssets.id, asset.id));
-        request.log.info({ event: 'media_deleted', meetingId: meeting.id, mediaAssetId: asset.id, reason: 'meeting_delete' }, 'media deleted');
-      } catch (err) {
-        failed += 1;
-        request.log.warn({ event: 'cleanup_failed', meetingId: meeting.id, mediaAssetId: asset.id, error: err instanceof Error ? err.message : String(err) }, 'media delete failed');
-      }
-    }
-    if (failed > 0) {
-      // Do not claim completion; the caller (or a retry) can call delete again.
-      throw errors.storage('Some media could not be deleted; please retry.');
-    }
-
+    // Local First / M5.2: there is no remote audio to delete — the recording lives
+    // on the user's device (removed there separately). Deleting the meeting removes
+    // the server-side data; the on-device copy is cleared by the client (§32).
     await db.transaction(async (tx) => {
       await tx.delete(exportHistory).where(eq(exportHistory.meetingId, meeting.id));
       await tx.delete(meetings).where(eq(meetings.id, meeting.id)); // cascades to the rest
       await writeAudit(tx, { action: 'meeting_deleted', actorId: auth.user.id, actorLabel: auth.user.name, targetType: 'meeting', targetId: meeting.id, targetLabel: meeting.title, workspaceId: meeting.workspaceId });
     });
-    request.log.info({ event: 'meeting_deleted', meetingId: meeting.id, workspaceId: meeting.workspaceId, mediaCount: assets.length }, 'meeting deleted');
+    request.log.info({ event: 'meeting_deleted', meetingId: meeting.id, workspaceId: meeting.workspaceId }, 'meeting deleted');
     return { deleted: true };
   });
 

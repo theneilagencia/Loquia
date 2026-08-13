@@ -1,11 +1,9 @@
-import { Queue, Worker } from 'bullmq';
+import { Worker } from 'bullmq';
 import { createDb } from '@loquia/api/db';
 import { loadEnv } from '@loquia/api/env';
 import {
   createAIPackGenerator,
   createRedis,
-  createStorageProvider,
-  createTranscriptionProvider,
   MEETING_QUEUE,
   type MeetingJobData,
 } from '@loquia/pipeline';
@@ -22,31 +20,15 @@ async function main(): Promise<void> {
   if (!env.REDIS_URL) throw new Error('REDIS_URL is required to run the worker');
 
   const { db } = createDb(env.DATABASE_URL);
-  const storage = createStorageProvider(env, {
-    dir: env.MEDIA_MOCK_DIR,
-    baseUrl: env.PUBLIC_API_URL ?? `http://localhost:${env.API_PORT}`,
-  });
-  const transcription = createTranscriptionProvider(env);
+  // M5.2: the worker's only job is AI Pack generation (async, storage-independent).
+  // Transcription now happens inline in the API ingest; there is no object storage.
   const generator = createAIPackGenerator(env);
-  log('worker_config', { storage: storage.name, transcription: transcription.name, aiPack: generator.name, aiPackModel: generator.model });
-
-  // Producer so a transcription job can chain the follow-up ai_pack job.
-  const producer = new Queue<MeetingJobData>(MEETING_QUEUE, { connection: createRedis(env.REDIS_URL) });
-  const enqueue = async (processingJobId: string): Promise<void> => {
-    await producer.add(
-      'process',
-      { processingJobId },
-      { jobId: processingJobId, attempts: 3, backoff: { type: 'exponential', delay: 2000 }, removeOnComplete: 100, removeOnFail: 500 },
-    );
-  };
+  log('worker_config', { aiPack: generator.name, aiPackModel: generator.model });
 
   const worker = new Worker<MeetingJobData>(
     MEETING_QUEUE,
     async (job) => {
-      await processJob(
-        { db, storage, transcription, generator, log, enqueue, downloadTtlSeconds: env.MEDIA_DOWNLOAD_URL_TTL_SECONDS },
-        job.data.processingJobId,
-      );
+      await processJob({ db, generator, log }, job.data.processingJobId);
     },
     { connection: createRedis(env.REDIS_URL), concurrency: 4 },
   );
@@ -62,7 +44,6 @@ async function main(): Promise<void> {
     log('shutdown_started', { signal });
     try {
       await worker.close(); // waits for the active job to complete
-      await producer.close();
       log('shutdown_complete', {});
       process.exit(0);
     } catch (err) {

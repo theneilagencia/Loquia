@@ -9,7 +9,7 @@
  */
 import { Queue } from 'bullmq';
 import { sql } from 'drizzle-orm';
-import { createRedis, createStorageProvider, MEETING_QUEUE } from '@loquia/pipeline';
+import { createRedis, MEETING_QUEUE } from '@loquia/pipeline';
 import { createDb } from '../src/db/client';
 import { loadEnv } from '../src/env';
 import { createEmailProvider } from '../src/email/factory';
@@ -21,8 +21,7 @@ const rec = (name: string, status: Status, detail?: string) => results.push({ na
 async function main(): Promise<void> {
   const env = loadEnv();
 
-  // Config presence (no secret values printed).
-  rec('config: storage provider', 'CONFIG', env.STORAGE_PROVIDER ?? (env.R2_ACCOUNT_ID ? 'r2 (implicit)' : 'mock'));
+  // Config presence (no secret values printed). M5.2: no object storage.
   rec('config: transcription provider', 'CONFIG', env.TRANSCRIPTION_PROVIDER ?? (env.DEEPGRAM_API_KEY ? 'deepgram (implicit)' : 'mock'));
   rec('config: AI Pack provider', 'CONFIG', env.AI_PACK_PROVIDER ?? (env.ANTHROPIC_API_KEY ? 'anthropic (implicit)' : 'mock'));
   rec('config: email provider', 'CONFIG', env.EMAIL_PROVIDER ?? (env.EMAIL_API_KEY ? 'resend (implicit)' : 'console'));
@@ -56,34 +55,16 @@ async function main(): Promise<void> {
     rec('queue enqueue round-trip', 'NOT RUN', 'REDIS_URL unavailable');
   }
 
-  // Storage: a real R2 round-trip when configured; else a mock fs round-trip.
+  // M5.2: object storage was removed. Verify the temp-media dir is writable — the
+  // API streams the audio there during ingest and deletes it after transcription.
   try {
-    const storage = createStorageProvider(env, { dir: env.MEDIA_MOCK_DIR, baseUrl: env.PUBLIC_API_URL ?? `http://localhost:${env.API_PORT}` });
-    if (storage.name === 'r2') {
-      // Local First §47: full temporary-processing lifecycle — presign PUT → upload
-      // → HEAD (present) → DELETE → HEAD (absent). This mirrors the real remote
-      // cleanup after a transcript is persisted.
-      const key = `smoke/${Date.now()}.txt`;
-      const up = await storage.createUploadUrl({ objectKey: key, contentType: 'text/plain', ttlSeconds: 120 });
-      const put = await fetch(up.url, { method: 'PUT', headers: up.headers, body: new TextEncoder().encode('loquia-smoke') });
-      if (!put.ok) throw new Error(`PUT ${put.status}`);
-      const present = await storage.headObject(key);
-      await storage.deleteObject(key);
-      const absent = await storage.headObject(key);
-      const ok = present.exists && !absent.exists;
-      rec('R2 temporary-processing lifecycle', ok ? 'PASS' : 'FAIL', 'presign PUT → HEAD(present) → DELETE → HEAD(absent)');
-    } else {
-      // Mock provider: exercise the same lifecycle shape (put → HEAD → delete → HEAD).
-      const key = `smoke/${Date.now()}.txt`;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (storage as any).putObjectSync(key, new TextEncoder().encode('loquia-smoke'), 'text/plain');
-      const present = await storage.headObject(key);
-      await storage.deleteObject(key);
-      const absent = await storage.headObject(key);
-      rec('storage lifecycle (mock)', present.exists && !absent.exists ? 'PASS' : 'FAIL', 'put → HEAD(present) → delete → HEAD(absent)');
-    }
+    const { streamToTempFile, removeTempFile } = await import('../src/services/temp-media');
+    const { Readable } = await import('node:stream');
+    const { path } = await streamToTempFile(Readable.from([Buffer.from('loquia-smoke')]), `smoke-${Date.now()}`, 1024);
+    await removeTempFile(path);
+    rec('temp media write/delete', 'PASS', 'stream → temp file → delete');
   } catch (err) {
-    rec('storage round-trip', 'FAIL', (err as Error).message);
+    rec('temp media write/delete', 'FAIL', (err as Error).message);
   }
 
   // Email: only a live send when a real provider + authorized recipient exist.

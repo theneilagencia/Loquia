@@ -4,7 +4,7 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { ZodError } from 'zod';
 import { Queue } from 'bullmq';
-import { createRedis, createStorageProvider, MEETING_QUEUE } from '@loquia/pipeline';
+import { createRedis, createTranscriptionProvider, MEETING_QUEUE } from '@loquia/pipeline';
 import type { AppContext } from './context';
 import type { Database } from './db/client';
 import type { Env } from './env';
@@ -21,14 +21,11 @@ import { registerMeetingRoutes } from './routes/meetings';
 import { registerSettingsRoutes } from './routes/settings';
 import { registerPresetRoutes } from './routes/presets';
 import { registerJobRoutes } from './routes/jobs';
-import { registerMediaRoutes } from './routes/media';
+import { registerIngestRoutes } from './routes/ingest';
 
-/** Assemble the app context (storage provider + queue producer) from env+db. */
+/** Assemble the app context (transcription provider + queue producer) from env+db. */
 export function createContext(env: Env, db: Database): AppContext {
-  const storage = createStorageProvider(env, {
-    dir: env.MEDIA_MOCK_DIR,
-    baseUrl: env.PUBLIC_API_URL ?? `http://localhost:${env.API_PORT}`,
-  });
+  const transcription = createTranscriptionProvider(env);
 
   let queue: Queue | null = null;
   const enqueue = async (processingJobId: string): Promise<void> => {
@@ -42,15 +39,18 @@ export function createContext(env: Env, db: Database): AppContext {
   };
 
   const email = createEmailProvider(env);
-  return { env, db, storage, email, enqueue };
+  return { env, db, transcription, email, enqueue };
 }
 
 export async function buildApp(input: AppContext | { env: Env; db: Database }): Promise<FastifyInstance> {
   const ctx: AppContext =
-    'storage' in input ? input : createContext(input.env, input.db);
+    'transcription' in input ? input : createContext(input.env, input.db);
   const app = Fastify({
     genReqId: () => newId(),
     trustProxy: true,
+    // Audio ingest streams to a temp file with its own byte cap; this guards the
+    // JSON/other routes and is a coarse upper bound for the raw audio body.
+    bodyLimit: ctx.env.MAX_UPLOAD_SIZE_BYTES,
     logger: {
       level: ctx.env.NODE_ENV === 'test' ? 'silent' : 'info',
       // Never log secrets, tokens, passwords or auth headers.
@@ -156,7 +156,7 @@ export async function buildApp(input: AppContext | { env: Env; db: Database }): 
   await app.register(registerSettingsRoutes, { prefix: '/api/settings' });
   await app.register(registerPresetRoutes, { prefix: '/api/presets' });
   await app.register(registerJobRoutes, { prefix: '/api/jobs' });
-  await app.register(registerMediaRoutes);
+  await app.register(registerIngestRoutes);
 
   return app;
 }
