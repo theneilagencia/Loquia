@@ -202,6 +202,18 @@ a deterministic golden AI-Pack integrity gate. See `docs/production.md`,
 `docs/retention.md`, `docs/golden-test.md`, and the runbook
 `docs/incident-basics.md`.
 
+## Local First (Milestone 5 REVISADA)
+
+**The recording stays on your device; remote object storage is temporary
+processing infrastructure.** The original recording is persisted on-device
+(`LocalMediaStore`: OPFS → IndexedDB), a temporary copy is sent to R2 for
+transcription, and that remote copy is deleted once the transcript is persisted.
+Playback prefers the local copy; another device shows the transcript/AI Pack with
+an honest "stored on another device" state for audio. Privacy language is factual
+(cloud STT is used, so no "never leaves your device" claims). See
+`docs/local-first-media.md`, `docs/privacy-model.md`, `docs/storage.md`,
+`docs/media-pipeline.md`.
+
 ## Limitations (by design, through Milestone 5)
 
 - **STT/diarization**, **AI Pack generation** and **email** run through the

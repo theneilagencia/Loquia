@@ -66,3 +66,14 @@ WebM, OGG (audio) and MP4/WebM (video container).
 A real R2 round-trip (create bucket URL → PUT → HEAD → GET → delete) is only run
 when R2 credentials are configured. Without them it is reported **`NOT RUN —
 credentials unavailable`**.
+
+## Local First (Milestone 5 REVISADA)
+
+`ObjectStorageProvider` is now a **temporary processing buffer**, not the audio
+archive. The primary recording lives on the device in `LocalMediaStore`
+(`apps/web/src/lib/local-media/`, OPFS → IndexedDB → memory). New remote assets
+are `discard_after_processing` and are deleted once the transcript persists
+(storage-first, retryable), with a `REMOTE_MEDIA_MAX_TTL_HOURS` lifecycle
+backstop (mirror it in the R2 bucket lifecycle rule). The smoke exercises the
+full temporary-processing lifecycle: presign PUT → HEAD (present) → DELETE →
+HEAD (absent). See `docs/local-first-media.md`.

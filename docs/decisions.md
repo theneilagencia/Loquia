@@ -45,3 +45,20 @@
     transcript.
 28. Prompt e schema são versionados (`promptVersion`/`schemaVersion`) e persistidos
     para reprodução.
+
+## Milestone 5 REVISADA — Local First
+
+29. **Canonical:** the local recording is the primary copy; remote object storage
+    is temporary processing infrastructure by default. The audio stays on the
+    device; a temporary copy is sent for STT and deleted after the transcript
+    persists. The product keeps working after the remote copy is gone.
+30. `LocalMediaStore` (OPFS → IndexedDB → memory) and `ObjectStorageProvider`
+    (R2) are separate abstractions with different lifetimes. No destructive
+    rename of `ObjectStorageProvider`/`MediaAsset`; the remote row is documented
+    as a temporary RemoteProcessingAsset.
+31. Remote cleanup runs only AFTER the transcript is persisted, is retryable
+    (`delete_processing_media` job + cleanup cron + `REMOTE_MEDIA_MAX_TTL_HOURS`
+    backstop), and never blocks or reprocesses transcription.
+32. Privacy language is factual: the audio DOES leave the device for cloud STT,
+    so absolute claims ("nunca sai do dispositivo", "100% privado") are forbidden.
+    Permanent remote-retention options are removed.

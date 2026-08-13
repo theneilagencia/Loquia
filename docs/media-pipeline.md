@@ -103,3 +103,16 @@ Real R2 and Deepgram smokes require credentials. When
 credentials unavailable`**, never falsely marked PASS. The full pipeline is
 exercised in CI with the mock providers (unit + integration + a real-BullMQ
 worker test + a provider-mocked browser e2e).
+
+## Local First remote lifecycle (Milestone 5 REVISADA)
+
+The remote copy is temporary. After the transcription worker commits the
+transcript, it marks the remote `media_assets` row `deletion_pending` and
+enqueues a `delete_processing_media` job. That job deletes the object
+storage-first and marks the asset `deleted`; a storage failure marks it
+`delete_failed` and requeues (BullMQ retry). The cleanup cron and a
+`REMOTE_MEDIA_MAX_TTL_HOURS` expiry are the backstops. Cleanup NEVER blocks or
+reprocesses transcription — the transcript and AI Pack are already persisted and
+are never touched. Media-asset statuses: `pending_upload → uploaded → processing
+→ deletion_pending → deleted` (or `delete_failed` → retry). `ready` is legacy.
+See `docs/local-first-media.md`.
