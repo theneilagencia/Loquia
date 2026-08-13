@@ -127,3 +127,23 @@ URL), persists `TranscriptSegment[]`, enqueues the `ai_pack` job, and deletes th
 temp file. The worker now only runs the AI Pack job. Failures: transient/timeout
 → `needs_reupload` (retry from the local copy); provider rejection → permanent.
 A per-instance sweep clears stale temp files (`TEMP_MEDIA_MAX_AGE_MS`).
+
+## Milestone 5.2 (adjusted) — async provider callback, not detached processing
+
+The API must never run long transcription work after the HTTP response (Render
+web dynos can restart/redeploy/die). So `POST /api/meetings/process-audio` now:
+streams the audio to a temp file → submits it to Deepgram **in async/callback
+mode** (`?callback=<PUBLIC_API_URL>/api/webhooks/deepgram?token=…`) → persists the
+Deepgram `request_id` on the ProcessingJob → marks it `submitted_to_stt` (status
+running, stage transcribing) → **deletes the temp file** → returns 202. Nothing
+runs detached.
+
+Deepgram later POSTs the finished transcript to `POST /api/webhooks/deepgram`
+(public, no session). The webhook: verifies the shared-secret `token`; binds the
+callback to a known job by `metadata.request_id` (rejects unknown → 404, unauth →
+401); maps the payload via the provider's `parseCallback`; and, **idempotently**,
+persists `TranscriptSegment[]`, marks the meeting ready + job completed, and
+enqueues the AI Pack — responding 2xx only after the result is persisted. A
+re-delivered callback returns `duplicate` without creating a second transcript or
+AI Pack job. A failure callback marks the job failed (needs_reupload | permanent);
+the user retries from the on-device recording (a new submission → new request_id).

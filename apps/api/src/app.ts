@@ -22,10 +22,16 @@ import { registerSettingsRoutes } from './routes/settings';
 import { registerPresetRoutes } from './routes/presets';
 import { registerJobRoutes } from './routes/jobs';
 import { registerIngestRoutes } from './routes/ingest';
+import { registerWebhookRoutes } from './routes/webhooks';
 
 /** Assemble the app context (transcription provider + queue producer) from env+db. */
 export function createContext(env: Env, db: Database): AppContext {
   const transcription = createTranscriptionProvider(env);
+  // The async STT callback must be authenticated in production (§5). Fail fast so
+  // we never run a real provider with the insecure dev fallback secret.
+  if (env.NODE_ENV === 'production' && transcription.name === 'deepgram' && !env.DEEPGRAM_CALLBACK_SECRET) {
+    throw new Error('DEEPGRAM_CALLBACK_SECRET is required in production when TRANSCRIPTION_PROVIDER=deepgram');
+  }
 
   let queue: Queue | null = null;
   const enqueue = async (processingJobId: string): Promise<void> => {
@@ -157,6 +163,7 @@ export async function buildApp(input: AppContext | { env: Env; db: Database }): 
   await app.register(registerPresetRoutes, { prefix: '/api/presets' });
   await app.register(registerJobRoutes, { prefix: '/api/jobs' });
   await app.register(registerIngestRoutes);
+  await app.register(registerWebhookRoutes);
 
   return app;
 }

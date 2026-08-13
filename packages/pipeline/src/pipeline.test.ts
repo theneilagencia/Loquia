@@ -70,14 +70,29 @@ describe('retry classification', () => {
   });
 });
 
-describe('mock transcription → segmentation', () => {
-  it('produces diarized words that segment into a readable transcript', async () => {
+describe('mock transcription → segmentation (async callback model)', () => {
+  it('submits, then maps a callback payload into diarized words that segment', async () => {
     const provider = new MockTranscriptionAdapter();
-    const result = await provider.transcribe({ mimeType: 'audio/webm', diarize: true, languageHint: 'pt-BR' });
-    expect(result.words.length).toBeGreaterThan(10);
-    const segmented = segmentTranscription(result.words);
+    const sub = await provider.submit({ audio: new Uint8Array([1, 2, 3]), mimeType: 'audio/webm', diarize: true, languageHint: 'pt-BR', callbackUrl: 'https://loquia.test/webhooks/deepgram?token=x' });
+    expect(sub.providerRequestId).toMatch(/^mock-req-/);
+
+    const payload = MockTranscriptionAdapter.sampleCallbackPayload(sub.providerRequestId, { language: 'pt-BR' });
+    expect(provider.callbackRequestId(payload)).toBe(sub.providerRequestId);
+    const outcome = provider.parseCallback(payload);
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.result.words.length).toBeGreaterThan(10);
+    const segmented = segmentTranscription(outcome.result.words);
     expect(segmented.speakers.length).toBe(2);
     expect(segmented.segments.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('maps a failure callback into a categorized error', () => {
+    const provider = new MockTranscriptionAdapter();
+    const outcome = provider.parseCallback(MockTranscriptionAdapter.sampleCallbackPayload('mock-req-9', { fail: true }));
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) return;
+    expect(outcome.category).toBe('unsupported_media');
   });
 });
 

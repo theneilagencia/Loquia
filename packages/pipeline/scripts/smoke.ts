@@ -54,9 +54,11 @@ async function smokeDeepgram(): Promise<void> {
       apiKey: process.env.DEEPGRAM_API_KEY,
       model: process.env.DEEPGRAM_MODEL,
     });
-    const res = await dg.transcribe({ audio: silenceWav(), mimeType: 'audio/wav', diarize: true });
-    // Silence yields few/no words; a successful call still returns a valid result.
-    record('Deepgram transcription', 'PASS', `provider=${res.provider} model=${res.model ?? '?'}`);
+    // Async model: submit returns a request_id immediately (the result arrives via
+    // callback later). A placeholder callback URL is fine to validate submission.
+    const callbackUrl = process.env.PUBLIC_API_URL ? `${process.env.PUBLIC_API_URL}/api/webhooks/deepgram?token=smoke` : 'https://example.com/webhooks/deepgram?token=smoke';
+    const sub = await dg.submit({ audio: silenceWav(), mimeType: 'audio/wav', diarize: true, callbackUrl });
+    record('Deepgram async submission', sub.providerRequestId ? 'PASS' : 'FAIL', `request_id=${sub.providerRequestId}`);
   } catch (err) {
     record('Deepgram transcription', 'FAIL', err instanceof Error ? err.message : String(err));
   }

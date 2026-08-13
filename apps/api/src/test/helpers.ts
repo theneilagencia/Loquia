@@ -26,6 +26,7 @@ export function testEnv(extra?: Partial<NodeJS.ProcessEnv>): ReturnType<typeof l
     NODE_ENV: 'test',
     SESSION_SECRET: 'test-secret-0123456789-abcdef',
     TRANSCRIPTION_PROVIDER: 'mock',
+    DEEPGRAM_CALLBACK_SECRET: 'test-callback-secret',
     PUBLIC_API_URL: 'http://localhost:4000',
     REDIS_URL: process.env.TEST_REDIS_URL ?? 'redis://127.0.0.1:6380',
     ...extra,

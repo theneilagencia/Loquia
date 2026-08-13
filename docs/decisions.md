@@ -79,3 +79,17 @@
 36. `MediaAsset` is deprecated (no longer written); `ProcessingJob` is the record
     of a processing attempt (§30). The table is left in place (non-destructive)
     but carries no runtime meaning.
+
+## Milestone 5.2 (adjusted) — async STT callback, no detached API work
+
+37. **Canonical:** do NOT transcribe as a detached in-process task inside the API
+    web service. Render web dynos can restart/redeploy/die after the response and
+    lose that work. Use Deepgram's async/callback mode for prerecorded audio.
+38. The API submits the audio with a callback URL, persists the provider
+    `request_id`, marks the job `submitted_to_stt`, and returns. A public,
+    self-authenticated webhook (`/api/webhooks/deepgram`) receives the result,
+    binds it to the job by `request_id`, and persists it idempotently before
+    responding 2xx. The temp file exists only during submission.
+39. The `TranscriptionProvider` gains `submit` + `parseCallback` +
+    `callbackRequestId`; the domain never sees provider-specific shapes. The mock
+    provider simulates submit → callback for tests/E2E.

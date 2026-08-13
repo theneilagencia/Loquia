@@ -15,20 +15,26 @@ Pushed:  YES (branch)
 ## Architecture
 
 ```
-R2 required:              NO  (removed entirely)
-LocalMediaStore:          UNCHANGED (OPFS → IndexedDB → memory; primary copy)
-Direct processing upload: POST /api/meetings/process-audio (raw body, streaming)
-Temporary server media:   per-instance temp file, deleted after transcription
-Deepgram adapter:         raw audio bytes (no URL); provider abstraction preserved
-Worker required:          YES — for AI Pack only (storage-independent, async)
-Queue required:           YES — BullMQ backs the AI Pack jobs
+R2 required:                NO  (removed entirely)
+Detached API STT:           NO  (removed — Render web dynos can restart/redeploy)
+Deepgram async submission:  YES (submit with ?callback=…; returns request_id)
+Deepgram callback:          YES (POST /api/webhooks/deepgram)
+Callback authenticated:     YES (shared-secret token + request_id binding)
+Callback idempotent:        YES (duplicate → no second transcript / AI Pack job)
+Worker handles audio:       NO
+Worker handles AI Pack:     YES (async, storage-independent)
+Local audio preserved:      YES (never discarded on failure; retry re-submits)
+LocalMediaStore:            UNCHANGED (OPFS → IndexedDB → memory; primary copy)
+Temporary server media:     per-instance temp file, deleted right after submission
+Queue required:             YES — BullMQ backs the AI Pack jobs
 ```
 
-Decision (see `docs/decisions.md` §33-36): the API and worker are **separate
-Render instances** (no shared disk), and Deepgram accepts raw bytes — so the API
-ingests the audio and transcribes it **in-process, detached** (returns 202 fast),
-persists the transcript, and enqueues the AI Pack. The worker no longer
-transcribes.
+Decision (see `docs/decisions.md` §33-39): the API and worker are **separate
+Render instances** (no shared disk). The API must not run long work after the
+HTTP response, so it submits the audio to Deepgram in **async/callback mode**,
+persists the `request_id`, marks the job `submitted_to_stt`, and returns 202. A
+public, self-authenticated webhook receives the result and **idempotently**
+persists the transcript + enqueues the AI Pack. The worker only runs AI Pack.
 
 ## Removed (because of the R2 removal)
 
@@ -75,8 +81,10 @@ Second-device behavior:          UNCHANGED (honest "stored on another device")
 build:            PASS  (next build)
 typecheck:        PASS  (tsc across all workspaces)
 lint:             PASS  (next lint)
-unit:             PASS  (web 30 · pipeline 21 · export-engine 18)
-integration:      PASS  (api 31 incl. direct-ingest tests)
+unit:             PASS  (web 30 · pipeline 22 · export-engine 18)
+integration:      PASS  (api 37 incl. async submit + webhook callback tests:
+                        maps transcript · idempotent · unauthorized · unknown ·
+                        failure · reprocess · no temp media survives)
 worker:           PASS  (6 — AI-Pack-only)
 e2e:              PASS  (11 incl. local persistence + second-device)
 storybook:        PASS

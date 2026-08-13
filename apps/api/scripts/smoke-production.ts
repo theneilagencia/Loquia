@@ -23,6 +23,7 @@ async function main(): Promise<void> {
 
   // Config presence (no secret values printed). M5.2: no object storage.
   rec('config: transcription provider', 'CONFIG', env.TRANSCRIPTION_PROVIDER ?? (env.DEEPGRAM_API_KEY ? 'deepgram (implicit)' : 'mock'));
+  rec('config: STT callback secret', env.DEEPGRAM_CALLBACK_SECRET ? 'CONFIG' : 'NOT RUN', env.DEEPGRAM_CALLBACK_SECRET ? 'set' : 'unset (required in prod with deepgram)');
   rec('config: AI Pack provider', 'CONFIG', env.AI_PACK_PROVIDER ?? (env.ANTHROPIC_API_KEY ? 'anthropic (implicit)' : 'mock'));
   rec('config: email provider', 'CONFIG', env.EMAIL_PROVIDER ?? (env.EMAIL_API_KEY ? 'resend (implicit)' : 'console'));
 

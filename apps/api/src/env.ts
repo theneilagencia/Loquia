@@ -15,15 +15,17 @@ const schema = z.object({
   TRANSCRIPTION_PROVIDER: z.string().optional(),
   DEEPGRAM_API_KEY: z.string().optional(),
   DEEPGRAM_MODEL: z.string().optional(),
+  // Shared secret that authenticates the provider's callback to our webhook (M5.2
+  // async model). Required in production when TRANSCRIPTION_PROVIDER=deepgram.
+  DEEPGRAM_CALLBACK_SECRET: z.string().optional(),
   // --- AI Pack generation (Milestone 4) ---
   AI_PACK_PROVIDER: z.string().optional(),
   AI_PACK_MODEL: z.string().optional(),
   AI_PACK_MAX_RETRIES: z.coerce.number().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   PUBLIC_API_URL: z.string().optional(),
-  // Direct audio ingest (M5.2): max raw audio body size + STT wall-clock budget.
+  // Direct audio ingest (M5.2): max raw audio body accepted by the ingest endpoint.
   MAX_UPLOAD_SIZE_BYTES: z.coerce.number().default(524288000),
-  STT_TIMEOUT_MS: z.coerce.number().default(120000),
   // How long a stale ingest temp file may linger before the per-instance sweep removes it.
   TEMP_MEDIA_MAX_AGE_MS: z.coerce.number().default(3600000),
 

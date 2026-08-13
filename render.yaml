@@ -61,11 +61,12 @@ services:
         sync: false
       - key: DEEPGRAM_MODEL
         value: nova-2
+      # Authenticates Deepgram's async callback to /api/webhooks/deepgram.
+      - key: DEEPGRAM_CALLBACK_SECRET
+        generateValue: true
       # Direct-ingest tuning.
       - key: MAX_UPLOAD_SIZE_BYTES
         value: "524288000"
-      - key: STT_TIMEOUT_MS
-        value: "120000"
       # --- AI Pack generation (real; runs on the worker) ---
       - key: AI_PACK_PROVIDER
         value: anthropic
