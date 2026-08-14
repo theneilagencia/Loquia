@@ -105,17 +105,18 @@ lifecycle (requests → approval → invitations → activation), server-side
 append-only audit, and real persistence of meetings metadata, settings, export
 presets and ProcessingJobs. See [`docs/backend-architecture.md`](docs/backend-architecture.md).
 
-## Media pipeline (Milestone 3)
+## Media pipeline (Milestone 3 → 5.2)
 
-Recording/upload now runs through a **real** asynchronous pipeline: direct
-browser upload to object storage (the API never proxies the bytes) → `MediaAsset`
-→ `ProcessingJob` → BullMQ queue (Redis) → worker (`apps/worker`) → STT +
-diarization → segmentation → persisted `TranscriptSegment`s → frontend. Providers
-sit behind interfaces and are selected by env — **Cloudflare R2**
-(`STORAGE_PROVIDER=r2|mock`) and **Deepgram** (`TRANSCRIPTION_PROVIDER=deepgram|mock`),
-with deterministic mocks for dev/tests and **no silent mock fallback in
-production**. See [`docs/media-pipeline.md`](docs/media-pipeline.md),
-[`docs/storage.md`](docs/storage.md),
+Recording/upload runs through a **real** asynchronous pipeline. As of M5.2 there
+is **no object storage**: the browser sends the recording directly to the API,
+which submits it to **Deepgram in async/callback mode**
+(`TRANSCRIPTION_PROVIDER=deepgram|mock`), persists the `request_id`, and returns.
+Deepgram POSTs the result to `/api/webhooks/deepgram`, which maps + persists
+`TranscriptSegment`s → BullMQ queue (Redis) → worker (`apps/worker`) → AI Pack
+(Anthropic). Providers sit behind interfaces with deterministic mocks for
+dev/tests and **no silent mock fallback in production**. See
+[`docs/media-pipeline.md`](docs/media-pipeline.md),
+[`docs/local-first-media.md`](docs/local-first-media.md),
 [`docs/transcription-provider.md`](docs/transcription-provider.md), and
 [`docs/processing-jobs.md`](docs/processing-jobs.md).
 

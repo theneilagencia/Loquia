@@ -12,14 +12,13 @@ const E2E_DB = process.env.E2E_DATABASE_URL ?? 'postgres://postgres@127.0.0.1:54
 const baseURL = `http://localhost:${WEB_PORT}`;
 const apiUrl = `http://localhost:${API_PORT}`;
 const REDIS_URL = process.env.E2E_REDIS_URL ?? 'redis://127.0.0.1:6380';
-// Mock providers exercise the real pipeline (storage → queue → worker → STT)
-// without external credentials. API and worker MUST share the same media dir.
-const MEDIA_MOCK_DIR = '/tmp/loquia-e2e-media';
+// Mock providers exercise the real M5.2 pipeline (direct ingest → async submit →
+// webhook callback → queue → worker → AI Pack) without external credentials.
+const DEEPGRAM_CALLBACK_SECRET = 'e2e-callback-secret';
 const mediaEnv = {
-  STORAGE_PROVIDER: 'mock',
   TRANSCRIPTION_PROVIDER: 'mock',
   AI_PACK_PROVIDER: 'mock',
-  MEDIA_MOCK_DIR,
+  DEEPGRAM_CALLBACK_SECRET,
   REDIS_URL,
   PUBLIC_API_URL: apiUrl,
 };
