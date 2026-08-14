@@ -73,11 +73,12 @@ jobs:
       - run: pnpm -r --if-present typecheck
       - run: pnpm -r --if-present lint
       - run: pnpm -r --if-present test
+      # Build before e2e: the mock e2e webServer runs `next start`, which needs a build.
+      - run: pnpm --filter @loquia/web build
       - name: Install Playwright Chromium
         run: pnpm --filter @loquia/web exec playwright install --with-deps chromium
       - name: e2e (mock mode)
         run: pnpm --filter @loquia/web test:e2e
-      - run: pnpm --filter @loquia/web build
       - run: pnpm --filter @loquia/web build-storybook
       - name: Production smoke (infra; providers NOT RUN without keys)
         run: pnpm --filter @loquia/api smoke:production
