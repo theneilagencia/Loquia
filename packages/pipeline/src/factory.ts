@@ -47,7 +47,10 @@ export function createAIPackGenerator(env: PipelineEnv): AIPackGenerator {
     if (!env.ANTHROPIC_API_KEY) throw new Error('AI_PACK_PROVIDER=anthropic but ANTHROPIC_API_KEY is missing');
     return new LLMAIPackGenerator({
       apiKey: env.ANTHROPIC_API_KEY,
-      model: env.AI_PACK_MODEL ?? DEFAULT_AI_PACK_MODEL,
+      // `||` (not `??`): an env var set to an empty/blank string must fall back to
+      // the default, otherwise Anthropic rejects it with `model: String should have
+      // at least 1 character`.
+      model: env.AI_PACK_MODEL?.trim() || DEFAULT_AI_PACK_MODEL,
       maxRetries: env.AI_PACK_MAX_RETRIES,
     });
   }

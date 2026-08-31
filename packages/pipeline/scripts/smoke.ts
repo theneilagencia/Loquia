@@ -72,7 +72,9 @@ async function smokeAIPack(): Promise<void> {
   try {
     const gen = new LLMAIPackGenerator({
       apiKey: process.env.ANTHROPIC_API_KEY,
-      model: process.env.AI_PACK_MODEL ?? 'claude-sonnet-5',
+      // `||` (not `??`): CI injects AI_PACK_MODEL as an empty string when the
+      // secret is unset, and an empty model is rejected by Anthropic (400).
+      model: process.env.AI_PACK_MODEL?.trim() || 'claude-sonnet-5',
       maxRetries: 1,
     });
     // Non-sensitive fixture transcript with explicit segment ids.

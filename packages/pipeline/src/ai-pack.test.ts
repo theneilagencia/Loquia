@@ -6,7 +6,7 @@ import { chunkTranscript } from './ai-pack-chunk';
 import { consolidateSections } from './ai-pack-consolidate';
 import { buildPackSource } from './ai-pack-evidence';
 import { MockAIPackGenerator } from './adapters/mock-ai-pack';
-import { createAIPackGenerator } from './factory';
+import { createAIPackGenerator, DEFAULT_AI_PACK_MODEL } from './factory';
 import type { AIPackGenerationInput, GenSegment, GeneratedSection } from './ai-pack';
 
 const segs: GenSegment[] = [
@@ -125,6 +125,14 @@ describe('factory', () => {
     expect(() => createAIPackGenerator({ NODE_ENV: 'production' })).toThrow(/No AI Pack provider/);
     expect(() => createAIPackGenerator({ AI_PACK_PROVIDER: 'anthropic' })).toThrow(/ANTHROPIC_API_KEY/);
     expect(createAIPackGenerator({ AI_PACK_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: 'k' }).name).toBe('anthropic');
+  });
+
+  it('falls back to the default model when AI_PACK_MODEL is unset or blank (empty-env footgun)', () => {
+    const base = { AI_PACK_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: 'k' } as const;
+    expect(createAIPackGenerator({ ...base }).model).toBe(DEFAULT_AI_PACK_MODEL);
+    expect(createAIPackGenerator({ ...base, AI_PACK_MODEL: '' }).model).toBe(DEFAULT_AI_PACK_MODEL);
+    expect(createAIPackGenerator({ ...base, AI_PACK_MODEL: '   ' }).model).toBe(DEFAULT_AI_PACK_MODEL);
+    expect(createAIPackGenerator({ ...base, AI_PACK_MODEL: 'claude-opus-4-8' }).model).toBe('claude-opus-4-8');
   });
 
   it('exposes exactly the canonical LLM section keys', () => {

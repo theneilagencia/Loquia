@@ -49,7 +49,7 @@ export class DeepgramTranscriptionAdapter implements TranscriptionProvider {
   private readonly timeoutMs: number;
 
   constructor(private readonly config: DeepgramConfig) {
-    this.model = config.model ?? 'nova-2';
+    this.model = config.model?.trim() || 'nova-2'; // `||`: a blank model env var falls back to the default
     this.timeoutMs = config.timeoutMs ?? 30_000; // submission is fast; the result comes via callback
   }
 
