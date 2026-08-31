@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { FileAudio, UploadCloud, X } from 'lucide-react';
-import { Button, Card, CardContent, cn } from '@loquia/ui';
+import { Button, cn } from '@loquia/ui';
 import { useServices } from '@/lib/services-context';
 import { getLocalMediaStore } from '@/lib/local-media/provider';
 import { useRouter } from '@/i18n/navigation';
@@ -97,82 +97,87 @@ export default function UploadPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-2xl font-semibold">{t('title')}</h1>
+    <div className="max-w-[760px] space-y-6">
+      <h1 className="text-[clamp(26px,2.9vw,34px)] font-extrabold tracking-[-0.03em]">
+        {t('title')}
+      </h1>
 
       {phase === 'idle' || phase === 'error' ? (
-        <Card>
-          <CardContent className="pt-6">
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragging(true);
-              }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setDragging(false);
-                const f = e.dataTransfer.files[0];
-                if (f) pick(f);
-              }}
-              className={cn(
-                'flex w-full flex-col items-center gap-3 rounded-lg border-2 border-dashed p-12 text-center transition-colors',
-                dragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50',
-              )}
-            >
-              <UploadCloud className="size-10 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">{t('drop')}</p>
-              <span className="text-xs text-muted-foreground">MP3 · WAV · M4A</span>
-            </button>
-            <input
-              ref={inputRef}
-              type="file"
-              accept=".mp3,.wav,.m4a,audio/*"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) pick(f);
-              }}
-            />
-            {error && (
-              <p role="alert" className="mt-3 text-sm text-destructive">
-                {error}
-              </p>
+        <div>
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              const f = e.dataTransfer.files[0];
+              if (f) pick(f);
+            }}
+            className={cn(
+              'flex w-full flex-col items-center gap-3 rounded-xl border border-dashed px-8 py-[52px] text-center shadow-card transition-all',
+              dragging
+                ? 'border-iris bg-iris-tint'
+                : 'border-iris-line bg-surface hover:-translate-y-0.5 hover:border-iris hover:bg-iris-tint',
             )}
-            {phase === 'error' && (
-              <div className="mt-3 flex gap-2">
-                <Button size="sm" variant="outline" onClick={reset}>
-                  {t('remove')}
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="space-y-4 pt-6">
-            <div className="flex items-center gap-3">
-              <FileAudio className="size-8 text-primary" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{file?.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {phase === 'processing' ? t('processing') : t('uploading')}
-                </p>
-              </div>
-              <Button size="icon" variant="ghost" aria-label={t('cancel')} onClick={reset}>
-                <X className="size-4" />
+          >
+            <UploadCloud className="size-10 text-iris" />
+            <span className="text-[17px] font-bold text-ink">{t('drop')}</span>
+            <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
+              MP3 · WAV · M4A
+            </span>
+            <span className="mt-2 inline-flex items-center rounded-lg border border-border bg-surface px-4 py-2 text-[13.5px] font-semibold text-ink">
+              {t('select')}
+            </span>
+          </button>
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".mp3,.wav,.m4a,audio/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) pick(f);
+            }}
+          />
+          {error && (
+            <p role="alert" className="mt-3 text-sm text-danger">
+              {error}
+            </p>
+          )}
+          {phase === 'error' && (
+            <div className="mt-3 flex gap-2">
+              <Button size="sm" variant="outline" onClick={reset}>
+                {t('remove')}
               </Button>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full bg-primary transition-all"
-                style={{ width: `${phase === 'processing' ? 100 : progress}%` }}
-              />
+          )}
+        </div>
+      ) : (
+        <div className="space-y-5 rounded-xl border border-border bg-surface p-7 shadow-card">
+          <div className="flex items-center gap-3">
+            <FileAudio className="size-8 text-iris" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[15px] font-semibold text-ink">{file?.name}</p>
+              <p className="font-mono text-[11.5px] uppercase tracking-[0.1em] text-muted-foreground">
+                {phase === 'processing' ? t('processing') : t('uploading')}
+              </p>
             </div>
-          </CardContent>
-        </Card>
+            <Button size="icon" variant="ghost" aria-label={t('cancel')} onClick={reset}>
+              <X className="size-4" />
+            </Button>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-track">
+            <div
+              className="h-full rounded-full bg-iris transition-all"
+              style={{ width: `${phase === 'processing' ? 100 : progress}%` }}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

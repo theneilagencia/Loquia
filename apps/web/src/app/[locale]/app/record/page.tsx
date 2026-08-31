@@ -6,8 +6,10 @@ import { Recorder } from '@/components/product/recorder';
 export default function RecordPage() {
   const t = useTranslations('recorder');
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-2xl font-semibold">{t('title')}</h1>
+    <div className="max-w-[760px] space-y-6">
+      <h1 className="text-[clamp(26px,2.9vw,34px)] font-extrabold tracking-[-0.03em]">
+        {t('title')}
+      </h1>
       <Recorder />
     </div>
   );
