@@ -7,8 +7,12 @@ async function main(): Promise<void> {
   // API-owned connection pool (never opened per request).
   const { db, close } = createDb(env.DATABASE_URL, { max: 10 });
   const app = await buildApp({ env, db });
-  await app.listen({ host: env.API_HOST, port: env.API_PORT });
-  app.log.info(`Loquia API listening on ${env.API_HOST}:${env.API_PORT}`);
+  // Bind to the platform-provided PORT when present (Render/Heroku/etc. inject it
+  // and route health checks to it); fall back to API_PORT for local/dev. Without
+  // this the service would listen on the wrong port and fail the health check.
+  const port = Number(process.env.PORT) || env.API_PORT;
+  await app.listen({ host: env.API_HOST, port });
+  app.log.info(`Loquia API listening on ${env.API_HOST}:${port}`);
 
   // No Redis (Render free): the API processes AI Pack jobs in-process. Start the
   // runner AFTER listen so a startup reconcile can't delay readiness; it finishes
