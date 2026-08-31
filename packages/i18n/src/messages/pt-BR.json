@@ -152,7 +152,9 @@
     "resetDone": "Sua senha foi redefinida. Agora você pode entrar.",
     "resetInvalid": "Este link de redefinição é inválido ou expirou.",
     "newPassword": "Nova senha",
-    "backToLogin": "Voltar para o login"
+    "backToLogin": "Voltar para o login",
+    "showPassword": "Mostrar senha",
+    "hidePassword": "Ocultar senha"
   },
   "onboarding": {
     "title": "Bem-vindo à Loquia",

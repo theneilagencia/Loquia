@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { loginSchema, type LoginInput } from '@loquia/contracts';
 import { Button, Input, Label } from '@loquia/ui';
 import { useServices } from '@/lib/services-context';
@@ -21,6 +22,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -71,13 +73,24 @@ export default function LoginPage() {
             <Label htmlFor="password" className="text-[13px] font-semibold text-ink">
               {t('password')}
             </Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              className={inputClass}
-              {...register('password')}
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                className={`${inputClass} pr-11`}
+                {...register('password')}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? t('hidePassword') : t('showPassword')}
+                aria-pressed={showPassword}
+                className="absolute inset-y-0 right-0 grid w-11 place-items-center rounded-r-[10px] text-faint transition-colors hover:text-ink focus-visible:outline-none focus-visible:text-iris"
+              >
+                {showPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
+              </button>
+            </div>
             <FieldError error={errors.password?.message} />
           </div>
           {formError && (

@@ -152,7 +152,9 @@
     "resetDone": "Your password has been reset. You can now log in.",
     "resetInvalid": "This reset link is invalid or has expired.",
     "newPassword": "New password",
-    "backToLogin": "Back to log in"
+    "backToLogin": "Back to log in",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "onboarding": {
     "title": "Welcome to Loquia",
