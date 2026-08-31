@@ -12,30 +12,40 @@ Working tree:      clean
 Production commit: same branch (no main rewrite; no force-push)
 ```
 
-## Render
+## Render — DEPLOYED & LIVE (free-plan topology)
 
 ```
-Render access:     BLOCKED — environment egress policy
-                   (api.render.com AND *.onrender.com both 403 at the CONNECT
-                    tunnel; no Render credential present in the environment)
-Blueprint:         render.yaml valid — web, api, worker, postgres, keyvalue
-                   (no cleanup cron, no R2 env; deploy-ready)
-Web:               NOT DEPLOYED — Render unreachable from this environment
-API:               NOT DEPLOYED — Render unreachable from this environment
-Worker:            NOT DEPLOYED — Render unreachable from this environment
-Postgres:          provisioned by blueprint on deploy (migrations run in
-                   preDeployCommand); verified locally + in CI
-Redis:             provisioned by blueprint (keyvalue) on deploy
-Migrations:        PASS locally + in CI (0001–0004 applied clean)
-Health:            /health + /ready verified locally + in CI; live NOT RUN
-Ready:             /ready DB-hard-gate verified; live NOT RUN
+Sandbox → Render:  BLOCKED — environment egress policy (api.render.com +
+                   *.onrender.com both 403 at CONNECT). All Render work was done
+                   from the GitHub Actions runner (not egress-blocked), driven by
+                   RENDER_API_KEY as a GitHub Secret.
+Blueprint:         render.yaml — loquia-web + loquia-api + loquia-postgres, all
+                   plan:free. No worker, no Redis (workers are paid); AI Pack runs
+                   in-process. No cleanup cron, no R2.
+Web  (loquia-web): LIVE — https://loquia-web.onrender.com  (GET /pt-BR → 200)
+API  (loquia-api): LIVE — https://loquia-api.onrender.com
+Postgres:          LIVE — migrations applied at startup; /ready reports db: up
+Health:            LIVE PASS — GET /health → 200 {"status":"ok"}
+Ready:             LIVE PASS — GET /ready → 200 {"status":"ready","checks":{"db":"up","queue":"skipped"}}
 ```
 
-Per §41–§42 the one official autonomous route around the sandbox egress block is
-GitHub Actions (its runners are not policy-blocked). A CI + live-verify workflow
-was added and executed on clean infra (see Gates). Render's own blueprint
-auto-deploy resolves the deploy once a human connects the repo, so no redundant
-deploy workflow was created (§42).
+Deploy issues found and fixed (each by root cause, verified from the Render API/logs
+via the runner): (1) free tier forbids preDeployCommand → migrate in startCommand;
+(2) build `corepack enable` hit EROFS on read-only /usr/bin → install pnpm via npm,
+pin Node 20; (3) API ignored Render's $PORT → bind $PORT; (4) email factory threw
+at boot when EMAIL_* unset → lazy email provider (API boots; sends fail loudly).
+
+### Live golden path — PASS (deployed prod, real providers)
+
+```
+CI "Live golden path" workflow, against https://loquia-api.onrender.com:
+  login 200 → process-audio 202 → meeting processing→ready (real Deepgram
+  callback on the PUBLIC webhook) → transcript segments=1 (accurate Deepgram
+  transcription, smart_format "$12,000") → AI Pack generating→ready, sections=9.
+  == GOLDEN PATH LIVE: PASS ==
+Fully autonomous: the runner resolved the Postgres external URL via the Render
+API, seeded the owner, synthesized speech (espeak-ng), and drove the flow.
+```
 
 ## Deepgram
 
@@ -138,45 +148,49 @@ RESOLVED — Anthropic credential: valid ANTHROPIC_API_KEY added as a GitHub Sec
           CI live-verify PASSED real AI Pack generation (schema + evidence
           validated). A blank-model env footgun was fixed along the way (the
           factory/smoke now default on empty/whitespace, not just undefined).
-BLOCKED — environment egress policy: Render unreachable from this session
-          (api.render.com + *.onrender.com denied); no Render credential present.
-          The sandbox also blocks api.deepgram.com / api.anthropic.com — the live
-          PASSes were obtained via the GitHub Actions runner, not egress-blocked.
-BLOCKED — provider configuration (remaining): EMAIL_API_KEY not yet provided
-          (live email still NOT RUN).
-NOT RUN — Deepgram callback loop + full golden path: need the Render deploy so
-          Deepgram can POST the transcript back to a public API URL.
+RESOLVED — deployment: Loquia is DEPLOYED and LIVE on Render (free plan), driven
+          entirely from the GitHub Actions runner with RENDER_API_KEY (the sandbox
+          itself stays egress-blocked from Render/Deepgram/Anthropic).
+RESOLVED — Deepgram callback loop + full golden path: PASS live against the
+          deployed prod API (real Deepgram callback on the public webhook →
+          transcript → AI Pack). See "Live golden path" above.
+REMAINING (optional) — EMAIL_API_KEY / EMAIL_FROM not set: invitation + password
+          reset emails will fail loudly until configured; the core pipeline
+          (record → transcribe → AI Pack → export) is unaffected.
 ```
 
-## HUMAN ACTION REQUIRED (minimum set)
+## Remaining human actions (optional / hygiene)
 
 ```
-1. Rotate the Render API key pasted earlier (treat as exposed).
-2. Render → New → Blueprint → connect theneilagencia/Loquia →
-   branch claude/loquia-milestone-1-frontend-rnoc96 → Apply
-   (free topology: provisions loquia-web + loquia-api + loquia-postgres, all
-   plan:free — no worker, no Redis; the API runs the AI Pack in-process).
-3. Set the sync:false secrets (see docs/production-deploy.md) on loquia-api:
-   DEEPGRAM_API_KEY, ANTHROPIC_API_KEY, EMAIL_API_KEY, EMAIL_FROM, APP_URL,
-   PUBLIC_API_URL; and NEXT_PUBLIC_API_URL on loquia-web.
-4. After first deploy, set PUBLIC_API_URL to the API's *.onrender.com URL and
-   redeploy so the Deepgram callback resolves; then run the CI "live-verify"
-   job (or the local smokes) for the live golden path.
-Note: free web services spin down (~15 min idle; ~1 min cold start — Deepgram
-retries its callback) and free Postgres expires (~30 days). Upgrade plans (and
-add a worker + Key Value, set REDIS_URL) to scale out later — no code change.
+1. Rotate the keys that passed through chat (Deepgram, Anthropic, Render) — treat
+   as exposed.
+2. (Optional) Set EMAIL_API_KEY + EMAIL_FROM on loquia-api to enable invitation +
+   password-reset emails. Not needed for the core pipeline.
+3. Free-plan notes: web services spin down (~15 min idle; ~1 min cold start —
+   Deepgram retries its callback so it still lands) and free Postgres expires
+   (~30 days). Upgrade plans (add a worker + Key Value, set REDIS_URL) to scale
+   out later — no code change. Seeding reset prod demo data (owner:
+   vinicius@apymine.com / password123).
 ```
 
 ## Status
 
 ```
-Implementation readiness: COMPLETE
-Live production verification: BLOCKED (environment egress policy + provider configuration)
+Implementation readiness:      COMPLETE
+Deployment:                    LIVE (Render free plan — web + api + postgres)
+Live production verification:  PASS (health, ready, and the full golden path
+                               through the deployed API with real providers)
 ```
 
 ## Conclusion
 
-**MILESTONE 5 REPROVADA — produção controlada ainda possui blockers.**
+**MILESTONE 5 — produção controlada: NO AR e VERIFICADA LIVE.** Loquia is deployed
+on Render (free plan) and the complete golden path (record → process-audio → real
+Deepgram callback on the public webhook → transcript → Anthropic AI Pack) passes
+end-to-end against the live production API. The one-time deployment obstacles were
+each diagnosed from the Render API/logs and fixed by root cause, autonomously via
+the GitHub Actions runner. Optional follow-ups only (email keys, key rotation,
+plan upgrades for persistence).
 
 Everything technically possible from this session is done: R2 fully removed, the
 M5.2 async Deepgram-callback architecture implemented and tested, a real-backend
