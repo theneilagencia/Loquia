@@ -25,5 +25,26 @@ export function createEmailProvider(env: Env): EmailProvider {
   return new ConsoleEmailProvider();
 }
 
+/**
+ * Defer provider construction to the first send. Email is not a core dependency
+ * (transcription + AI Pack don't need it), so a misconfigured EMAIL_* must NOT
+ * crash the whole API at startup — but it must still fail LOUDLY when an email is
+ * actually sent (never a silent console fallback in production). The build error
+ * is re-raised on every send attempt until the configuration is fixed.
+ */
+export function createLazyEmailProvider(build: () => EmailProvider): EmailProvider {
+  let instance: EmailProvider | null = null;
+  const get = (): EmailProvider => (instance ??= build());
+  return {
+    get name(): string {
+      return instance?.name ?? 'unconfigured';
+    },
+    sendInvitation: (i) => get().sendInvitation(i),
+    sendPasswordReset: (i) => get().sendPasswordReset(i),
+    sendMoreInformationRequest: (i) => get().sendMoreInformationRequest(i),
+    sendRejection: (i) => get().sendRejection(i),
+  };
+}
+
 export { ConsoleEmailProvider, ResendEmailProvider };
 export * from './provider';

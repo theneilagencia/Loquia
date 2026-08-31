@@ -10,7 +10,7 @@ import { createInProcessRunner } from './services/ai-pack-runner';
 import type { Database } from './db/client';
 import type { Env } from './env';
 import { isProd } from './env';
-import { createEmailProvider } from './email/factory';
+import { createEmailProvider, createLazyEmailProvider } from './email/factory';
 import { ApiError, type ErrorResponseBody } from './lib/errors';
 import { loadAuth, SESSION_COOKIE } from './auth/session';
 import { newId } from './lib/crypto';
@@ -62,7 +62,17 @@ export function createContext(env: Env, db: Database): AppContext {
     runner?.kick();
   };
 
-  const email = createEmailProvider(env);
+  // Email is not a core dependency: build it eagerly when it's configured, but if
+  // it's misconfigured (e.g. EMAIL_PROVIDER=resend without keys) warn and defer —
+  // the API still boots for transcription + AI Pack; email sends fail loudly until
+  // the config is fixed (never a silent console fallback in prod).
+  let email;
+  try {
+    email = createEmailProvider(env);
+  } catch (err) {
+    runnerLog('email_provider_unconfigured', { message: err instanceof Error ? err.message : String(err) });
+    email = createLazyEmailProvider(() => createEmailProvider(env));
+  }
   return { env, db, transcription, email, enqueue, runner };
 }
 
