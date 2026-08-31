@@ -39,11 +39,22 @@ jobs:
             echo "::error::RENDER_API_KEY secret is not set. Add it in Settings → Secrets and variables → Actions."
             exit 1
           fi
+          # Strip any stray whitespace/newline the pasted secret may carry (a trailing
+          # newline corrupts the Authorization header → 401).
+          RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
+          echo "RENDER_API_KEY length after trim: ${#RENDER_API_KEY} (starts rnd_: $(case "$RENDER_API_KEY" in rnd_*) echo yes;; *) echo no;; esac))"
           API="https://api.render.com/v1"
           auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json" -H "Content-Type: application/json")
 
           echo "== Discovering services =="
-          services="$(curl -fsS "${auth[@]}" "${API}/services?limit=100")"
+          resp="$(curl -sS -m 30 -w $'\n%{http_code}' "${auth[@]}" "${API}/services?limit=100")"
+          code="${resp##*$'\n'}"; services="${resp%$'\n'*}"
+          if [ "$code" != "200" ]; then
+            echo "::error::GET /services returned HTTP ${code}"
+            echo "Response body (should not contain a secret):"; printf '%s' "$services" | head -c 400; echo
+            echo "If 401: the RENDER_API_KEY value is wrong or expired — recreate it in Render → Account Settings → API Keys and update the GitHub Secret."
+            exit 1
+          fi
           # The list endpoint returns [{ "service": { ... } }, ...].
           api_id="$(jq -r --arg n "$API_NAME" '.[].service | select(.name==$n) | .id' <<<"$services" | head -n1)"
           web_id="$(jq -r --arg n "$WEB_NAME" '.[].service | select(.name==$n) | .id' <<<"$services" | head -n1)"
