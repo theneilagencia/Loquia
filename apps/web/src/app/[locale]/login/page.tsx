@@ -5,14 +5,18 @@ import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { loginSchema, type LoginInput } from '@loquia/contracts';
-import { Button, Card, CardContent, Input, Label } from '@loquia/ui';
+import { Button, Input, Label } from '@loquia/ui';
 import { useServices } from '@/lib/services-context';
 import { Link, useRouter } from '@/i18n/navigation';
 import { MarketingShell } from '@/components/marketing/marketing-shell';
 import { FieldError } from '@/components/ui/field-error';
 
+const inputClass =
+  'h-auto rounded-[10px] border-border bg-canvas px-3 py-[11px] text-[14.5px] text-ink placeholder:text-faint focus-visible:border-iris focus-visible:bg-surface focus-visible:ring-0 focus-visible:ring-offset-0';
+
 export default function LoginPage() {
   const t = useTranslations('auth');
+  const nav = useTranslations('nav');
   const services = useServices();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
@@ -35,38 +39,68 @@ export default function LoginPage() {
 
   return (
     <MarketingShell>
-      <div className="container flex max-w-md flex-col py-20">
-        <h1 className="text-3xl font-bold tracking-tight">{t('loginTitle')}</h1>
-        <p className="mt-2 text-muted-foreground">{t('loginSubtitle')}</p>
-        <Card className="mt-8">
-          <CardContent className="pt-6">
-            <form onSubmit={onSubmit} className="space-y-4" noValidate>
-              <div className="space-y-1.5">
-                <Label htmlFor="email">{t('email')}</Label>
-                <Input id="email" type="email" placeholder="vinicius@apymine.com" {...register('email')} />
-                <FieldError error={errors.email?.message} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="password">{t('password')}</Label>
-                <Input id="password" type="password" {...register('password')} />
-                <FieldError error={errors.password?.message} />
-              </div>
-              {formError && (
-                <p role="alert" className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
-                  {formError}
-                </p>
-              )}
-              <Button type="submit" className="w-full" disabled={submitting}>
-                {t('submit')}
-              </Button>
-              <div className="text-center text-sm">
-                <Link href="/forgot-password" className="text-muted-foreground hover:text-foreground">
-                  {t('forgot')}
-                </Link>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+      <div
+        className="mx-auto flex w-full max-w-[420px] flex-col px-5 py-[clamp(40px,7vw,84px)]"
+        style={{ animation: 'loq-rise .5s cubic-bezier(.2,.7,.3,1) both' }}
+      >
+        <h1 className="text-[clamp(26px,3.2vw,34px)] font-extrabold leading-tight tracking-[-0.03em] text-ink">
+          {t('loginTitle')}
+        </h1>
+        <p className="mt-2.5 text-[15.5px] leading-relaxed text-muted-foreground">{t('loginSubtitle')}</p>
+
+        <form
+          onSubmit={onSubmit}
+          className="mt-8 grid gap-4 rounded-xl border border-border bg-surface p-[26px] shadow-card"
+          noValidate
+        >
+          <div className="grid gap-1.5">
+            <Label htmlFor="email" className="text-[13px] font-semibold text-ink">
+              {t('email')}
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              placeholder="vinicius@apymine.com"
+              className={inputClass}
+              {...register('email')}
+            />
+            <FieldError error={errors.email?.message} />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="password" className="text-[13px] font-semibold text-ink">
+              {t('password')}
+            </Label>
+            <Input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              className={inputClass}
+              {...register('password')}
+            />
+            <FieldError error={errors.password?.message} />
+          </div>
+          {formError && (
+            <p
+              role="alert"
+              className="rounded-[10px] border border-border bg-track px-3.5 py-3 text-[13.5px] leading-relaxed text-muted-foreground"
+            >
+              {formError}
+            </p>
+          )}
+          <Button type="submit" className="w-full" disabled={submitting}>
+            {t('submit')}
+          </Button>
+        </form>
+
+        <div className="mt-5 flex flex-wrap gap-x-[18px] gap-y-2 text-sm">
+          <Link href="/forgot-password" className="font-semibold text-iris hover:underline">
+            {t('forgot')}
+          </Link>
+          <Link href="/request-access" className="font-semibold text-iris hover:underline">
+            {nav('requestAccess')}
+          </Link>
+        </div>
       </div>
     </MarketingShell>
   );

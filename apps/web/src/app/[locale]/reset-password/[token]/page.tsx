@@ -5,11 +5,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import { resetPasswordSchema, type ResetPasswordInput } from '@loquia/contracts';
-import { Button, Card, CardContent, Input, Label } from '@loquia/ui';
+import { Button, Input, Label } from '@loquia/ui';
 import { useServices } from '@/lib/services-context';
 import { Link } from '@/i18n/navigation';
 import { MarketingShell } from '@/components/marketing/marketing-shell';
 import { FieldError } from '@/components/ui/field-error';
+
+const inputClass =
+  'h-auto rounded-[10px] border-border bg-canvas px-3 py-[11px] text-[14.5px] text-ink placeholder:text-faint focus-visible:border-iris focus-visible:bg-surface focus-visible:ring-0 focus-visible:ring-offset-0';
 
 export default function ResetPasswordPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
@@ -33,45 +36,63 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
 
   return (
     <MarketingShell>
-      <div className="container flex max-w-md flex-col py-20">
-        <h1 className="text-3xl font-bold tracking-tight">{t('resetTitle')}</h1>
-        <p className="mt-2 text-muted-foreground">{t('resetSubtitle')}</p>
-        <Card className="mt-8">
-          <CardContent className="pt-6">
-            {done ? (
-              <div className="space-y-4">
-                <p role="status" className="rounded-md bg-muted p-4 text-sm text-muted-foreground">
-                  {t('resetDone')}
-                </p>
-                <Link href="/login" className="text-sm text-primary hover:underline">
-                  {t('backToLogin')}
-                </Link>
+      <div
+        className="mx-auto flex w-full max-w-[420px] flex-col px-5 py-[clamp(40px,7vw,84px)]"
+        style={{ animation: 'loq-rise .5s cubic-bezier(.2,.7,.3,1) both' }}
+      >
+        <h1 className="text-[clamp(24px,3vw,32px)] font-extrabold leading-tight tracking-[-0.03em] text-ink">
+          {t('resetTitle')}
+        </h1>
+        <p className="mt-2.5 text-[15.5px] leading-relaxed text-muted-foreground">{t('resetSubtitle')}</p>
+
+        {done ? (
+          <div className="mt-8 rounded-xl border border-sage bg-sage-soft p-[26px]">
+            <p role="status" className="text-[14.5px] leading-relaxed text-ink">
+              {t('resetDone')}
+            </p>
+            <Link href="/login" className="mt-4 inline-block text-sm font-semibold text-iris hover:underline">
+              ← {t('backToLogin')}
+            </Link>
+          </div>
+        ) : (
+          <form
+            onSubmit={onSubmit}
+            className="mt-8 grid gap-4 rounded-xl border border-border bg-surface p-[26px] shadow-card"
+            noValidate
+          >
+            <input type="hidden" {...register('token')} />
+            <div className="grid gap-1.5">
+              <Label htmlFor="password" className="text-[13px] font-semibold text-ink">
+                {t('newPassword')}
+              </Label>
+              <Input id="password" type="password" className={inputClass} {...register('password')} />
+              <FieldError error={errors.password?.message} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="confirmPassword" className="text-[13px] font-semibold text-ink">
+                {t('confirmPassword')}
+              </Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                className={inputClass}
+                {...register('confirmPassword')}
+              />
+              <FieldError error={errors.confirmPassword?.message} />
+            </div>
+            {error && (
+              <div
+                role="alert"
+                className="rounded-[10px] border border-danger bg-danger-soft px-3.5 py-3 text-[13.5px] font-semibold text-danger"
+              >
+                {error}
               </div>
-            ) : (
-              <form onSubmit={onSubmit} className="space-y-4" noValidate>
-                <input type="hidden" {...register('token')} />
-                <div className="space-y-1.5">
-                  <Label htmlFor="password">{t('newPassword')}</Label>
-                  <Input id="password" type="password" {...register('password')} />
-                  <FieldError error={errors.password?.message} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="confirmPassword">{t('confirmPassword')}</Label>
-                  <Input id="confirmPassword" type="password" {...register('confirmPassword')} />
-                  <FieldError error={errors.confirmPassword?.message} />
-                </div>
-                {error && (
-                  <p role="alert" className="text-sm text-destructive">
-                    {error}
-                  </p>
-                )}
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {t('resetSubmit')}
-                </Button>
-              </form>
             )}
-          </CardContent>
-        </Card>
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {t('resetSubmit')}
+            </Button>
+          </form>
+        )}
       </div>
     </MarketingShell>
   );

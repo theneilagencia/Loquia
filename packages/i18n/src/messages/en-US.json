@@ -61,7 +61,11 @@
     "ctaButton": "Request access",
     "eyebrow": "Meetings prepared for AI",
     "accessNote": "Invite-only · Your data stays on your device by default.",
-    "recordingLabel": "Recording"
+    "recordingLabel": "Recording",
+    "rawTranscriptLabel": "Raw transcript",
+    "rawSample": "…so I think we should, like, go ahead with that, right? But Paul said maybe not by Friday, so…",
+    "rawResult": "Hours of audio, no context.",
+    "packResult": "AI-ready context in seconds."
   },
   "access": {
     "requestTitle": "Request access",

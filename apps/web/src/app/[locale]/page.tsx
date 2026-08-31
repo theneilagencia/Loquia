@@ -1,8 +1,8 @@
 import Image from 'next/image';
 import { setRequestLocale } from 'next-intl/server';
 import { useTranslations } from 'next-intl';
-import { ArrowRight, FileText, Layers, Lock, Workflow } from 'lucide-react';
-import { buttonVariants, Card, CardContent } from '@loquia/ui';
+import { ArrowRight } from 'lucide-react';
+import { buttonVariants } from '@loquia/ui';
 import { Link } from '@/i18n/navigation';
 import { MarketingShell } from '@/components/marketing/marketing-shell';
 
@@ -64,94 +64,123 @@ function Marketing() {
         </div>
       </section>
 
-      {/* Problem */}
-      <section className="border-y border-border bg-muted/40">
-        <div className="container grid gap-8 py-16 md:grid-cols-2 md:items-center">
-          <h2 className="text-3xl font-semibold tracking-tight">{t('problemTitle')}</h2>
-          <p className="text-lg text-muted-foreground">{t('problemBody')}</p>
+      {/* Problem — raw transcript vs AI Pack contrast (design canvas) */}
+      <section className="container pb-[clamp(56px,8vw,88px)]">
+        <h2 className="mb-3 max-w-[20ch] text-[clamp(26px,3.2vw,40px)] font-extrabold leading-[1.1] tracking-[-0.032em] text-ink">
+          {t('problemTitle')}
+        </h2>
+        <p className="mb-8 max-w-[58ch] text-[16.5px] leading-relaxed text-muted-foreground">{t('problemBody')}</p>
+        <div className="grid gap-5 md:grid-cols-2">
+          <div className="rounded-xl border border-border bg-surface p-[26px]">
+            <div className="mb-3.5 font-mono text-[11.5px] uppercase tracking-[0.1em] text-muted-foreground">
+              {t('rawTranscriptLabel')}
+            </div>
+            <p className="font-mono text-[12.5px] leading-[1.7] text-faint">{t('rawSample')}</p>
+            <div className="mt-4 border-t border-border pt-3.5 text-sm font-semibold text-danger">
+              {t('rawResult')}
+            </div>
+          </div>
+          <div className="rounded-xl bg-inverse-surface p-[26px] text-inverse-fg">
+            <div className="mb-3.5 font-mono text-[11.5px] uppercase tracking-[0.1em] text-inverse-fg/50">
+              {t('aiPackTitle')}
+            </div>
+            <p className="whitespace-pre-line font-mono text-[12.5px] leading-[1.8] text-inverse-fg">
+              {t('aiPackBody')}
+            </p>
+            <div className="mt-4 border-t border-inverse-fg/15 pt-3.5 text-sm font-semibold text-sage">
+              {t('packResult')}
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="container py-20">
-        <h2 className="mb-10 text-center text-3xl font-semibold tracking-tight">{t('howTitle')}</h2>
-        <div className="grid gap-6 md:grid-cols-3">
+      {/* How it works — numbered cards */}
+      <section className="container pb-[clamp(56px,8vw,88px)]">
+        <h2 className="mb-[30px] text-[clamp(26px,3.2vw,40px)] font-extrabold tracking-[-0.032em] text-ink">
+          {t('howTitle')}
+        </h2>
+        <div className="grid gap-5 sm:grid-cols-2 md:grid-cols-3">
           {[t('howStep1'), t('howStep2'), t('howStep3')].map((step, i) => (
-            <Card key={i}>
-              <CardContent className="pt-6">
-                <div className="mb-3 grid size-9 place-items-center rounded-full bg-primary/10 font-semibold text-primary">
-                  {i + 1}
-                </div>
-                <p className="text-base">{step}</p>
-              </CardContent>
-            </Card>
+            <div
+              key={i}
+              className="rounded-xl border border-border bg-surface p-7 transition-all hover:-translate-y-[3px] hover:shadow-elevate"
+            >
+              <div className="font-mono text-xs text-iris">{String(i + 1).padStart(2, '0')}</div>
+              <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">{step}</p>
+            </div>
           ))}
         </div>
       </section>
 
-      {/* Feature blocks */}
-      <section className="container grid gap-6 pb-8 md:grid-cols-2">
-        <FeatureCard icon={FileText} title={t('aiPackTitle')} body={t('aiPackBody')} />
-        <FeatureCard icon={Layers} title={t('presetsTitle')} body={t('presetsBody')} />
-        <FeatureCard icon={Workflow} title={t('portabilityTitle')} body={t('portabilityBody')} />
-        <FeatureCard icon={Lock} title={t('privacyTitle')} body={t('privacyBody')} />
+      {/* Formats / presets */}
+      <section className="container pb-[clamp(56px,8vw,88px)]">
+        <h2 className="mb-3 text-[clamp(26px,3.2vw,40px)] font-extrabold tracking-[-0.032em] text-ink">
+          {t('presetsTitle')}
+        </h2>
+        <p className="mb-[30px] max-w-[56ch] text-[16.5px] text-muted-foreground">{t('presetsBody')}</p>
+        <div className="flex flex-wrap gap-2">
+          {['Markdown', 'JSON', 'Cursor', 'Claude Projects', 'Notion'].map((label) => (
+            <span
+              key={label}
+              className="rounded-lg border border-border bg-surface px-3 py-[7px] font-mono text-[12.5px] text-muted-foreground"
+            >
+              {label}
+            </span>
+          ))}
+        </div>
       </section>
 
-      {/* Portability */}
-      <section className="container grid items-center gap-8 py-16 md:grid-cols-2">
-        <div className="space-y-3">
-          <h2 className="text-3xl font-semibold tracking-tight">{t('portabilityTitle')}</h2>
-          <p className="text-lg text-muted-foreground">{t('portabilityBody')}</p>
+      {/* Open / portability + privacy */}
+      <section className="container pb-[clamp(64px,9vw,100px)]">
+        <div className="grid items-stretch gap-6 md:grid-cols-2">
+          <div>
+            <h2 className="mb-3 text-[clamp(24px,2.8vw,34px)] font-extrabold tracking-[-0.03em] text-ink">
+              {t('portabilityTitle')}
+            </h2>
+            <p className="mb-5 max-w-[46ch] text-base leading-relaxed text-muted-foreground">
+              {t('portabilityBody')}
+            </p>
+            <div className="grid gap-2.5">
+              <div className="flex flex-wrap items-baseline gap-3.5 rounded-xl border border-border bg-surface px-[18px] py-4">
+                <span className="min-w-[130px] text-[14.5px] font-bold text-ink">{t('privacyTitle')}</span>
+                <span className="min-w-[180px] flex-1 text-sm leading-relaxed text-muted-foreground">
+                  {t('privacyBody')}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="min-h-[340px] overflow-hidden rounded-xl bg-track shadow-card">
+            <Image
+              src="/images/portability.png"
+              alt=""
+              width={1200}
+              height={800}
+              className="h-full w-full object-cover [object-position:50%_32%]"
+            />
+          </div>
         </div>
-        <div className="overflow-hidden rounded-2xl border border-border shadow-card">
-          <Image src="/images/portability.png" alt="" width={1200} height={800} className="h-auto w-full" />
-        </div>
-      </section>
 
-      {/* CTA */}
-      <section className="container py-20">
-        <Card className="relative overflow-hidden border-0">
-          <Image
-            src="/images/cta-background.png"
-            alt=""
-            fill
-            className="object-cover"
-            sizes="(max-width: 1200px) 100vw, 1200px"
+        {/* Final CTA banner */}
+        <div className="relative mt-16 flex min-h-[320px] flex-wrap items-end justify-between gap-6 overflow-hidden rounded-2xl p-[clamp(30px,4vw,52px)]">
+          <Image src="/images/cta-background.png" alt="" fill className="object-cover [object-position:58%_55%]" />
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage:
+                'linear-gradient(100deg, rgba(14,12,19,.82) 0%, rgba(14,12,19,.52) 48%, rgba(14,12,19,.12) 100%)',
+            }}
           />
-          <div className="absolute inset-0 bg-inverse-surface/70" />
-          <CardContent className="relative flex flex-col items-center gap-5 py-16 text-center">
-            <h2 className="max-w-xl text-3xl font-semibold tracking-tight text-inverse-fg">{t('ctaTitle')}</h2>
-            <p className="max-w-lg text-inverse-fg/80">{t('ctaBody')}</p>
-            <Link href="/request-access" className={buttonVariants({ size: 'lg' })}>
-              {t('ctaButton')} <ArrowRight className="size-4" />
-            </Link>
-          </CardContent>
-        </Card>
+          <div className="relative max-w-[34ch]">
+            <div className="text-[clamp(22px,2.6vw,30px)] font-extrabold tracking-[-0.03em] text-[#F7F5F1]">
+              {t('ctaTitle')}
+            </div>
+            <div className="mt-2.5 text-[15px] leading-relaxed text-[rgba(247,245,241,0.72)]">{t('ctaBody')}</div>
+          </div>
+          <Link href="/request-access" className={`relative ${buttonVariants({ size: 'lg' })}`}>
+            {t('ctaButton')} <ArrowRight className="size-4" />
+          </Link>
+        </div>
       </section>
     </>
-  );
-}
-
-function FeatureCard({
-  icon: Icon,
-  title,
-  body,
-}: {
-  icon: typeof FileText;
-  title: string;
-  body: string;
-}) {
-  return (
-    <Card>
-      <CardContent className="flex gap-4 pt-6">
-        <div className="grid size-10 shrink-0 place-items-center rounded-md bg-accent/10 text-accent">
-          <Icon className="size-5" />
-        </div>
-        <div>
-          <h3 className="mb-1 text-lg font-semibold">{title}</h3>
-          <p className="text-muted-foreground">{body}</p>
-        </div>
-      </CardContent>
-    </Card>
   );
 }

@@ -61,7 +61,11 @@
     "ctaButton": "Solicitar acesso",
     "eyebrow": "Reuniões preparadas para IA",
     "accessNote": "Acesso por convite · Seus dados ficam no seu dispositivo por padrão.",
-    "recordingLabel": "Gravando"
+    "recordingLabel": "Gravando",
+    "rawTranscriptLabel": "Transcrição bruta",
+    "rawSample": "…então acho que a gente devia, tipo, seguir com aquilo, né? Mas o Paulo falou que talvez não dê até sexta, aí…",
+    "rawResult": "Horas de áudio, contexto nenhum.",
+    "packResult": "Contexto pronto para IA em segundos."
   },
   "access": {
     "requestTitle": "Solicitar acesso",
