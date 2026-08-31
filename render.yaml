@@ -35,7 +35,7 @@ services:
     rootDir: .
     # `--prod=false`: NODE_ENV=production is set on the service, and pnpm then
     # skips devDependencies — so force a full install for the build/runtime tooling.
-    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false
+    buildCommand: npm install -g pnpm@10.33.0 && pnpm install --frozen-lockfile --prod=false
     # Free tier does NOT support preDeployCommand, so run migrations at startup.
     # Drizzle tracks applied migrations, so re-running on each (cold) start is an
     # idempotent no-op once the schema is current.
@@ -112,7 +112,7 @@ services:
     plan: free
     rootDir: .
     # `--prod=false`: install devDependencies for `next build` despite NODE_ENV=production.
-    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm --filter @loquia/web build
+    buildCommand: npm install -g pnpm@10.33.0 && pnpm install --frozen-lockfile --prod=false && pnpm --filter @loquia/web build
     startCommand: pnpm --filter @loquia/web start
     envVars:
       - key: NODE_ENV
