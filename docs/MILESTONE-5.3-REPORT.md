@@ -40,15 +40,19 @@ deploy workflow was created (§42).
 ## Deepgram
 
 ```
-Credentials:            MISSING (DEEPGRAM_API_KEY unset in this environment)
-Submission (async):     IMPLEMENTED — submit(?callback=…) → request_id; unit-tested
+Credentials:            PRESENT via GitHub Secret DEEPGRAM_API_KEY (CI live-verify job)
+Submission (async):     PASS (LIVE) — real Deepgram /v1/listen ?callback=… accepted the
+                        submit and returned a real request_id
+                        (CI run 33392569034, request_id=01a057d5-0373-74f1-912f-ff12fb048f33)
 request_id:             persisted on the ProcessingJob (verified in tests/e2e; truncated in logs)
-Callback reachability:  n/a locally; live NOT RUN (needs deployed public API + key)
+Callback reachability:  live NOT RUN — needs deployed public API so Deepgram can POST back
+                        (submission verified live; callback loop still needs the Render deploy)
 Callback authentication: IMPLEMENTED — shared-secret token (constant-time) + request_id binding
 Callback idempotency:   IMPLEMENTED + tested — duplicate → no second transcript/AI-Pack job
 Transcript persistence: IMPLEMENTED + tested — webhook maps + persists TranscriptSegment[]
-Diarization:            IMPLEMENTED — segmentation maps provider speakers → stable keys
-Live:                   NOT RUN — credentials unavailable
+Diarization:            IMPLEMENTED — submit sends diarize=true; segmentation maps provider
+                        speakers → stable keys
+Live submission:        PASS — credential valid, async submit round-trip succeeded
 ```
 
 ## Anthropic
@@ -115,16 +119,24 @@ migrations:  PASS      typecheck: PASS      lint: PASS
 unit+integration (api/worker/pipeline/web): PASS
 mock e2e:    PASS (after build-before-e2e ordering fix)
 web build:   PASS      storybook: PASS      production smoke: PASS (providers NOT RUN)
+live-verify (Deepgram submit): PASS — real async submit, request_id issued
+               (CI run 33392569034; opt-in via [live] commit marker + GitHub Secret)
 Run: GitHub Actions "CI & Live Verify" on the certified commit.
 ```
 
 ## Live blockers (real, remaining)
 
 ```
+RESOLVED — Deepgram credential: a valid DEEPGRAM_API_KEY was added as a GitHub
+          Secret and the CI live-verify job PASSED the real async submit
+          (request_id issued). The remaining Deepgram gap is only the callback
+          loop, which is deploy-dependent (public API URL), not credential.
 BLOCKED — environment egress policy: Render unreachable from this session
           (api.render.com + *.onrender.com denied); no Render credential present.
-BLOCKED — provider configuration: DEEPGRAM_API_KEY, ANTHROPIC_API_KEY,
-          EMAIL_API_KEY not present in this environment.
+          The sandbox also blocks api.deepgram.com — the live PASS was obtained
+          via the GitHub Actions runner, which is not egress-blocked.
+BLOCKED — provider configuration (remaining): ANTHROPIC_API_KEY and EMAIL_API_KEY
+          not yet provided (live Anthropic + email still NOT RUN).
 ```
 
 ## HUMAN ACTION REQUIRED (minimum set)
