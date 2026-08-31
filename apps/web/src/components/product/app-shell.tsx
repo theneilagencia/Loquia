@@ -133,19 +133,6 @@ export function AppShell({
               <span>{t(item.labelKey)}</span>
             </Link>
           ))}
-          {session?.isAdmin && (
-            <Link
-              href="/admin"
-              className={cn(
-                'flex items-center justify-between rounded-[9px] px-3 py-2.5 text-sm transition-colors',
-                isActive('/admin')
-                  ? 'bg-white/10 font-medium text-inverse-fg'
-                  : 'font-medium text-inverse-fg/65 hover:bg-white/5 hover:text-inverse-fg',
-              )}
-            >
-              <span>{t('admin')}</span>
-            </Link>
-          )}
         </nav>
 
         <div className="flex-1" />
@@ -153,36 +140,28 @@ export function AppShell({
         {/* Persistent mini-recorder lives in the rail (design). */}
         <MiniRecorder />
 
-        <div className="flex flex-col gap-3 border-t border-white/10 pt-4">
-          <div className="flex items-center justify-between gap-2">
-            <LocaleSwitcher />
-            <div className="flex items-center gap-1">
-              <ThemeToggle />
-              <button
-                type="button"
-                onClick={logout}
-                className="grid size-9 place-items-center rounded-md text-inverse-fg/65 transition-colors hover:bg-white/5 hover:text-inverse-fg"
-                aria-label={t('logout')}
-              >
-                <LogOut className="size-4" />
-              </button>
-            </div>
-          </div>
+        <div className="flex flex-col gap-2.5 border-t border-white/10 pt-4">
           {session && (
-            <div className="flex items-center gap-2.5 px-1">
+            <div className="flex items-center gap-2.5 px-1 pb-0.5">
               <span className="grid size-8 shrink-0 place-items-center rounded-full bg-iris text-[11px] font-bold text-white">
                 {initials}
               </span>
               <div className="min-w-0">
-                <p className="truncate text-[13px] font-semibold text-inverse-fg">
-                  {session.user.name}
-                </p>
-                <p className="truncate text-[11.5px] text-inverse-fg/45">
-                  {session.workspace.name}
-                </p>
+                <p className="truncate text-[13px] font-semibold text-inverse-fg">{session.user.name}</p>
+                <p className="truncate text-[11.5px] text-inverse-fg/45">{session.workspace.name}</p>
               </div>
             </div>
           )}
+          <LocaleSwitcher onDark fluid />
+          <ThemeToggle onDark fluid />
+          <button
+            type="button"
+            onClick={logout}
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-inverse-fg/65 transition-colors hover:bg-white/5 hover:text-inverse-fg"
+          >
+            <LogOut className="size-4" />
+            {t('logout')}
+          </button>
         </div>
       </aside>
 
@@ -193,8 +172,8 @@ export function AppShell({
             <Logo />
           </Link>
           <span className="flex-1" />
-          <LocaleSwitcher />
-          <ThemeToggle />
+          <LocaleSwitcher onDark />
+          <ThemeToggle onDark />
         </div>
 
         {/* Content topbar: search + settings + admin. */}
