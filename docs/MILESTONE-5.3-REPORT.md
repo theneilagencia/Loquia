@@ -58,11 +58,12 @@ Live submission:        PASS — credential valid, async submit round-trip succe
 ## Anthropic
 
 ```
-Credentials:      MISSING (ANTHROPIC_API_KEY unset; ANTHROPIC_BASE_URL is the
-                  Claude Code proxy, not an AI Pack key)
-Generation:       IMPLEMENTED (worker; structured output re-validated)
-Schema:           enforced (Zod) + versioned
-Evidence:         segment-id anchored; hallucinated ids rejected
+Credentials:      PRESENT via GitHub Secret ANTHROPIC_API_KEY (CI live-verify job)
+Generation:       PASS (LIVE) — real Anthropic call generated an AI Pack
+                  (CI run 33395992539: model=claude-sonnet-5, sections=8,
+                   cited=3, dropped=0 — schema + evidence validated on real output)
+Schema:           enforced (Zod) + versioned — passed on the live output
+Evidence:         segment-id anchored; hallucinated ids rejected (dropped=0 live)
 Cross-language:   pt-BR transcript → en-US pack keeps original evidence/numbers/dates
 Integrity metrics (golden evaluator, deterministic mock):
     evidence_reference_validity = 1.0
@@ -71,7 +72,7 @@ Integrity metrics (golden evaluator, deterministic mock):
     date_preservation           = PASS ("12 de março"/"20 de março")
     decision_precision          = PASS (decision detected; suggestion excluded)
     explicit_vs_inferred        = NOT MEASURED (no numeric accuracy metric emitted)
-Live:             NOT RUN — credentials unavailable
+Live generation:  PASS — real AI Pack generated, schema + evidence validated
 ```
 
 ## Resend
@@ -119,24 +120,32 @@ migrations:  PASS      typecheck: PASS      lint: PASS
 unit+integration (api/worker/pipeline/web): PASS
 mock e2e:    PASS (after build-before-e2e ordering fix)
 web build:   PASS      storybook: PASS      production smoke: PASS (providers NOT RUN)
-live-verify (Deepgram submit): PASS — real async submit, request_id issued
-               (CI run 33392569034; opt-in via [live] commit marker + GitHub Secret)
+live-verify (Deepgram submit):  PASS — real async submit, request_id issued
+live-verify (Anthropic AI Pack): PASS — real generation, model=claude-sonnet-5,
+               sections=8, cited=3, dropped=0 (schema + evidence validated)
+               (CI run 33395992539; opt-in via [live] marker + GitHub Secrets)
 Run: GitHub Actions "CI & Live Verify" on the certified commit.
 ```
 
 ## Live blockers (real, remaining)
 
 ```
-RESOLVED — Deepgram credential: a valid DEEPGRAM_API_KEY was added as a GitHub
-          Secret and the CI live-verify job PASSED the real async submit
-          (request_id issued). The remaining Deepgram gap is only the callback
-          loop, which is deploy-dependent (public API URL), not credential.
+RESOLVED — Deepgram credential: valid DEEPGRAM_API_KEY added as a GitHub Secret;
+          CI live-verify PASSED the real async submit (request_id issued). The
+          remaining Deepgram gap is only the callback loop, deploy-dependent
+          (needs a public API URL), not credential.
+RESOLVED — Anthropic credential: valid ANTHROPIC_API_KEY added as a GitHub Secret;
+          CI live-verify PASSED real AI Pack generation (schema + evidence
+          validated). A blank-model env footgun was fixed along the way (the
+          factory/smoke now default on empty/whitespace, not just undefined).
 BLOCKED — environment egress policy: Render unreachable from this session
           (api.render.com + *.onrender.com denied); no Render credential present.
-          The sandbox also blocks api.deepgram.com — the live PASS was obtained
-          via the GitHub Actions runner, which is not egress-blocked.
-BLOCKED — provider configuration (remaining): ANTHROPIC_API_KEY and EMAIL_API_KEY
-          not yet provided (live Anthropic + email still NOT RUN).
+          The sandbox also blocks api.deepgram.com / api.anthropic.com — the live
+          PASSes were obtained via the GitHub Actions runner, not egress-blocked.
+BLOCKED — provider configuration (remaining): EMAIL_API_KEY not yet provided
+          (live email still NOT RUN).
+NOT RUN — Deepgram callback loop + full golden path: need the Render deploy so
+          Deepgram can POST the transcript back to a public API URL.
 ```
 
 ## HUMAN ACTION REQUIRED (minimum set)
