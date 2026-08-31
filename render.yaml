@@ -33,6 +33,13 @@ services:
     runtime: node
     plan: free
     rootDir: .
+    # Don't rebuild the service for docs/CI-only commits (avoids needless free-tier
+    # redeploys + downtime windows). Only code changes trigger a build.
+    buildFilter:
+      ignoredPaths:
+        - docs/**
+        - .github/**
+        - "**/*.md"
     # `--prod=false`: NODE_ENV=production is set on the service, and pnpm then
     # skips devDependencies — so force a full install for the build/runtime tooling.
     buildCommand: npm install -g pnpm@10.33.0 && pnpm install --frozen-lockfile --prod=false
@@ -111,6 +118,11 @@ services:
     runtime: node
     plan: free
     rootDir: .
+    buildFilter:
+      ignoredPaths:
+        - docs/**
+        - .github/**
+        - "**/*.md"
     # `--prod=false`: install devDependencies for `next build` despite NODE_ENV=production.
     buildCommand: npm install -g pnpm@10.33.0 && pnpm install --frozen-lockfile --prod=false && pnpm --filter @loquia/web build
     startCommand: pnpm --filter @loquia/web start
