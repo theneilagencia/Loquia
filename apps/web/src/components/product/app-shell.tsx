@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
-import { Home, LogOut, Mic, Search, Settings, Video } from 'lucide-react';
+import { Home, Loader2, LogOut, Mic, Search, Settings, Video } from 'lucide-react';
 import type { Session } from '@loquia/domain';
 import { cn } from '@loquia/ui';
 import { Link, useRouter } from '@/i18n/navigation';
@@ -36,17 +36,52 @@ function openPalette() {
   window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
 }
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({
+  children,
+  requireAdmin = false,
+}: {
+  children: ReactNode;
+  /** When true, non-admins are redirected to /app (used by the admin section). */
+  requireAdmin?: boolean;
+}) {
   const t = useTranslations('nav');
   const common = useTranslations('common');
   const services = useServices();
   const router = useRouter();
   const pathname = usePathname();
-  const [session, setSession] = useState<Session | null>(null);
+  // `undefined` = still resolving the session (show a loader, never protected UI).
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
 
   useEffect(() => {
-    services.auth.getSession().then(setSession);
-  }, [services]);
+    let active = true;
+    services.auth.getSession().then((s) => {
+      if (!active) return;
+      if (!s) {
+        // Not signed in — the whole app section is gated behind login.
+        router.replace('/login');
+        return;
+      }
+      if (requireAdmin && !s.isAdmin) {
+        // Signed in but lacks admin rights — send back to the app home.
+        router.replace('/app');
+        return;
+      }
+      setSession(s);
+    });
+    return () => {
+      active = false;
+    };
+  }, [services, router, requireAdmin]);
+
+  // While the session resolves (or a redirect is in flight) render only a
+  // neutral loader — protected content and the admin chrome never flash.
+  if (session === undefined || session === null) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-canvas">
+        <Loader2 className="size-6 animate-spin text-iris" aria-label={common('loading')} />
+      </div>
+    );
+  }
 
   function isActive(href: string, exact?: boolean) {
     const path = pathname.replace(/^\/[a-z]{2}-[A-Z]{2}/, '');

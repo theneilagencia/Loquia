@@ -24,7 +24,9 @@ test('AI Pack renders canonical sections and evidence stays in the original lang
 });
 
 test('theme preference persists across reload', async ({ page }) => {
-  await page.goto('/pt-BR/login');
+  // The theme control lives in the authenticated app shell (design dropped it
+  // from the marketing header); the seeded mock session renders the shell.
+  await page.goto('/pt-BR/app');
   await page.getByRole('radio', { name: 'Escuro' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.reload();
