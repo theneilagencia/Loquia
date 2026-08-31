@@ -1,0 +1,56 @@
+name: Fetch Render API logs
+
+# Pull the loquia-api runtime (app) logs via the Render API from the runner, so
+# the crash reason behind an update_failed deploy is visible without dashboard
+# access. Read-only. Opt-in: manual dispatch or a [logs] commit marker.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: render-logs
+  cancel-in-progress: true
+
+jobs:
+  logs:
+    name: Fetch API logs
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[logs]') }}
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      API_NAME: loquia-api
+    steps:
+      - name: Fetch logs
+        run: |
+          set -uo pipefail
+          RENDER_API_KEY="$(printf '%s' "${RENDER_API_KEY:-}" | tr -d '[:space:]')"
+          [ -n "$RENDER_API_KEY" ] || { echo "::error::RENDER_API_KEY not set"; exit 1; }
+          API="https://api.render.com/v1"
+          auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json")
+
+          svc="$(curl -sS -m 30 "${auth[@]}" "${API}/services?limit=100")"
+          obj="$(jq -c --arg n "$API_NAME" '.[].service | select(.name==$n)' <<<"$svc" | head -n1)"
+          sid="$(jq -r '.id' <<<"$obj")"
+          owner="$(jq -r '.ownerId // .owner.id // empty' <<<"$obj")"
+          echo "service=${sid} owner=${owner}"
+
+          echo "== Latest deploy =="
+          curl -sS -m 20 "${auth[@]}" "${API}/services/${sid}/deploys?limit=1" \
+            | jq -r '.[0].deploy | "status=\(.status) startedAt=\(.startedAt) finishedAt=\(.finishedAt) commit=\(.commit.id // "?")"' || true
+
+          # Try the Logs API a couple of ways (shape varies); print whatever comes back.
+          echo "== App logs (type=app) =="
+          code="$(curl -sS -m 30 "${auth[@]}" -o /tmp/logs1 -w '%{http_code}' \
+            "${API}/logs?ownerId=${owner}&resource=${sid}&type=app&limit=100&direction=backward" || echo 000)"
+          echo "HTTP ${code}"
+          if [ "$code" = "200" ]; then
+            jq -r '(.logs // .events // [])[] | "\(.timestamp // "") \(.message // .text // .)"' /tmp/logs1 2>/dev/null | tail -n 80 || { echo "raw:"; head -c 2000 /tmp/logs1; }
+          else
+            echo "body:"; head -c 800 /tmp/logs1; echo
+            echo "== Retry without type filter =="
+            code2="$(curl -sS -m 30 "${auth[@]}" -o /tmp/logs2 -w '%{http_code}' \
+              "${API}/logs?ownerId=${owner}&resource=${sid}&limit=100&direction=backward" || echo 000)"
+            echo "HTTP ${code2}"; head -c 2000 /tmp/logs2; echo
+          fi
