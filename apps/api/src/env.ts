@@ -8,6 +8,14 @@ const schema = z.object({
   API_HOST: z.string().default('0.0.0.0'),
   API_PORT: z.coerce.number().default(4000),
   COOKIE_DOMAIN: z.string().optional(),
+  // Session-cookie SameSite. Cross-site deploys (web and API on different sites,
+  // e.g. *.onrender.com subdomains) require 'none' so the browser stores/sends
+  // the cookie on cross-origin fetches; same-site deploys can use 'lax'. Blank
+  // falls back to 'none' in production, 'lax' otherwise.
+  COOKIE_SAMESITE: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() ? v.trim() : undefined),
+    z.enum(['lax', 'none', 'strict']).optional(),
+  ),
   RATE_LIMIT_MAX: z.coerce.number().default(100),
 
   // --- Processing pipeline ---

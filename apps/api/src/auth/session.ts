@@ -63,16 +63,28 @@ export async function revokeAllSessionsForUser(db: Database, userId: string): Pr
     .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)));
 }
 
+/**
+ * SameSite for the session cookie. Cross-site deploys (web + API on different
+ * sites, e.g. loquia-web / loquia-api on *.onrender.com) MUST use 'none' or the
+ * browser drops the cookie on cross-origin fetches — the login POST returns 200
+ * but no session is stored. Defaults to 'none' in production, 'lax' otherwise.
+ */
+function cookieSameSite(env: Env): 'lax' | 'none' | 'strict' {
+  return env.COOKIE_SAMESITE ?? (isProd(env) ? 'none' : 'lax');
+}
+
 export function setSessionCookie(
   reply: FastifyReply,
   token: string,
   expiresAt: Date,
   env: Env,
 ): void {
+  const sameSite = cookieSameSite(env);
   reply.setCookie(SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: isProd(env),
-    sameSite: 'lax',
+    // SameSite=None is only honored on a Secure cookie.
+    secure: isProd(env) || sameSite === 'none',
+    sameSite,
     path: '/',
     expires: expiresAt,
     ...(env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {}),
@@ -80,8 +92,12 @@ export function setSessionCookie(
 }
 
 export function clearSessionCookie(reply: FastifyReply, env: Env): void {
+  const sameSite = cookieSameSite(env);
   reply.clearCookie(SESSION_COOKIE, {
     path: '/',
+    // Match the set attributes so the browser actually clears the cookie.
+    secure: isProd(env) || sameSite === 'none',
+    sameSite,
     ...(env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {}),
   });
 }
