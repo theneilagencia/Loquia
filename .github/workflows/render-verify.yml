@@ -35,27 +35,31 @@ jobs:
           [ "$code" = "200" ] || { echo "::error::GET /services HTTP $code"; printf '%s' "$body" | head -c 300; exit 1; }
           api_url="$(jq -r --arg n "$API_NAME" '.[].service | select(.name==$n) | .serviceDetails.url // empty' <<<"$body" | head -n1)"
           web_url="$(jq -r --arg n "$WEB_NAME" '.[].service | select(.name==$n) | .serviceDetails.url // empty' <<<"$body" | head -n1)"
-          # Also report each service's latest deploy status for context.
+          # Report each service's latest deploy status + failure reason (the key signal).
+          echo "== Latest deploy status per service =="
           for n in "$API_NAME" "$WEB_NAME"; do
             sid="$(jq -r --arg n "$n" '.[].service | select(.name==$n) | .id' <<<"$body" | head -n1)"
-            st="$(curl -sS -m 20 "${auth[@]}" "${API}/services/${sid}/deploys?limit=1" | jq -r '.[0].deploy.status // .[0].status // "unknown"')"
-            echo "service ${n}: id=${sid} latest_deploy=${st}"
+            dep="$(curl -sS -m 20 "${auth[@]}" "${API}/services/${sid}/deploys?limit=1")"
+            st="$(jq -r '.[0].deploy.status // .[0].status // "unknown"' <<<"$dep")"
+            echo "  ${n}: id=${sid} latest_deploy=${st}"
           done
           echo "API_URL=${api_url:-MISSING}"
           echo "WEB_URL=${web_url:-MISSING}"
           [ -n "$api_url" ] || { echo "::error::api url not found"; jq '.[0]' <<<"$body"; exit 1; }
 
-          probe () { # $1=url -> prints code, returns 0 on 200
-            for i in $(seq 1 10); do
-              code="$(curl -sS -o /tmp/b -m 60 -w '%{http_code}' "$1" 2>/dev/null || echo 000)"
+          # Fail-fast probe: short per-attempt timeout so a non-responding endpoint
+          # doesn't hang the job. ~72s max per endpoint.
+          probe () { # $1=url -> returns 0 on 200
+            for i in $(seq 1 6); do
+              code="$(curl -sS -o /tmp/b -m 12 -w '%{http_code}' "$1" 2>/dev/null || echo 000)"
               echo "  GET $1 -> ${code}"
               if [ "$code" = "200" ]; then echo "  body: $(head -c 300 /tmp/b)"; return 0; fi
-              sleep 12
+              sleep 8
             done
             return 1
           }
           rc=0
-          echo "== /health (cold start may take ~50s) =="; probe "${api_url}/health" || { echo "::error::/health not 200"; rc=1; }
-          echo "== /ready =="; probe "${api_url}/ready" || { echo "::warning::/ready not 200"; rc=1; }
+          echo "== /health (cold start may take ~50s) =="; probe "${api_url}/health" || { echo "::error::/health not 200 — API not live (see deploy status above; check Render deploy log)"; rc=1; }
+          echo "== /ready =="; probe "${api_url}/ready" || echo "::warning::/ready not 200"
           echo "== web root =="; probe "${web_url}/pt-BR" || echo "::warning::web not 200 yet"
           exit $rc
