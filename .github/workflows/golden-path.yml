@@ -1,0 +1,102 @@
+name: Live golden path
+
+# End-to-end verification against the DEPLOYED Render production API: seed a user
+# (via the Postgres external URL from the Render API), synthesize real speech,
+# then login → process-audio → REAL Deepgram callback lands on the public webhook
+# → transcript → in-process AI Pack. Uses real Deepgram + Anthropic. Opt-in via a
+# [golden] commit marker or manual dispatch. Never prints secrets.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: golden-path
+  cancel-in-progress: true
+
+jobs:
+  golden:
+    name: Live golden path
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[golden]') }}
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      API_URL: https://loquia-api.onrender.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Resolve prod DB external URL (Render API)
+        run: |
+          set -euo pipefail
+          RENDER_API_KEY="$(printf '%s' "${RENDER_API_KEY:-}" | tr -d '[:space:]')"
+          [ -n "$RENDER_API_KEY" ] || { echo "::error::RENDER_API_KEY not set"; exit 1; }
+          A="https://api.render.com/v1"; auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json")
+          pg="$(curl -fsS -m 30 "${auth[@]}" "${A}/postgres?limit=100")"
+          pgid="$(jq -r '.[].postgres | select(.name=="loquia-postgres") | .id' <<<"$pg" | head -n1)"
+          [ -n "$pgid" ] || { echo "::error::loquia-postgres not found"; jq -r '.[].postgres.name' <<<"$pg"; exit 1; }
+          ci="$(curl -fsS -m 30 "${auth[@]}" "${A}/postgres/${pgid}/connection-info")"
+          ext="$(jq -r '.externalConnectionString // .external_connection_string // empty' <<<"$ci")"
+          [ -n "$ext" ] || { echo "::error::no external connection string"; echo "$ci" | head -c 300; exit 1; }
+          echo "PROD_DB_URL=${ext}" >> "$GITHUB_ENV"
+          echo "resolved external DB (len ${#ext})"
+      - run: npm install -g pnpm@10.33.0 && pnpm install --frozen-lockfile --prod=false
+      - name: Seed the production database (creates the owner user)
+        run: DATABASE_URL="$PROD_DB_URL" pnpm --filter @loquia/api db:seed
+      - name: Synthesize real speech (TTS)
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq && sudo apt-get install -y -qq espeak-ng
+          espeak-ng -s 150 -w /tmp/audio.wav \
+            "Good morning everyone. This is a live test meeting for Loquia. The decision is to launch the pilot on Friday. The budget is twelve thousand dollars. We will confirm the vendor next week."
+          ls -l /tmp/audio.wav
+      - name: Login, process-audio, and poll transcript + AI Pack
+        run: |
+          set -euo pipefail
+          jarg=(-c /tmp/cj -b /tmp/cj)
+          echo "== login =="
+          code="$(curl -sS -m 30 -o /tmp/lo -w '%{http_code}' "${jarg[@]}" -H 'content-type: application/json' \
+            -d '{"email":"vinicius@apymine.com","password":"password123"}' "${API_URL}/api/auth/login")"
+          echo "login HTTP ${code}"; [ "$code" = "200" ] || { head -c 300 /tmp/lo; echo; exit 1; }
+
+          echo "== process-audio =="
+          code="$(curl -sS -m 60 -o /tmp/pa -w '%{http_code}' "${jarg[@]}" \
+            -H 'content-type: audio/wav' --data-binary @/tmp/audio.wav \
+            "${API_URL}/api/meetings/process-audio?title=Live%20golden%20path&meetingLanguage=en-US&source=recording&durationSeconds=14")"
+          echo "process-audio HTTP ${code}"; cat /tmp/pa; echo
+          [ "$code" = "202" ] || { echo "::error::process-audio not 202"; exit 1; }
+          mid="$(jq -r '.meetingId' /tmp/pa)"; echo "meetingId=${mid}"
+
+          echo "== poll meeting ready (real Deepgram callback → public webhook) =="
+          status=""
+          for i in $(seq 1 40); do
+            status="$(curl -sS -m 20 "${jarg[@]}" "${API_URL}/api/meetings/${mid}" | jq -r '.status // "?"')"
+            echo "  meeting status=${status}"
+            [ "$status" = "ready" ] && break
+            [ "$status" = "failed" ] && { echo "::error::meeting failed"; exit 1; }
+            sleep 6
+          done
+          [ "$status" = "ready" ] || { echo "::error::transcript not ready in time"; exit 1; }
+
+          echo "== transcript =="
+          tr="$(curl -sS -m 20 "${jarg[@]}" "${API_URL}/api/meetings/${mid}/transcript")"
+          segs="$(jq -r '.segments | length' <<<"$tr")"; echo "segments=${segs}"
+          jq -r '.segments[0].text // "(none)"' <<<"$tr"
+          [ "${segs:-0}" -ge 1 ] || { echo "::error::no transcript segments"; exit 1; }
+
+          echo "== poll AI Pack ready =="
+          apst=""
+          for i in $(seq 1 40); do
+            apst="$(curl -sS -m 20 "${jarg[@]}" "${API_URL}/api/meetings/${mid}/ai-pack/status" | jq -r '.status // "?"')"
+            echo "  ai-pack status=${apst}"
+            [ "$apst" = "ready" ] && break
+            [ "$apst" = "failed" ] && { echo "::error::ai-pack failed"; exit 1; }
+            sleep 6
+          done
+          [ "$apst" = "ready" ] || { echo "::error::ai-pack not ready in time"; exit 1; }
+          pack="$(curl -sS -m 20 "${jarg[@]}" "${API_URL}/api/meetings/${mid}/aipack")"
+          nsec="$(jq -r '.source.sections | length' <<<"$pack")"; echo "ai_pack sections=${nsec}"
+          [ "${nsec:-0}" -ge 1 ] || { echo "::error::ai-pack has no sections"; exit 1; }
+          echo "== GOLDEN PATH LIVE: PASS =="
