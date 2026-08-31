@@ -4,7 +4,7 @@ import { use, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { AlertCircle } from 'lucide-react';
 import type { ProcessingJob } from '@loquia/domain';
-import { Badge, Button, Card, CardContent } from '@loquia/ui';
+import { Button, cn } from '@loquia/ui';
 import { useServices } from '@/lib/services-context';
 import { useRouter } from '@/i18n/navigation';
 import { ProcessingTimeline } from '@/components/product/processing-timeline';
@@ -49,38 +49,49 @@ export default function ProcessingPage({
     setJob(result.ok ? result.value : job);
   }
 
+  const failed = job?.status === 'failed';
+  const completed = job?.status === 'completed';
+
   return (
     <div className="mx-auto max-w-xl space-y-6">
-      <h1 className="text-2xl font-semibold">{t('title')}</h1>
-      <Card>
-        <CardContent className="space-y-6 pt-6">
-          {job && (
-            <div className="flex items-center justify-between">
-              <Badge variant={job.status === 'failed' ? 'destructive' : 'secondary'}>
-                {t(`status.${job.status === 'running' ? 'running' : job.status}`)}
-              </Badge>
-              <span className="text-sm text-muted-foreground">{job.progress}%</span>
-            </div>
-          )}
-          {job ? <ProcessingTimeline job={job} /> : <p className="text-muted-foreground">…</p>}
-
-          {job?.status === 'failed' && (
-            <div className="space-y-3 rounded-md bg-destructive/10 p-4">
-              <div className="flex items-center gap-2 text-destructive">
-                <AlertCircle className="size-4" />
-                <p className="font-medium">{t('failedTitle')}</p>
-              </div>
-              <p className="text-sm text-muted-foreground">{t('failedBody')}</p>
-              {job.errorMessage && (
-                <p className="font-mono text-xs text-muted-foreground">{job.errorMessage}</p>
+      <h1 className="text-[clamp(24px,2.6vw,32px)] font-extrabold tracking-[-0.03em] text-ink">
+        {t('title')}
+      </h1>
+      <div className="rounded-xl border border-border bg-surface p-7 shadow-card">
+        {job && (
+          <div className="mb-5 flex items-center gap-3">
+            <span
+              className={cn(
+                'size-2 rounded-full',
+                failed ? 'bg-danger' : completed ? 'bg-sage' : 'animate-loq-pulse bg-iris',
               )}
-              <Button size="sm" onClick={() => void retry()}>
-                {t('retry')}
-              </Button>
+            />
+            <span className="text-[18px] font-bold text-ink">
+              {t(`status.${job.status === 'running' ? 'running' : job.status}`)}
+            </span>
+            <span className="flex-1" />
+            <span className="font-mono text-[11.5px] text-faint">{job.progress}%</span>
+          </div>
+        )}
+
+        {job ? <ProcessingTimeline job={job} /> : <p className="text-muted-foreground">…</p>}
+
+        {failed && (
+          <div className="mt-6 space-y-3 rounded-xl bg-danger-soft p-4">
+            <div className="flex items-center gap-2 text-danger">
+              <AlertCircle className="size-4" />
+              <p className="font-medium">{t('failedTitle')}</p>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <p className="text-sm text-muted-foreground">{t('failedBody')}</p>
+            {job?.errorMessage && (
+              <p className="font-mono text-xs text-muted-foreground">{job.errorMessage}</p>
+            )}
+            <Button size="sm" onClick={() => void retry()}>
+              {t('retry')}
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useLocale, useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, Skeleton } from '@loquia/ui';
+import { Skeleton } from '@loquia/ui';
 import { useServices } from '@/lib/services-context';
 import { formatDate } from '@/lib/format';
 
@@ -18,25 +18,27 @@ export default function AdminAuditPage() {
   if (isLoading) return <Skeleton className="h-64" />;
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">{t('audit')}</h1>
-      <Card>
-        <CardContent className="divide-y divide-border p-0">
-          {(data?.items ?? []).map((event) => (
-            <div key={event.id} className="flex items-start justify-between gap-4 p-4">
-              <div className="min-w-0">
-                <p className="font-mono text-sm">{event.action}</p>
-                <p className="truncate text-sm text-muted-foreground">
-                  {event.actorLabel} → {event.targetLabel}
-                </p>
-              </div>
-              <span className="whitespace-nowrap text-xs text-muted-foreground">
-                {formatDate(event.createdAt, locale)}
-              </span>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+    <div>
+      <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-faint">Loquia · Admin</div>
+      <h1 className="mb-6 text-[clamp(23px,2.5vw,30px)] font-bold tracking-[-0.03em] text-ink">{t('audit')}</h1>
+      <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+        {(data?.items ?? []).map((event) => (
+          <div
+            key={event.id}
+            className="flex flex-wrap items-center gap-4 px-[18px] py-3 transition-colors hover:bg-canvas"
+          >
+            <span className="min-w-[82px] whitespace-nowrap font-mono text-[11.5px] text-faint">
+              {formatDate(event.createdAt, locale)}
+            </span>
+            <span className="inline-block min-w-[104px] whitespace-nowrap rounded-md bg-track px-[7px] py-[3px] text-center font-mono text-[10.5px] uppercase tracking-[0.09em] text-muted-foreground">
+              {event.action}
+            </span>
+            <span className="min-w-[200px] flex-1 truncate text-[13.5px] text-ink">
+              {event.actorLabel} → {event.targetLabel}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

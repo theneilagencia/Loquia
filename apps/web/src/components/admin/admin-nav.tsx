@@ -18,7 +18,7 @@ export function AdminNav() {
   const t = useTranslations('admin');
   const pathname = usePathname().replace(/^\/[a-z]{2}-[A-Z]{2}/, '');
   return (
-    <nav className="flex gap-1 overflow-x-auto border-b border-border pb-px">
+    <nav className="flex w-fit max-w-full flex-wrap gap-0.5 overflow-x-auto rounded-lg border border-border bg-surface p-[3px] shadow-card">
       {ITEMS.map((item) => {
         const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
         return (
@@ -26,10 +26,10 @@ export function AdminNav() {
             key={item.href}
             href={item.href}
             className={cn(
-              '-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm transition-colors',
+              'whitespace-nowrap rounded-md px-3.5 py-[7px] text-[12.5px] font-semibold transition-colors',
               active
-                ? 'border-primary font-medium text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground',
+                ? 'bg-ink text-canvas'
+                : 'text-muted-foreground hover:bg-canvas hover:text-ink',
             )}
           >
             {t(item.key)}

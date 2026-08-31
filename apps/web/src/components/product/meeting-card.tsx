@@ -1,42 +1,43 @@
 'use client';
 
 import { useLocale, useTranslations } from 'next-intl';
-import { Clock, Mic, Upload, Users } from 'lucide-react';
 import type { Meeting } from '@loquia/domain';
-import { Card, CardContent } from '@loquia/ui';
+import { cn } from '@loquia/ui';
 import { Link } from '@/i18n/navigation';
 import { formatDate, minutesOf } from '@/lib/format';
-import { MeetingStatusBadge } from './meeting-status-badge';
+import { MeetingStatusBadge, STATUS_DOT } from './meeting-status-badge';
 
+/**
+ * A single meeting row. Rendered inside a bordered surface card (home + list);
+ * rows self-divide with a top border (first row excepted).
+ */
 export function MeetingCard({ meeting }: { meeting: Meeting }) {
   const t = useTranslations('meetings');
   const locale = useLocale();
-  const SourceIcon = meeting.source === 'recording' ? Mic : Upload;
   return (
-    <Link href={`/app/meetings/${meeting.id}`} className="block">
-      <Card className="transition-colors hover:border-primary/50">
-        <CardContent className="space-y-3 pt-6">
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="font-semibold leading-snug">{meeting.title}</h3>
-            <MeetingStatusBadge status={meeting.status} />
-          </div>
-          {meeting.summaryLine && (
-            <p className="line-clamp-2 text-sm text-muted-foreground">{meeting.summaryLine}</p>
-          )}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <SourceIcon className="size-3.5" /> {meeting.source}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Clock className="size-3.5" /> {t('durationLabel', { minutes: minutesOf(meeting.durationSeconds) })}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Users className="size-3.5" /> {meeting.participantCount}
-            </span>
-            <span>{formatDate(meeting.createdAt, locale)}</span>
-          </div>
-        </CardContent>
-      </Card>
+    <Link
+      href={`/app/meetings/${meeting.id}`}
+      className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border px-[18px] py-3.5 transition-colors first:border-t-0 hover:bg-canvas"
+    >
+      <span className={cn('size-1.5 shrink-0 rounded-full', STATUS_DOT[meeting.status])} />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span className="text-[14.5px] font-semibold tracking-[-0.008em] text-ink">
+            {meeting.title}
+          </span>
+          <MeetingStatusBadge status={meeting.status} />
+        </div>
+        <div className="mt-1 truncate text-[12.5px] text-muted-foreground">
+          {meeting.summaryLine ??
+            `${meeting.source} · ${t('durationLabel', { minutes: minutesOf(meeting.durationSeconds) })} · ${t('participants', { count: meeting.participantCount })}`}
+        </div>
+      </div>
+      <span className="shrink-0 font-mono text-[11.5px] uppercase text-faint">
+        {meeting.meetingLanguage}
+      </span>
+      <span className="shrink-0 whitespace-nowrap text-[12.5px] text-muted-foreground">
+        {formatDate(meeting.createdAt, locale)}
+      </span>
     </Link>
   );
 }

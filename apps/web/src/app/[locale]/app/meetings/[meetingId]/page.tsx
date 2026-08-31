@@ -4,7 +4,7 @@ import { use, useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import { Archive, ArrowLeft, Download, RefreshCw, Sparkles, Trash2 } from 'lucide-react';
-import { Button, buttonVariants, Card, CardContent, Skeleton } from '@loquia/ui';
+import { Button, buttonVariants, Skeleton } from '@loquia/ui';
 import { useServices } from '@/lib/services-context';
 import { Link, useRouter } from '@/i18n/navigation';
 import { formatDate, minutesOf } from '@/lib/format';
@@ -90,20 +90,31 @@ export default function MeetingDetailPage({
   const recordingPeaks = [0.3, 0.6, 0.8, 0.5, 0.9, 0.4, 0.7, 0.6];
   const showRecording = meeting.status !== 'processing';
 
+  const meta = [
+    meeting.source,
+    t('durationLabel', { minutes: minutesOf(meeting.durationSeconds) }),
+    t('participants', { count: meeting.participantCount }),
+    formatDate(meeting.createdAt, locale),
+  ].join(' · ');
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="min-w-0 space-y-1">
-          <Link
-            href="/app/meetings"
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="size-3.5" /> {t('title')}
-          </Link>
-          <div className="flex items-center gap-3">
-            <h1 className="truncate text-2xl font-semibold">{meeting.title}</h1>
+      <Link
+        href="/app/meetings"
+        className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-iris hover:text-iris-strong"
+      >
+        <ArrowLeft className="size-3.5" /> {t('title')}
+      </Link>
+
+      <div className="flex flex-wrap items-start justify-between gap-5">
+        <div className="min-w-[280px] flex-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-[clamp(23px,2.5vw,30px)] font-extrabold tracking-[-0.03em] text-ink">
+              {meeting.title}
+            </h1>
             <MeetingStatusBadge status={meeting.status} />
           </div>
+          <div className="mt-2 text-[14px] text-muted-foreground">{meta}</div>
         </div>
         {meeting.status === 'ready' && (
           <ExportModal
@@ -119,17 +130,15 @@ export default function MeetingDetailPage({
       </div>
 
       {meeting.status === 'processing' && (
-        <Card>
-          <CardContent className="flex items-center justify-between pt-6">
-            <p className="text-muted-foreground">{t('status.processing')}…</p>
-            <Link
-              href={`/app/meetings/${meetingId}/processing`}
-              className={buttonVariants({ variant: 'outline', size: 'sm' })}
-            >
-              {processingT('title')}
-            </Link>
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface px-[18px] py-4 shadow-card">
+          <p className="text-muted-foreground">{t('status.processing')}…</p>
+          <Link
+            href={`/app/meetings/${meetingId}/processing`}
+            className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          >
+            {processingT('title')}
+          </Link>
+        </div>
       )}
 
       {showRecording && (
@@ -146,10 +155,16 @@ export default function MeetingDetailPage({
 
       {/* AI Pack is the DEFAULT tab — never Transcript (task spec §27). */}
       <Tabs defaultValue="aiPack">
-        <TabsList>
-          <TabsTrigger value="aiPack">{t('tabs.aiPack')}</TabsTrigger>
-          <TabsTrigger value="transcript">{t('tabs.transcript')}</TabsTrigger>
-          <TabsTrigger value="details">{t('tabs.details')}</TabsTrigger>
+        <TabsList className="h-auto w-full justify-start gap-1 rounded-none border-b border-border bg-transparent p-0 text-muted-foreground">
+          {(['aiPack', 'transcript', 'details'] as const).map((tab) => (
+            <TabsTrigger
+              key={tab}
+              value={tab}
+              className="-mb-px rounded-none border-b-2 border-transparent px-4 py-2.5 text-[14.5px] data-[state=active]:border-ink data-[state=active]:bg-transparent data-[state=active]:text-ink data-[state=active]:shadow-none"
+            >
+              {t(`tabs.${tab}`)}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         <TabsContent value="aiPack">
@@ -218,48 +233,52 @@ export default function MeetingDetailPage({
         </TabsContent>
 
         <TabsContent value="details">
-          <Card>
-            <CardContent className="grid gap-3 pt-6 text-sm sm:grid-cols-2">
-              <Detail label="ID" value={meeting.id} />
-              <Detail label={t('tabs.details')} value={meeting.source} />
-              <Detail label={t('durationLabel', { minutes: minutesOf(meeting.durationSeconds) })} value={`${meeting.participantCount}`} />
-              <Detail label="Idioma" value={meeting.meetingLanguage} />
-              <Detail label="Criada" value={formatDate(meeting.createdAt, locale)} />
-              <div className="flex gap-2 pt-2 sm:col-span-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void services.meetings.archive(meetingId).then(() => meetingQ.refetch())}
-                >
-                  <Archive className="size-3.5" /> {t('archive')}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => {
-                    if (!window.confirm(t('deleteConfirm'))) return;
-                    void (async () => {
-                      // §32: deleting the meeting also removes the on-device copy.
-                      if (workspaceId) {
-                        try {
-                          const localStore = await getLocalMediaStore(workspaceId);
-                          const localAsset = localStore.getByMeeting(meetingId);
-                          if (localAsset) await localStore.delete(localAsset.id);
-                        } catch {
-                          /* best effort */
-                        }
+          <div className="rounded-xl border border-border bg-surface p-6 shadow-card">
+            <div className="mb-3.5 font-mono text-[11.5px] uppercase tracking-[0.1em] text-muted-foreground">
+              {t('tabs.details')}
+            </div>
+            <Detail label="ID" value={meeting.id} />
+            <Detail label={t('tabs.details')} value={meeting.source} />
+            <Detail
+              label={t('durationLabel', { minutes: minutesOf(meeting.durationSeconds) })}
+              value={t('participants', { count: meeting.participantCount })}
+            />
+            <Detail label="Idioma" value={meeting.meetingLanguage} />
+            <Detail label="Criada" value={formatDate(meeting.createdAt, locale)} />
+            <div className="flex gap-2 pt-5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void services.meetings.archive(meetingId).then(() => meetingQ.refetch())}
+              >
+                <Archive className="size-3.5" /> {t('archive')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={() => {
+                  if (!window.confirm(t('deleteConfirm'))) return;
+                  void (async () => {
+                    // §32: deleting the meeting also removes the on-device copy.
+                    if (workspaceId) {
+                      try {
+                        const localStore = await getLocalMediaStore(workspaceId);
+                        const localAsset = localStore.getByMeeting(meetingId);
+                        if (localAsset) await localStore.delete(localAsset.id);
+                      } catch {
+                        /* best effort */
                       }
-                      const res = await services.meetings.remove(meetingId);
-                      if (res.ok) router.push('/app/meetings');
-                    })();
-                  }}
-                >
-                  <Trash2 className="size-3.5" /> {t('delete')}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                    }
+                    const res = await services.meetings.remove(meetingId);
+                    if (res.ok) router.push('/app/meetings');
+                  })();
+                }}
+              >
+                <Trash2 className="size-3.5" /> {t('delete')}
+              </Button>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
@@ -268,9 +287,9 @@ export default function MeetingDetailPage({
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="font-medium">{value}</p>
+    <div className="flex items-start justify-between gap-4 border-t border-border py-2.5 text-[14px]">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-right font-medium text-ink">{value}</span>
     </div>
   );
 }

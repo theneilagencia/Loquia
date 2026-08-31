@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
-import { Badge, Button, Card, CardContent, Skeleton } from '@loquia/ui';
+import { Badge, Button, Skeleton } from '@loquia/ui';
 import { useServices } from '@/lib/services-context';
 
 export default function AdminWorkspacesPage() {
@@ -17,15 +17,15 @@ export default function AdminWorkspacesPage() {
   if (isLoading) return <Skeleton className="h-64" />;
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">{t('workspaces')}</h1>
-      <Card>
-        <CardContent className="divide-y divide-border p-0">
+    <div>
+      <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-faint">Loquia · Admin</div>
+      <h1 className="mb-6 text-[clamp(23px,2.5vw,30px)] font-bold tracking-[-0.03em] text-ink">{t('workspaces')}</h1>
+      <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface shadow-card">
           {(data ?? []).map((w) => (
-            <div key={w.id} className="flex items-center justify-between gap-3 p-4">
-              <div>
-                <p className="font-medium">{w.name}</p>
-                <p className="text-sm text-muted-foreground">
+            <div key={w.id} className="flex flex-wrap items-center justify-between gap-3 px-[18px] py-3.5 transition-colors hover:bg-canvas">
+              <div className="min-w-0">
+                <p className="truncate text-[14.5px] font-semibold tracking-[-0.008em] text-ink">{w.name}</p>
+                <p className="mt-1 text-[12.5px] text-muted-foreground">
                   {w.slug} · {w.plan} · {w.seats} seats
                 </p>
               </div>
@@ -48,8 +48,7 @@ export default function AdminWorkspacesPage() {
               </div>
             </div>
           ))}
-        </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }

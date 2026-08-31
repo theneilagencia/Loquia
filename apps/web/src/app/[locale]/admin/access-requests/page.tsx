@@ -3,7 +3,7 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronRight } from 'lucide-react';
-import { Badge, Card, CardContent, Skeleton } from '@loquia/ui';
+import { Badge, Skeleton } from '@loquia/ui';
 import type { AccessRequestStatus } from '@loquia/domain';
 import { useServices } from '@/lib/services-context';
 import { Link } from '@/i18n/navigation';
@@ -33,33 +33,33 @@ export default function AccessRequestsPage() {
   if (isLoading) return <Skeleton className="h-64" />;
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">{t('accessRequests')}</h1>
-      <Card>
-        <CardContent className="divide-y divide-border p-0">
-          {(data ?? []).map((req) => (
-            <Link
-              key={req.id}
-              href={`/admin/access-requests/${req.id}`}
-              className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-secondary/50"
-            >
-              <div className="min-w-0">
-                <p className="truncate font-medium">{req.name}</p>
-                <p className="truncate text-sm text-muted-foreground">
-                  {req.email} · {req.company}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="hidden text-xs text-muted-foreground sm:block">
-                  {formatDate(req.createdAt, locale)}
-                </span>
-                <Badge variant={STATUS_VARIANT[req.status]}>{t(STATUS_KEY[req.status])}</Badge>
-                <ChevronRight className="size-4 text-muted-foreground" />
-              </div>
-            </Link>
-          ))}
-        </CardContent>
-      </Card>
+    <div>
+      <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-faint">Loquia · Admin</div>
+      <h1 className="mb-6 text-[clamp(23px,2.5vw,30px)] font-bold tracking-[-0.03em] text-ink">
+        {t('accessRequests')}
+      </h1>
+      <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+        {(data ?? []).map((req) => (
+          <Link
+            key={req.id}
+            href={`/admin/access-requests/${req.id}`}
+            className="flex flex-wrap items-center gap-4 px-[18px] py-3.5 transition-colors hover:bg-canvas"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[14.5px] font-semibold tracking-[-0.008em] text-ink">{req.name}</p>
+              <p className="mt-1 truncate text-[12.5px] text-muted-foreground">{req.email}</p>
+            </div>
+            <span className="min-w-[104px] text-[13.5px] text-ink">{req.company}</span>
+            <span className="min-w-[92px]">
+              <Badge variant={STATUS_VARIANT[req.status]}>{t(STATUS_KEY[req.status])}</Badge>
+            </span>
+            <span className="hidden whitespace-nowrap text-[12.5px] text-muted-foreground sm:block">
+              {formatDate(req.createdAt, locale)}
+            </span>
+            <ChevronRight className="size-4 text-iris" />
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
