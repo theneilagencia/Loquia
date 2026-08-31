@@ -1,12 +1,11 @@
 name: Live login verify
 
-# Redeploy loquia-api (picks up the SameSite=None cookie fix), wait until it is
-# live, then drive a REAL headless browser through the deployed web login and
-# assert it lands in the app (proves the cross-site session cookie is stored and
-# sent). Opt-in: manual dispatch or a [logincheck] commit marker.
-#
-# Never prints secrets. Credentials default to the seeded owner; override with
-# ADMIN_EMAIL / ADMIN_PASSWORD repository secrets.
+# Drive a REAL headless browser through the deployed web login and assert it
+# lands in the app — the definitive check that the cross-site session cookie is
+# stored and sent. The push that carries the API fix auto-deploys loquia-api, so
+# this does NOT trigger a deploy itself; it waits for /health, then retries the
+# browser login while the rollout finishes. Opt-in: manual dispatch or a
+# [logincheck] commit marker. Never prints secrets.
 
 on:
   workflow_dispatch:
@@ -19,58 +18,29 @@ concurrency:
 
 jobs:
   verify:
-    name: Redeploy API + browser login
+    name: Browser login against deployed web
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[logincheck]') }}
     env:
-      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      WEB_URL: https://loquia-web.onrender.com
+      API_URL: https://loquia-api.onrender.com
       ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
       ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
-      API_NAME: loquia-api
-      WEB_NAME: loquia-web
     steps:
-      - name: Redeploy API and wait until live
-        id: deploy
+      - name: Wait for API to answer (cold start + rollout)
         run: |
           set -euo pipefail
-          RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
-          API="https://api.render.com/v1"
-          auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json" -H "Content-Type: application/json")
-          services="$(curl -fsS -m 30 "${auth[@]}" "${API}/services?limit=100")"
-          api_id="$(jq -r --arg n "$API_NAME" '.[].service | select(.name==$n) | .id' <<<"$services" | head -n1)"
-          web_url="$(jq -r --arg n "$WEB_NAME" '.[].service | select(.name==$n) | .serviceDetails.url // empty' <<<"$services" | head -n1)"
-          echo "api_id=${api_id}  web_url=${web_url}"
-          [ -n "$api_id" ] && [ -n "$web_url" ] || { echo "::error::could not resolve services"; exit 1; }
-          echo "web_url=${web_url}" >> "$GITHUB_OUTPUT"
-
-          dep="$(curl -fsS -X POST "${auth[@]}" "${API}/services/${api_id}/deploys" -d '{"clearCache":"do_not_clear"}' | jq -r '.id')"
-          echo "api deploy: ${dep}"
-          for i in $(seq 1 80); do
-            status="$(curl -fsS "${auth[@]}" "${API}/services/${api_id}/deploys/${dep}" | jq -r '.status')"
-            echo "  ${dep}: ${status}"
-            case "$status" in
-              live|deactivated) break ;;
-              build_failed|update_failed|canceled|pre_deploy_failed) echo "::error::deploy ${status}"; exit 1 ;;
-            esac
+          for i in $(seq 1 40); do
+            code="$(curl -sS -o /dev/null -m 60 -w '%{http_code}' "${API_URL}/health" || echo 000)"
+            echo "  api /health -> ${code} (attempt ${i})"
+            [ "$code" = "200" ] && break
             sleep 15
           done
-          # Wait for the API to actually answer 200 (cold start).
-          for i in $(seq 1 12); do
-            code="$(curl -sS -o /dev/null -m 60 -w '%{http_code}' "${web_url%/}"/ || echo 000)"
-            code_api="$(curl -sS -o /dev/null -m 60 -w '%{http_code}' "$(jq -r --arg n "$API_NAME" '.[].service|select(.name==$n)|.serviceDetails.url' <<<"$services")/health" || echo 000)"
-            echo "  web / -> ${code} ; api /health -> ${code_api}"
-            [ "$code_api" = "200" ] && break
-            sleep 10
-          done
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: npm init -y >/dev/null 2>&1 && npm i playwright@1.49.1 >/dev/null 2>&1 && npx playwright install --with-deps chromium
-
-      - name: Browser login against deployed web
-        env:
-          WEB_URL: ${{ steps.deploy.outputs.web_url }}
+      - name: Browser login (with retries while the API rollout finishes)
         run: |
           cat > login.cjs <<'EOF'
           (async () => {
@@ -78,36 +48,46 @@ jobs:
             const WEB = (process.env.WEB_URL || '').replace(/\/$/, '');
             const email = process.env.ADMIN_EMAIL || 'vinicius@apymine.com';
             const password = process.env.ADMIN_PASSWORD || 'password123';
-            const b = await chromium.launch();
-            const p = await b.newPage();
-            const netErr = [];
-            p.on('requestfailed', r => netErr.push(r.method()+' '+r.url()+' '+ (r.failure()&&r.failure().errorText)));
-            await p.goto(`${WEB}/pt-BR/login`, { waitUntil: 'networkidle', timeout: 60000 });
-            await p.getByLabel('E-mail').fill(email);
-            await p.getByLabel('Senha').fill(password);
-            // Capture the login API response status.
-            const [resp] = await Promise.all([
-              p.waitForResponse(r => r.url().includes('/api/auth/login'), { timeout: 30000 }).catch(() => null),
-              p.getByRole('button', { name: 'Entrar' }).click(),
-            ]);
-            console.log('login API status:', resp ? resp.status() : 'NO RESPONSE');
-            // Give the client-side redirect + getSession a moment.
-            await p.waitForTimeout(4000);
-            const url = p.url();
-            console.log('URL after login:', url);
-            await p.screenshot({ path: 'after-login.png', fullPage: true });
-            if (netErr.length) console.log('failed requests:', netErr.slice(0, 8));
-            await b.close();
-            if (/\/pt-BR\/app(\/|$|\?)/.test(url) || /\/pt-BR\/app$/.test(url)) {
-              console.log('LOGIN OK: landed in the app');
-            } else {
-              console.log('::error::Login did not reach /app — still at ' + url);
-              process.exit(1);
+
+            async function attempt(n) {
+              const b = await chromium.launch();
+              const ctx = await b.newContext();
+              const p = await ctx.newPage();
+              let loginStatus = 'none', setCookie = '';
+              p.on('response', async r => {
+                if (r.url().includes('/api/auth/login')) {
+                  loginStatus = r.status();
+                  const h = await r.allHeaders();
+                  setCookie = h['set-cookie'] || '';
+                }
+              });
+              await p.goto(`${WEB}/pt-BR/login`, { waitUntil: 'networkidle', timeout: 60000 });
+              await p.getByLabel('E-mail').fill(email);
+              await p.getByLabel('Senha').fill(password);
+              await p.getByRole('button', { name: 'Entrar' }).click();
+              await p.waitForTimeout(5000);
+              const url = p.url();
+              // A stored cross-site cookie means a reload stays authenticated (no bounce to /login).
+              await p.goto(`${WEB}/pt-BR/app`, { waitUntil: 'networkidle', timeout: 60000 });
+              await p.waitForTimeout(2500);
+              const afterReload = p.url();
+              console.log(`attempt ${n}: loginStatus=${loginStatus} sameSite=${/samesite=none/i.test(setCookie)?'None':(setCookie?'other':'n/a')} urlAfterLogin=${url} urlAfterReload=${afterReload}`);
+              await p.screenshot({ path: 'after-login.png', fullPage: true });
+              await b.close();
+              const ok = /\/pt-BR\/app(\b|\/|\?|$)/.test(afterReload) && !/\/login/.test(afterReload);
+              return ok;
             }
+
+            for (let n = 1; n <= 6; n++) {
+              try { if (await attempt(n)) { console.log('LOGIN OK: authenticated and stayed in /app'); process.exit(0); } }
+              catch (e) { console.log(`attempt ${n} error: ${e.message}`); }
+              await new Promise(r => setTimeout(r, 20000));
+            }
+            console.log('::error::Login never reached an authenticated /app after 6 attempts');
+            process.exit(1);
           })().catch(e => { console.error(e.message); process.exit(1); });
           EOF
           node login.cjs
-
       - uses: actions/upload-artifact@v4
         if: always()
         with:
