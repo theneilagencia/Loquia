@@ -87,7 +87,11 @@ jobs:
     name: Live provider verification (opt-in)
     runs-on: ubuntu-latest
     needs: gates
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.live }}
+    # Opt-in: manual dispatch with live=true, OR a push whose head commit message
+    # contains the [live] marker (so provider credits are only spent deliberately).
+    if: >-
+      ${{ (github.event_name == 'workflow_dispatch' && inputs.live) ||
+          (github.event_name == 'push' && contains(github.event.head_commit.message, '[live]')) }}
     env:
       # Provider keys come from GitHub Secrets; the smokes self-report NOT RUN
       # when a key is absent, so this job never fails for a missing credential.
