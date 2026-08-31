@@ -21,6 +21,7 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
+    "db:bootstrap-admin": "tsx src/db/bootstrap-admin.ts",
     "db:check": "drizzle-kit check",
     "db:seed": "tsx src/db/seed.ts",
     "smoke:production": "tsx scripts/smoke-production.ts"
