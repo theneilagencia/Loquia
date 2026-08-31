@@ -62,4 +62,17 @@ jobs:
           echo "== /health (cold start may take ~50s) =="; probe "${api_url}/health" || { echo "::error::/health not 200 — API not live (see deploy status above; check Render deploy log)"; rc=1; }
           echo "== /ready =="; probe "${api_url}/ready" || echo "::warning::/ready not 200"
           echo "== web root =="; probe "${web_url}/pt-BR" || echo "::warning::web not 200 yet"
+
+          echo "== web CSS assets =="
+          html="$(curl -sS -m 20 "${web_url}/pt-BR" || true)"
+          # Extract stylesheet + preloaded CSS hrefs referenced by the served HTML.
+          mapfile -t css < <(grep -oE '/_next/static/[^"]+\.css' <<<"$html" | sort -u)
+          echo "stylesheet links in HTML: ${#css[@]}"
+          if [ "${#css[@]}" -eq 0 ]; then
+            echo "::warning::no CSS <link> found in served HTML — dumping <head>"; grep -oE '<head>.*</head>' <<<"$html" | head -c 1500; echo
+          fi
+          for href in "${css[@]}"; do
+            cc="$(curl -sS -m 15 -o /tmp/css -w '%{http_code}:%{content_type}' "${web_url}${href}" 2>/dev/null || echo '000:')"
+            echo "  ${href} -> ${cc} ($(wc -c </tmp/css 2>/dev/null) bytes)"
+          done
           exit $rc
