@@ -113,7 +113,8 @@
     "portPoint1": "Markdown, JSON and TXT",
     "portPoint2": "Copy or download in one click",
     "portPoint3": "Evidence in the original language",
-    "portPoint4": "On-device only by default"
+    "portPoint4": "On-device only by default",
+    "ctaEyebrow": "GET STARTED"
   },
   "access": {
     "requestTitle": "Request access",

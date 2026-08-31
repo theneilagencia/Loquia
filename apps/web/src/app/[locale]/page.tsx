@@ -11,7 +11,6 @@ import {
   Mic,
   Quote,
   Sparkles,
-  Upload,
   Workflow,
 } from 'lucide-react';
 import { buttonVariants } from '@loquia/ui';
@@ -32,6 +31,7 @@ const INTEGRATIONS = ['ChatGPT', 'Claude', 'Cursor', 'Notion', 'Obsidian', 'Gemi
 
 function Marketing() {
   const t = useTranslations('marketing');
+  const nav = useTranslations('nav');
 
   const steps = [
     { icon: Mic, title: t('stepTitle1'), body: t('howStep1') },
@@ -327,25 +327,48 @@ function Marketing() {
         </div>
       </section>
 
-      {/* Final CTA — dark band */}
+      {/* Final CTA — dark band, centered closing moment */}
       <section className="container py-[clamp(56px,8vw,96px)]">
-        <div className="relative overflow-hidden rounded-2xl bg-inverse-surface px-[clamp(28px,5vw,64px)] py-[clamp(40px,6vw,72px)] text-inverse-fg shadow-modal">
+        <div className="relative overflow-hidden rounded-[24px] bg-inverse-surface px-[clamp(24px,5vw,72px)] py-[clamp(52px,8vw,96px)] text-center text-inverse-fg shadow-modal">
+          {/* Ambient glows + subtle dot grid for depth */}
+          <div className="pointer-events-none absolute -right-28 -top-28 size-80 rounded-full bg-iris/30 blur-3xl" aria-hidden />
+          <div className="pointer-events-none absolute -bottom-32 -left-24 size-80 rounded-full bg-iris/15 blur-3xl" aria-hidden />
           <div
-            className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-iris/25 blur-3xl"
+            className="pointer-events-none absolute inset-0 opacity-[0.06]"
             aria-hidden
+            style={{
+              backgroundImage: 'radial-gradient(currentColor 1px, transparent 1px)',
+              backgroundSize: '22px 22px',
+            }}
           />
-          <div className="relative flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
-            <div className="max-w-[34ch]">
-              <div className="mb-3 flex items-center gap-2">
-                <Upload className="size-4 text-inverse-fg/60" />
-                <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-inverse-fg/60">Loquia</span>
-              </div>
-              <h2 className="text-[clamp(24px,3vw,36px)] font-extrabold leading-[1.1] tracking-[-0.03em]">{t('ctaTitle')}</h2>
-              <p className="mt-3 text-[15.5px] leading-relaxed text-inverse-fg/70">{t('ctaBody')}</p>
+          <div className="relative mx-auto flex max-w-[640px] flex-col items-center">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-inverse-fg/15 bg-inverse-fg/5 px-3.5 py-1.5">
+              <Sparkles className="size-3.5 text-iris-strong" />
+              <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-inverse-fg/70">{t('ctaEyebrow')}</span>
             </div>
-            <Link href="/request-access" className={buttonVariants({ size: 'lg' })}>
-              {t('ctaButton')} <ArrowRight className="size-4" />
-            </Link>
+            <h2 className="max-w-[18ch] text-[clamp(28px,4vw,48px)] font-extrabold leading-[1.05] tracking-[-0.035em]">
+              {t('ctaTitle')}
+            </h2>
+            <p className="mt-5 max-w-[52ch] text-[clamp(15px,1.6vw,18px)] leading-relaxed text-inverse-fg/70">{t('ctaBody')}</p>
+            <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+              <Link href="/request-access" className={buttonVariants({ size: 'lg' })}>
+                {t('ctaButton')} <ArrowRight className="size-4" />
+              </Link>
+              <Link
+                href="/login"
+                className="inline-flex items-center rounded-lg border border-inverse-fg/25 bg-transparent px-5 py-3 text-sm font-semibold text-inverse-fg transition-colors hover:border-inverse-fg/60 hover:bg-inverse-fg/5"
+              >
+                {nav('login')}
+              </Link>
+            </div>
+            <ul className="mt-9 flex flex-wrap items-center justify-center gap-x-6 gap-y-2.5">
+              {[t('trust1'), t('trust2'), t('trust3')].map((item) => (
+                <li key={item} className="flex items-center gap-2 text-[13px] text-inverse-fg/60">
+                  <Check className="size-4 text-sage" />
+                  {item}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
