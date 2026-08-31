@@ -154,13 +154,17 @@ NOT RUN — Deepgram callback loop + full golden path: need the Render deploy so
 1. Rotate the Render API key pasted earlier (treat as exposed).
 2. Render → New → Blueprint → connect theneilagencia/Loquia →
    branch claude/loquia-milestone-1-frontend-rnoc96 → Apply
-   (provisions all services + enables auto-deploy).
-3. Set the sync:false secrets (see docs/production-deploy.md): DEEPGRAM_API_KEY,
-   ANTHROPIC_API_KEY, EMAIL_API_KEY, EMAIL_FROM, APP_URL, PUBLIC_API_URL,
-   NEXT_PUBLIC_API_URL (web), ANTHROPIC_API_KEY (worker).
+   (free topology: provisions loquia-web + loquia-api + loquia-postgres, all
+   plan:free — no worker, no Redis; the API runs the AI Pack in-process).
+3. Set the sync:false secrets (see docs/production-deploy.md) on loquia-api:
+   DEEPGRAM_API_KEY, ANTHROPIC_API_KEY, EMAIL_API_KEY, EMAIL_FROM, APP_URL,
+   PUBLIC_API_URL; and NEXT_PUBLIC_API_URL on loquia-web.
 4. After first deploy, set PUBLIC_API_URL to the API's *.onrender.com URL and
    redeploy so the Deepgram callback resolves; then run the CI "live-verify"
    job (or the local smokes) for the live golden path.
+Note: free web services spin down (~15 min idle; ~1 min cold start — Deepgram
+retries its callback) and free Postgres expires (~30 days). Upgrade plans (and
+add a worker + Key Value, set REDIS_URL) to scale out later — no code change.
 ```
 
 ## Status

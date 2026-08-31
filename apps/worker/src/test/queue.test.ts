@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { Queue, Worker } from 'bullmq';
 import { schema, type Database } from '@loquia/api/db';
 import { createRedis, MEETING_QUEUE, type MeetingJobData } from '@loquia/pipeline';
-import { processJob } from '../process-job';
+import { processJob } from '@loquia/api/jobs';
 import { makeWorkerDeps, makeWorkerTestDb, seedAiPackReady, truncateAll } from './helpers';
 
 const REDIS_URL = process.env.TEST_REDIS_URL ?? 'redis://127.0.0.1:6380';

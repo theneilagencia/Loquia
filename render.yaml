@@ -1,27 +1,37 @@
-# Loquia — Render Blueprint (Milestone 5.2: direct processing, no object storage).
+# Loquia — Render Blueprint (Milestone 5.2 pipeline; free-plan topology).
 # Structurally validated only; no deploy is performed here (no real credentials in
 # this environment). Secrets are never committed — they are injected by Render
-# (generateValue / sync:false / fromDatabase / fromService). Deepgram, Anthropic
-# and Resend credentials are set in the Render dashboard (sync:false); production
-# never silently uses mocks/console. There is NO object storage / R2.
+# (generateValue / sync:false / fromDatabase). Deepgram, Anthropic and Resend
+# credentials are set in the Render dashboard (sync:false); production never
+# silently uses mocks/console. There is NO object storage / R2.
 #
-# Region: pin every service and the database to the SAME region (e.g. `oregon`) so
-# the API↔DB↔queue↔worker hops stay in-region. Set it per service with a `region:`
-# key (omitted here so the blueprint stays account-default; choose one region and
-# apply it uniformly before the first deploy).
+# FREE-PLAN TOPOLOGY: Render background workers are a PAID instance type, so this
+# blueprint has NO separate worker and NO Redis/Key Value. The API generates the
+# AI Pack in-process (it drains ai_pack jobs from Postgres itself; the Deepgram
+# callback that inserts the job also wakes the service). Trade-offs to accept on
+# free: web services SPIN DOWN after ~15 min idle (≈1 min cold start — Deepgram
+# retries its callback, so it still lands), and the free Postgres is small and
+# EXPIRES (~30 days) — export anything you need to keep. To scale later, upgrade
+# the plans, add a Key Value + a `worker` service, and set REDIS_URL on the API:
+# the same job code then runs in a dedicated worker via BullMQ instead of in-process.
+#
+# Region: pin both web services and the database to the SAME region (e.g. `oregon`)
+# so the API↔DB hops stay in-region. Set it per service with a `region:` key
+# (omitted here so the blueprint stays account-default; apply one region uniformly).
 
 databases:
   - name: loquia-postgres
     databaseName: loquia
     user: loquia
-    plan: basic-256mb
+    plan: free # free Postgres expires (~30 days); upgrade to a paid plan to persist
 
 services:
-  # ---- API (Fastify) — also ingests + transcribes audio (M5.2) ----
+  # ---- API (Fastify) — ingests + transcribes audio AND generates the AI Pack
+  #      in-process (free plan: no separate worker, no Redis) ----
   - type: web
     name: loquia-api
     runtime: node
-    plan: starter
+    plan: free
     rootDir: .
     buildCommand: corepack enable && pnpm install --frozen-lockfile
     preDeployCommand: pnpm --filter @loquia/api db:migrate
@@ -48,11 +58,8 @@ services:
         sync: false # set to the loquia-api public URL
       - key: CORS_ORIGINS
         sync: false # comma-separated allowlist; defaults to APP_URL
-      - key: REDIS_URL
-        fromService:
-          type: keyvalue
-          name: loquia-queue
-          property: connectionString
+      # No REDIS_URL on free: without it the API runs the AI Pack in-process. Set
+      # REDIS_URL (+ add a Key Value and a worker service) only to scale out later.
       # --- Transcription (real; no silent mock fallback in prod). The API submits
       #     the received audio bytes directly to Deepgram — no object storage. ---
       - key: TRANSCRIPTION_PROVIDER
@@ -99,7 +106,7 @@ services:
   - type: web
     name: loquia-web
     runtime: node
-    plan: starter
+    plan: free
     rootDir: .
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @loquia/web build
     startCommand: pnpm --filter @loquia/web start
@@ -111,40 +118,8 @@ services:
       - key: NEXT_PUBLIC_API_URL
         sync: false # set to the loquia-api public URL
 
-  # ---- Worker (BullMQ consumer): AI Pack generation ONLY (M5.2) ----
-  # Transcription now happens inline in the API ingest, so the worker no longer
-  # needs storage or a transcription provider — only Anthropic for the AI Pack.
-  - type: worker
-    name: loquia-worker
-    runtime: node
-    plan: starter
-    rootDir: .
-    buildCommand: corepack enable && pnpm install --frozen-lockfile
-    startCommand: pnpm --filter @loquia/worker start
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: DATABASE_URL
-        fromDatabase:
-          name: loquia-postgres
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: keyvalue
-          name: loquia-queue
-          property: connectionString
-      - key: AI_PACK_PROVIDER
-        value: anthropic
-      - key: AI_PACK_MODEL
-        value: claude-sonnet-5
-      - key: AI_PACK_MAX_RETRIES
-        value: "2"
-      - key: ANTHROPIC_API_KEY
-        sync: false
-
-  # ---- Key Value (Redis-compatible) backing the BullMQ queue (AI Pack jobs) ----
-  - type: keyvalue
-    name: loquia-queue
-    plan: starter
-    maxmemoryPolicy: noeviction
-    ipAllowList: [] # only reachable from Render services
+  # NOTE: no `worker` and no `keyvalue` service on the free plan. Render workers
+  # are paid; the API generates the AI Pack in-process (see the header). The AI
+  # Pack env vars (AI_PACK_PROVIDER/MODEL/MAX_RETRIES + ANTHROPIC_API_KEY) live on
+  # loquia-api above. To scale out later, add a Key Value + a `worker` service and
+  # set REDIS_URL on both — the same job code then runs via BullMQ.

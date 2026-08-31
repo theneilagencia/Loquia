@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { schema, type Database } from '@loquia/api/db';
 import { resolvePack, type PackSource } from '@loquia/domain';
 import { PipelineError, type AIPackGenerator } from '@loquia/pipeline';
-import { processJob } from '../process-job';
+import { processJob } from '@loquia/api/jobs';
 import { makeWorkerDeps, makeWorkerTestDb, seedAiPackReady, truncateAll } from './helpers';
 
 const { processingJobs, meetings, transcriptSegments, aiPacks } = schema;

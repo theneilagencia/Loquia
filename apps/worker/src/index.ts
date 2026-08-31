@@ -1,13 +1,13 @@
 import { Worker } from 'bullmq';
 import { createDb } from '@loquia/api/db';
 import { loadEnv } from '@loquia/api/env';
+import { processJob } from '@loquia/api/jobs';
 import {
   createAIPackGenerator,
   createRedis,
   MEETING_QUEUE,
   type MeetingJobData,
 } from '@loquia/pipeline';
-import { processJob } from './process-job';
 
 /** Structured log line — IDs only, never meeting content (task §34, §38). */
 function log(event: string, fields: Record<string, unknown> = {}): void {

@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { createDb, runMigrations, schema, type Database } from '@loquia/api/db';
 import { MockAIPackGenerator } from '@loquia/pipeline';
-import type { WorkerDeps } from '../process-job';
+import type { JobDeps } from '@loquia/api/jobs';
 
 const { workspaces, users, meetings, transcriptSegments, processingJobs } = schema;
 
@@ -27,8 +27,8 @@ export async function truncateAll(db: Database): Promise<void> {
   `);
 }
 
-/** Build WorkerDeps (AI-Pack-only) with a mock generator for tests. */
-export function makeWorkerDeps(db: Database, extra?: Partial<WorkerDeps>): WorkerDeps {
+/** Build JobDeps (AI-Pack-only) with a mock generator for tests. */
+export function makeWorkerDeps(db: Database, extra?: Partial<JobDeps>): JobDeps {
   return {
     db,
     generator: new MockAIPackGenerator(),

@@ -5,26 +5,42 @@ architecture, **no object storage**) into controlled production. The code is
 certified green; the only remaining inputs are credentials and a one-time Render
 connection that require a human with account access.
 
-## Architecture being deployed
+## Architecture being deployed (free-plan topology)
 
 ```
 Browser → LocalMediaStore → Loquia API
   → Deepgram (async submit, ?callback=…) → 202
   → Deepgram POST /api/webhooks/deepgram → TranscriptSegment[]
-  → BullMQ (Redis) → worker → Anthropic → AI Pack
-Resend (email) · PostgreSQL · Key Value (Redis). No R2 / object storage.
+  → in-process AI Pack runner (Postgres is the queue) → Anthropic → AI Pack
+Resend (email) · PostgreSQL. No worker, no Redis. No R2 / object storage.
 ```
+
+Render **background workers are a paid instance type**, so the free topology has
+no separate worker and no Redis. The API generates the AI Pack **in-process**: it
+drains `ai_pack` jobs straight from Postgres. The Deepgram callback that inserts
+the job also wakes the (possibly spun-down) service, so a live process is present
+exactly when there is work. Durability is Postgres — a spin-down mid-job leaves
+the row `queued`/`running`, and the API's startup reconcile + poll finishes it.
+
+To scale out later (paid): add a Key Value + a `worker` service and set
+`REDIS_URL` — the *same* job code then runs in the worker via BullMQ instead of
+in-process (this is a runtime switch, no code change).
 
 ## Services (`render.yaml`)
 
-`loquia-web`, `loquia-api`, `loquia-worker`, `loquia-postgres`, `loquia-queue`.
-No cleanup cron (it only existed for R2). No dead env vars.
+Free plan: `loquia-web`, `loquia-api`, `loquia-postgres` (all `plan: free`). No
+`loquia-worker`, no `loquia-queue`. No cleanup cron (it only existed for R2).
+
+Free-plan caveats to accept: web services **spin down after ~15 min idle**
+(≈1 min cold start; Deepgram retries its callback so it still lands), and the free
+Postgres is small and **expires (~30 days)** — export anything you need to keep.
 
 ## Canonical production environment variables (names from `apps/api/src/env.ts`)
 
 Auto-managed by the blueprint: `SESSION_SECRET` (generateValue),
-`DEEPGRAM_CALLBACK_SECRET` (generateValue), `DATABASE_URL`, `REDIS_URL`,
-`NODE_ENV`, and the non-secret defaults.
+`DEEPGRAM_CALLBACK_SECRET` (generateValue), `DATABASE_URL`, `NODE_ENV`, and the
+non-secret defaults. No `REDIS_URL` on the free plan — leaving it unset is what
+puts the API in in-process AI Pack mode.
 
 Human-supplied secrets (`sync:false`):
 
@@ -39,7 +55,9 @@ Human-supplied secrets (`sync:false`):
 | loquia-api     | `PUBLIC_API_URL`    | public URL of `loquia-api` (used for the callback)|
 | loquia-api     | `CORS_ORIGINS`      | optional; defaults to `APP_URL`                   |
 | loquia-web     | `NEXT_PUBLIC_API_URL` | public URL of `loquia-api`                       |
-| loquia-worker  | `ANTHROPIC_API_KEY` | Anthropic key                                     |
+
+(No `loquia-worker` row on the free plan — the API holds `ANTHROPIC_API_KEY` and
+runs the AI Pack in-process.)
 
 > The Deepgram callback URL is built at runtime as
 > `${PUBLIC_API_URL}/api/webhooks/deepgram?token=${DEEPGRAM_CALLBACK_SECRET}`.

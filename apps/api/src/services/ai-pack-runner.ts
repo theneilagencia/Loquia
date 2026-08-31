@@ -1,6 +1,4 @@
-import { and, asc, desc, eq, ne } from 'drizzle-orm';
-import type { Database } from '@loquia/api/db';
-import { schema } from '@loquia/api/db';
+import { and, asc, desc, eq, lt, ne, or } from 'drizzle-orm';
 import {
   PipelineError,
   isRetryable,
@@ -9,10 +7,11 @@ import {
   type AIPackGenerationInput,
   type GenSegment,
 } from '@loquia/pipeline';
+import { schema, type Database } from '../db';
 
 const { processingJobs, meetings, transcriptSegments, aiPacks } = schema;
 
-export interface WorkerDeps {
+export interface JobDeps {
   db: Database;
   generator: AIPackGenerator;
   log: (event: string, fields: Record<string, unknown>) => void;
@@ -25,11 +24,14 @@ export interface ProcessResult {
 }
 
 /**
- * Worker job dispatch (Milestone 5.2). Since R2 was removed and transcription now
- * happens inline in the API ingest, the worker's ONLY job is AI Pack generation
- * (async, storage-independent, Anthropic-backed). Any other job type is a no-op.
+ * AI Pack job dispatch (Milestone 5.2, shared runner). Since R2 was removed and
+ * transcription happens inline in the API ingest, the only job type is AI Pack
+ * generation (async, storage-independent, Anthropic-backed). Any other type is a
+ * no-op. This module is the single source of truth for job processing: the API
+ * runs it in-process (default, no Redis) and the optional BullMQ worker calls the
+ * same function.
  */
-export async function processJob(deps: WorkerDeps, processingJobId: string): Promise<ProcessResult> {
+export async function processJob(deps: JobDeps, processingJobId: string): Promise<ProcessResult> {
   const jobRows = await deps.db.select().from(processingJobs).where(eq(processingJobs.id, processingJobId)).limit(1);
   const job = jobRows[0];
   if (!job) return { status: 'skipped', reason: 'not_found' };
@@ -47,7 +49,7 @@ type JobRow = typeof processingJobs.$inferSelect;
  * current version only at the end, so the old pack stays visible until the new
  * one succeeds (§27, §29).
  */
-async function processAiPackJob(deps: WorkerDeps, job: JobRow): Promise<ProcessResult> {
+async function processAiPackJob(deps: JobDeps, job: JobRow): Promise<ProcessResult> {
   const { db, generator, log } = deps;
   const processingJobId = job.id;
 
@@ -157,12 +159,15 @@ async function processAiPackJob(deps: WorkerDeps, job: JobRow): Promise<ProcessR
     if (!isRetryable(err)) {
       await db.update(meetings).set({ aiPackStatus: 'failed', updatedAt: new Date() }).where(eq(meetings.id, job.meetingId));
     }
+    // In-process mode has no BullMQ to re-deliver: swallow retryable errors (the
+    // job is back to `queued` and the poll loop / next kick retries it). Rethrow
+    // so the BullMQ worker path still sees the failure and applies its backoff.
     throw err;
   }
 }
 
 /** Shared failure handling: classify retryable vs permanent, record for audit. */
-async function failJob(deps: WorkerDeps, job: JobRow, err: unknown): Promise<void> {
+async function failJob(deps: JobDeps, job: JobRow, err: unknown): Promise<void> {
   const { db, log } = deps;
   const retryable = isRetryable(err);
   const category = err instanceof PipelineError ? err.category : 'unknown';
@@ -173,4 +178,103 @@ async function failJob(deps: WorkerDeps, job: JobRow, err: unknown): Promise<voi
     .set({ status: retryable ? 'queued' : 'failed', errorCode: category, errorMessage: message.slice(0, 500), attempt: (job.attempt ?? 1) + 1, updatedAt: new Date() })
     .where(eq(processingJobs.id, job.id));
   log('job_failed', { processingJobId: job.id, type: job.type, category, retryable });
+}
+
+/**
+ * In-process AI Pack runner — the default processing path when there is no Redis
+ * (Render free plan: no separate paid worker). The API drains queued `ai_pack`
+ * jobs from Postgres itself:
+ *
+ *  - `kick()` is called after a job is inserted (e.g. the Deepgram callback) and
+ *    triggers a non-blocking drain, so the HTTP request returns immediately.
+ *  - `start()` runs one drain on boot (reconciles jobs left behind by a previous
+ *    process — Render free instances spin down) and then polls periodically to
+ *    pick up retryable jobs that failure reset to `queued`.
+ *  - A `running` job older than the stale threshold is reclaimable, so a job
+ *    interrupted by a spin-down/crash is retried on the next drain.
+ *
+ * A single-flight mutex guarantees only one drain runs at a time; the DB claim in
+ * `processAiPackJob` is the real concurrency guard, and `generationKey` keeps it
+ * idempotent, so a stray double-drain can never write two current packs.
+ */
+export interface JobRunner {
+  kick: () => void;
+  start: () => Promise<void>;
+  stop: () => Promise<void>;
+}
+
+const DEFAULT_POLL_MS = 15_000;
+const DEFAULT_STALE_MS = 5 * 60_000; // a `running` job older than this is presumed abandoned
+
+export function createInProcessRunner(deps: JobDeps, opts: { pollMs?: number; staleMs?: number } = {}): JobRunner {
+  const pollMs = opts.pollMs ?? DEFAULT_POLL_MS;
+  const staleMs = opts.staleMs ?? DEFAULT_STALE_MS;
+  let draining = false;
+  let pending = false; // a kick arrived while draining → drain once more
+  let timer: ReturnType<typeof setInterval> | undefined;
+  let stopped = false;
+
+  async function nextJobId(): Promise<string | undefined> {
+    const staleBefore = new Date(Date.now() - staleMs);
+    const rows = await deps.db
+      .select({ id: processingJobs.id })
+      .from(processingJobs)
+      .where(
+        and(
+          eq(processingJobs.type, 'ai_pack'),
+          or(eq(processingJobs.status, 'queued'), and(eq(processingJobs.status, 'running'), lt(processingJobs.updatedAt, staleBefore))),
+        ),
+      )
+      .orderBy(asc(processingJobs.createdAt))
+      .limit(1);
+    return rows[0]?.id;
+  }
+
+  async function drain(): Promise<void> {
+    if (draining) {
+      pending = true;
+      return;
+    }
+    draining = true;
+    try {
+      do {
+        pending = false;
+        // Process actionable jobs one at a time until the queue is empty.
+        for (let id = await nextJobId(); id && !stopped; id = await nextJobId()) {
+          try {
+            await processJob(deps, id);
+          } catch (err) {
+            // Failure is already recorded on the job row; don't let one bad job
+            // stop the drain. A retryable job is back to `queued`, but re-picking
+            // it immediately would spin — leave it for the next poll tick.
+            deps.log('in_process_job_error', { processingJobId: id, error: err instanceof Error ? err.message : String(err) });
+            break;
+          }
+        }
+      } while (pending && !stopped);
+    } finally {
+      draining = false;
+    }
+  }
+
+  return {
+    kick() {
+      if (stopped) return;
+      void drain();
+    },
+    async start() {
+      stopped = false;
+      await drain(); // startup reconcile: finish anything a prior process left queued
+      timer = setInterval(() => void drain(), pollMs);
+      // Don't keep the event loop alive just for the poller.
+      timer.unref?.();
+    },
+    async stop() {
+      stopped = true;
+      if (timer) clearInterval(timer);
+      timer = undefined;
+      // Let an in-flight drain settle.
+      for (let i = 0; i < 50 && draining; i += 1) await new Promise((r) => setTimeout(r, 20));
+    },
+  };
 }

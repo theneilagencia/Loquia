@@ -10,6 +10,7 @@
     "./db": "./src/db/index.ts",
     "./db/schema": "./src/db/schema.ts",
     "./env": "./src/env.ts",
+    "./jobs": "./src/services/ai-pack-runner.ts",
     "./lib/crypto": "./src/lib/crypto.ts"
   },
   "scripts": {

@@ -3,6 +3,7 @@ import type { Database } from './db/client';
 import type { Env } from './env';
 import type { AuthContext } from './auth/session';
 import type { EmailProvider } from './email/provider';
+import type { JobRunner } from './services/ai-pack-runner';
 import { errors } from './lib/errors';
 
 export interface AppContext {
@@ -14,8 +15,17 @@ export interface AppContext {
    */
   transcription: TranscriptionProvider;
   email: EmailProvider;
-  /** Publish a processing job to the queue (no-op if the queue is disabled). */
+  /**
+   * Publish a processing job for AI Pack generation. With REDIS_URL it enqueues to
+   * BullMQ (a separate paid worker consumes it); without Redis (Render free) it
+   * kicks the in-process `runner` below. A no-op only if neither is configured.
+   */
   enqueue: (processingJobId: string) => Promise<void>;
+  /**
+   * In-process AI Pack runner — present only when there is no Redis (the default
+   * free-plan path). The server bootstrap starts/stops it; `enqueue` kicks it.
+   */
+  runner?: JobRunner;
 }
 
 declare module 'fastify' {

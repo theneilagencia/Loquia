@@ -11,15 +11,15 @@ const API_PORT = 4000;
 const E2E_DB = process.env.E2E_DATABASE_URL ?? 'postgres://postgres@127.0.0.1:5433/loquia_e2e';
 const baseURL = `http://localhost:${WEB_PORT}`;
 const apiUrl = `http://localhost:${API_PORT}`;
-const REDIS_URL = process.env.E2E_REDIS_URL ?? 'redis://127.0.0.1:6380';
 // Mock providers exercise the real M5.2 pipeline (direct ingest → async submit →
-// webhook callback → queue → worker → AI Pack) without external credentials.
+// webhook callback → in-process AI Pack runner) without external credentials.
+// No REDIS_URL: this mirrors the Render free plan where the API generates the AI
+// Pack in-process (no separate worker, no Redis).
 const DEEPGRAM_CALLBACK_SECRET = 'e2e-callback-secret';
 const mediaEnv = {
   TRANSCRIPTION_PROVIDER: 'mock',
   AI_PACK_PROVIDER: 'mock',
   DEEPGRAM_CALLBACK_SECRET,
-  REDIS_URL,
   PUBLIC_API_URL: apiUrl,
 };
 
@@ -50,12 +50,10 @@ export default defineConfig({
   ],
   webServer: [
     {
-      // Migrate + seed the e2e DB, then start the real BullMQ worker (background)
-      // and the API (foreground). The worker has no HTTP surface, so it runs as a
-      // child of the same shell (same process group → torn down with the API).
-      // Playwright waits on the API's /health; the worker consumes jobs the API
-      // enqueues into the shared Redis and writes transcript segments.
-      command: `npx tsx src/db/migrate.ts && npx tsx src/db/seed.ts && { (cd ../worker && npx tsx src/index.ts) & npx tsx src/index.ts; }`,
+      // Migrate + seed the e2e DB, then start the API. No worker and no Redis: the
+      // API drains ai_pack jobs from Postgres in-process (Render free topology).
+      // Playwright waits on the API's /health.
+      command: `npx tsx src/db/migrate.ts && npx tsx src/db/seed.ts && npx tsx src/index.ts`,
       cwd: '../api',
       url: `${apiUrl}/health`,
       timeout: 120_000,

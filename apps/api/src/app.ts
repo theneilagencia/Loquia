@@ -4,8 +4,9 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { ZodError } from 'zod';
 import { Queue } from 'bullmq';
-import { createRedis, createTranscriptionProvider, MEETING_QUEUE } from '@loquia/pipeline';
+import { createAIPackGenerator, createRedis, createTranscriptionProvider, MEETING_QUEUE } from '@loquia/pipeline';
 import type { AppContext } from './context';
+import { createInProcessRunner } from './services/ai-pack-runner';
 import type { Database } from './db/client';
 import type { Env } from './env';
 import { isProd } from './env';
@@ -33,19 +34,36 @@ export function createContext(env: Env, db: Database): AppContext {
     throw new Error('DEEPGRAM_CALLBACK_SECRET is required in production when TRANSCRIPTION_PROVIDER=deepgram');
   }
 
+  // AI Pack processing has two modes. Default (Render free / no Redis): the API
+  // drains ai_pack jobs from Postgres itself via an in-process runner. Optional
+  // (paid): with REDIS_URL, enqueue to BullMQ for a separate worker to consume.
+  const runnerLog = (event: string, fields: Record<string, unknown>) => {
+    // eslint-disable-next-line no-console
+    console.log(JSON.stringify({ ts: new Date().toISOString(), service: 'loquia-api', event, ...fields }));
+  };
+  const runner = env.REDIS_URL
+    ? undefined
+    : createInProcessRunner({ db, generator: createAIPackGenerator(env), log: runnerLog });
+
   let queue: Queue | null = null;
   const enqueue = async (processingJobId: string): Promise<void> => {
-    if (!env.REDIS_URL) return; // queue disabled (dev without Redis)
-    if (!queue) queue = new Queue(MEETING_QUEUE, { connection: createRedis(env.REDIS_URL) });
-    await queue.add(
-      'process',
-      { processingJobId },
-      { jobId: processingJobId, attempts: 3, backoff: { type: 'exponential', delay: 2000 }, removeOnComplete: 100, removeOnFail: 500 },
-    );
+    if (env.REDIS_URL) {
+      if (!queue) queue = new Queue(MEETING_QUEUE, { connection: createRedis(env.REDIS_URL) });
+      await queue.add(
+        'process',
+        { processingJobId },
+        { jobId: processingJobId, attempts: 3, backoff: { type: 'exponential', delay: 2000 }, removeOnComplete: 100, removeOnFail: 500 },
+      );
+      return;
+    }
+    // In-process: the job row is already persisted (queued); drain without blocking
+    // the request. Durability comes from Postgres — a spin-down/crash leaves the job
+    // queued and the runner's startup reconcile + poll picks it up.
+    runner?.kick();
   };
 
   const email = createEmailProvider(env);
-  return { env, db, transcription, email, enqueue };
+  return { env, db, transcription, email, enqueue, runner };
 }
 
 export async function buildApp(input: AppContext | { env: Env; db: Database }): Promise<FastifyInstance> {
