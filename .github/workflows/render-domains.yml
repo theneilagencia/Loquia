@@ -1,0 +1,82 @@
+name: Render custom domains
+
+# Attach the custom domain to loquia-web and open CORS/APP_URL for it, via the
+# Render API (the GitHub runner can reach api.render.com; the dev sandbox can't).
+# Prints the exact DNS records to create at the registrar (KingHost). The app
+# keeps running on Render; only DNS points the domain at it. Opt-in: manual
+# dispatch or a [domains] commit marker. Never prints secrets.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: render-domains
+  cancel-in-progress: false
+
+jobs:
+  domains:
+    name: Attach domain + open CORS
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[domains]') }}
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      API_NAME: loquia-api
+      WEB_NAME: loquia-web
+      APEX: loquia.com.br
+      WWW: www.loquia.com.br
+    steps:
+      - name: Configure custom domain + CORS, print DNS
+        run: |
+          set -euo pipefail
+          RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
+          API="https://api.render.com/v1"
+          auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json" -H "Content-Type: application/json")
+
+          services="$(curl -fsS -m 30 "${auth[@]}" "${API}/services?limit=100")"
+          api_id="$(jq -r --arg n "$API_NAME" '.[].service|select(.name==$n)|.id' <<<"$services" | head -n1)"
+          web_id="$(jq -r --arg n "$WEB_NAME" '.[].service|select(.name==$n)|.id' <<<"$services" | head -n1)"
+          web_host="$(jq -r --arg n "$WEB_NAME" '.[].service|select(.name==$n)|.serviceDetails.url' <<<"$services" | head -n1 | sed 's#https\?://##')"
+          echo "web_id=${web_id} web_host=${web_host} api_id=${api_id}"
+          [ -n "$web_id" ] && [ -n "$api_id" ] || { echo "::error::services not found"; exit 1; }
+
+          add_domain () { # $1=serviceId $2=name
+            local code body
+            body="$(curl -sS -o /tmp/dbody -w '%{http_code}' -X POST "${auth[@]}" "${API}/services/$1/custom-domains" -d "$(jq -cn --arg n "$2" '{name:$n}')")"
+            code="$body"
+            if [ "$code" = "200" ] || [ "$code" = "201" ]; then echo "  added $2";
+            elif [ "$code" = "409" ]; then echo "  $2 already attached";
+            else echo "  $2 -> HTTP ${code}"; head -c 300 /tmp/dbody; echo; fi
+          }
+          echo "== Attaching custom domains to ${WEB_NAME} =="
+          add_domain "$web_id" "$WWW"
+          add_domain "$web_id" "$APEX"
+
+          echo "== Custom domains now on ${WEB_NAME} (raw) =="
+          curl -fsS "${auth[@]}" "${API}/services/${web_id}/custom-domains" \
+            | jq -r '.[]?|.customDomain // .|{name,domainType,verificationStatus,publicSuffix,redirectForName,server}' || true
+
+          echo "== Opening CORS + APP_URL on ${API_NAME} =="
+          set_env () { curl -fsS -X PUT "${auth[@]}" "${API}/services/$1/env-vars/$2" -d "$(jq -cn --arg v "$3" '{value:$v}')" >/dev/null && echo "  $2 set"; }
+          set_env "$api_id" APP_URL "https://${WWW}"
+          set_env "$api_id" CORS_ORIGINS "https://${WWW},https://${APEX},https://${web_host}"
+
+          echo "== Redeploying ${API_NAME} so CORS takes effect =="
+          dep="$(curl -fsS -X POST "${auth[@]}" "${API}/services/${api_id}/deploys" -d '{"clearCache":"do_not_clear"}' | jq -r '.id')"
+          for i in $(seq 1 60); do
+            st="$(curl -fsS "${auth[@]}" "${API}/services/${api_id}/deploys/${dep}" | jq -r '.status')"
+            echo "  api deploy ${dep}: ${st}"
+            case "$st" in live|deactivated) break;; build_failed|update_failed|canceled|pre_deploy_failed) echo "::error::deploy ${st}"; exit 1;; esac
+            sleep 15
+          done
+
+          echo ""
+          echo "=================  DNS RECORDS TO CREATE AT KINGHOST  ================="
+          echo "  Host: www          Type: CNAME   Value: ${web_host}"
+          echo "  (apex loquia.com.br) — KingHost usually can't CNAME the root, so either:"
+          echo "     a) create an A record for '@' pointing to Render's anycast IP shown"
+          echo "        in the Render dashboard for ${APEX} (Settings > Custom Domains), or"
+          echo "     b) set a domain redirect from loquia.com.br -> https://www.loquia.com.br"
+          echo "  After DNS propagates, Render issues the TLS certificate automatically."
+          echo "======================================================================"
