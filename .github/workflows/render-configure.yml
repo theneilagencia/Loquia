@@ -1,0 +1,131 @@
+name: Configure & Deploy on Render
+
+# Autonomous Render configuration via the GitHub-hosted runner (which, unlike the
+# dev sandbox, is NOT behind the egress policy that blocks api.render.com). Given
+# RENDER_API_KEY as a GitHub Secret, this discovers the loquia-api / loquia-web
+# service URLs, sets the sync:false env vars from GitHub Secrets, wires the public
+# URLs, triggers a redeploy of both, and verifies /health + /ready.
+#
+# It NEVER prints secret values (only presence/length). Opt-in only: a manual
+# dispatch, or a push whose head commit message contains [render].
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: render-configure
+  cancel-in-progress: false
+
+jobs:
+  configure:
+    name: Configure & deploy on Render
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[render]') }}
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      EMAIL_API_KEY: ${{ secrets.EMAIL_API_KEY }}
+      EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+      API_NAME: loquia-api
+      WEB_NAME: loquia-web
+    steps:
+      - name: Configure, deploy, verify
+        run: |
+          set -euo pipefail
+          if [ -z "${RENDER_API_KEY:-}" ]; then
+            echo "::error::RENDER_API_KEY secret is not set. Add it in Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          API="https://api.render.com/v1"
+          auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json" -H "Content-Type: application/json")
+
+          echo "== Discovering services =="
+          services="$(curl -fsS "${auth[@]}" "${API}/services?limit=100")"
+          # The list endpoint returns [{ "service": { ... } }, ...].
+          api_id="$(jq -r --arg n "$API_NAME" '.[].service | select(.name==$n) | .id' <<<"$services" | head -n1)"
+          web_id="$(jq -r --arg n "$WEB_NAME" '.[].service | select(.name==$n) | .id' <<<"$services" | head -n1)"
+          api_url="$(jq -r --arg n "$API_NAME" '.[].service | select(.name==$n) | .serviceDetails.url // .serviceDetails.publicUrl // empty' <<<"$services" | head -n1)"
+          web_url="$(jq -r --arg n "$WEB_NAME" '.[].service | select(.name==$n) | .serviceDetails.url // .serviceDetails.publicUrl // empty' <<<"$services" | head -n1)"
+          echo "api: id=${api_id:-MISSING} url=${api_url:-MISSING}"
+          echo "web: id=${web_id:-MISSING} url=${web_url:-MISSING}"
+          if [ -z "${api_id}" ] || [ -z "${web_id}" ]; then
+            echo "::error::Could not find both services by name. Raw service names below:"
+            jq -r '.[].service.name' <<<"$services" || true
+            echo "First service object (for shape debugging):"
+            jq '.[0]' <<<"$services" || true
+            exit 1
+          fi
+          if [ -z "${api_url}" ] || [ -z "${web_url}" ]; then
+            echo "URL field not where expected — dumping one service object to learn the shape:"
+            jq --arg n "$API_NAME" '.[].service | select(.name==$n)' <<<"$services"
+            echo "::error::Service URL not found; inspect the dump above and adjust the jq path."
+            exit 1
+          fi
+
+          # Upsert one env var without wiping the blueprint-set ones.
+          set_env () { # $1=serviceId $2=key $3=value
+            local sid="$1" key="$2" val="$3"
+            if [ -z "${val:-}" ]; then echo "  - ${key}: SKIP (no value)"; return 0; fi
+            curl -fsS -X PUT "${auth[@]}" "${API}/services/${sid}/env-vars/${key}" \
+              -d "$(jq -cn --arg v "$val" '{value:$v}')" >/dev/null
+            echo "  - ${key}: set (len ${#val})"
+          }
+
+          echo "== Setting loquia-api env vars =="
+          set_env "$api_id" DEEPGRAM_API_KEY  "${DEEPGRAM_API_KEY:-}"
+          set_env "$api_id" ANTHROPIC_API_KEY "${ANTHROPIC_API_KEY:-}"
+          set_env "$api_id" EMAIL_API_KEY     "${EMAIL_API_KEY:-}"
+          set_env "$api_id" EMAIL_FROM        "${EMAIL_FROM:-}"
+          set_env "$api_id" APP_URL           "${web_url}"
+          set_env "$api_id" PUBLIC_API_URL    "${api_url}"
+
+          echo "== Setting loquia-web env vars =="
+          set_env "$web_id" NEXT_PUBLIC_API_URL "${api_url}"
+
+          # Trigger a redeploy of both so the new env takes effect.
+          deploy () { # $1=serviceId -> prints deployId
+            curl -fsS -X POST "${auth[@]}" "${API}/services/$1/deploys" -d '{"clearCache":"do_not_clear"}' | jq -r '.id'
+          }
+          echo "== Triggering redeploys =="
+          api_dep="$(deploy "$api_id")"; echo "api deploy: ${api_dep}"
+          web_dep="$(deploy "$web_id")"; echo "web deploy: ${web_dep}"
+
+          # Poll a deploy until it leaves the in-progress states.
+          wait_deploy () { # $1=serviceId $2=deployId
+            local sid="$1" did="$2" status
+            for i in $(seq 1 60); do
+              status="$(curl -fsS "${auth[@]}" "${API}/services/${sid}/deploys/${did}" | jq -r '.status')"
+              echo "    ${sid} deploy ${did}: ${status}"
+              case "$status" in
+                live|deactivated) return 0 ;;
+                build_failed|update_failed|canceled|pre_deploy_failed) echo "::error::deploy ${did} ended ${status}"; return 1 ;;
+              esac
+              sleep 15
+            done
+            echo "::error::deploy ${did} did not finish in time"; return 1
+          }
+          echo "== Waiting for deploys =="
+          rc=0
+          wait_deploy "$api_id" "$api_dep" || rc=1
+          wait_deploy "$web_id" "$web_dep" || rc=1
+
+          echo "== Verifying API health (cold start may take ~50s) =="
+          check () { # $1=url
+            for i in $(seq 1 12); do
+              code="$(curl -sS -o /tmp/body -m 60 -w '%{http_code}' "$1" || echo 000)"
+              echo "    GET $1 -> ${code}"
+              if [ "$code" = "200" ]; then head -c 300 /tmp/body; echo; return 0; fi
+              sleep 10
+            done
+            return 1
+          }
+          check "${api_url}/health" || { echo "::error::/health not 200"; rc=1; }
+          check "${api_url}/ready"  || echo "::warning::/ready not 200 (DB not up yet or provider env missing)"
+
+          echo "== Summary =="
+          echo "API:  ${api_url}"
+          echo "WEB:  ${web_url}"
+          exit $rc
