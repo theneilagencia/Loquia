@@ -17,9 +17,6 @@ export function SiteHeader() {
           <Link href="/product" className="transition-colors hover:text-foreground">
             {t('product')}
           </Link>
-          <Link href="/admin" className="transition-colors hover:text-foreground">
-            {t('admin')}
-          </Link>
         </nav>
         <div className="flex-1" />
         <div className="hidden sm:block">

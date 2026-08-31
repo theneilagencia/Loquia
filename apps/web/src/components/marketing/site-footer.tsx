@@ -16,11 +16,11 @@ export function SiteFooter() {
           <Link href="/product" className="hover:text-foreground">
             {t('product')}
           </Link>
-          <Link href="/security" className="hover:text-foreground">
-            {t('security')}
-          </Link>
           <Link href="/brandbook" className="hover:text-foreground">
             {t('brandbook')}
+          </Link>
+          <Link href="/admin" className="hover:text-foreground">
+            {t('admin')}
           </Link>
           <Link href="/request-access" className="hover:text-foreground">
             {t('requestAccess')}
