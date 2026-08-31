@@ -34,10 +34,11 @@ services:
     plan: free
     rootDir: .
     buildCommand: corepack enable && pnpm install --frozen-lockfile
-    preDeployCommand: pnpm --filter @loquia/api db:migrate
-    startCommand: pnpm --filter @loquia/api start
-    # Readiness gate: /ready verifies the DB (hard) and reports the queue.
-    # Liveness is /health (no dependencies) for uptime probes.
+    # Free tier does NOT support preDeployCommand, so run migrations at startup.
+    # Drizzle tracks applied migrations, so re-running on each (cold) start is an
+    # idempotent no-op once the schema is current.
+    startCommand: pnpm --filter @loquia/api db:migrate && pnpm --filter @loquia/api start
+    # Readiness gate: /ready verifies the DB (hard). Liveness is /health.
     healthCheckPath: /ready
     envVars:
       - key: NODE_ENV
