@@ -5,7 +5,6 @@ import { ArrowRight, FileText, Layers, Lock, Workflow } from 'lucide-react';
 import { buttonVariants, Card, CardContent } from '@loquia/ui';
 import { Link } from '@/i18n/navigation';
 import { MarketingShell } from '@/components/marketing/marketing-shell';
-import { LogoSymbol } from '@/components/brand/logo';
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -21,32 +20,47 @@ function Marketing() {
   const t = useTranslations('marketing');
   return (
     <>
-      {/* Hero */}
-      <section className="container flex flex-col items-center gap-6 pt-20 text-center md:pt-28">
-        <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted-foreground">
-          <LogoSymbol className="h-3.5 w-5" /> AI Pack · 14 seções
-        </span>
-        <h1 className="max-w-3xl text-balance text-4xl font-bold tracking-[-0.03em] sm:text-5xl md:text-6xl">
-          {t('heroTitle')}
-        </h1>
-        <p className="max-w-2xl text-pretty text-lg text-muted-foreground">{t('heroSubtitle')}</p>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Link href="/request-access" className={buttonVariants({ size: 'lg' })}>
-            {t('heroCtaPrimary')} <ArrowRight className="size-4" />
-          </Link>
-          <Link href="/product" className={buttonVariants({ variant: 'outline', size: 'lg' })}>
-            {t('heroCtaSecondary')}
-          </Link>
+      {/* Hero — left-aligned, two-column (design handoff) */}
+      <section
+        className="container grid items-center gap-[clamp(28px,4vw,56px)] pb-16 pt-[clamp(48px,7vw,96px)] md:grid-cols-2"
+        style={{ animation: 'loq-rise .5s cubic-bezier(.2,.7,.3,1) both' }}
+      >
+        <div>
+          <div className="mb-6 font-mono text-xs uppercase tracking-[0.14em] text-iris">{t('eyebrow')}</div>
+          <h1 className="max-w-[16ch] text-[clamp(36px,5vw,64px)] font-extrabold leading-[1.05] tracking-[-0.04em] text-ink">
+            {t('heroTitle')}
+          </h1>
+          <p className="mt-7 max-w-[58ch] text-[clamp(16px,1.5vw,19px)] leading-relaxed text-muted-foreground">
+            {t('heroSubtitle')}
+          </p>
+          <div className="mt-9 flex flex-wrap items-center gap-3">
+            <Link href="/request-access" className={buttonVariants({ size: 'lg' })}>
+              {t('heroCtaPrimary')} <ArrowRight className="size-4" />
+            </Link>
+            <Link href="/product" className={buttonVariants({ variant: 'outline', size: 'lg' })}>
+              {t('heroCtaSecondary')}
+            </Link>
+          </div>
+          <p className="mt-4 text-[13.5px] text-muted-foreground">{t('accessNote')}</p>
         </div>
-        <div className="mt-8 w-full max-w-4xl overflow-hidden rounded-2xl border border-border shadow-elevate">
+        <div
+          className="relative aspect-[4/5] overflow-hidden rounded-xl bg-iris-soft shadow-elevate"
+          style={{ animation: 'loq-rise .6s cubic-bezier(.2,.7,.3,1) both .12s' }}
+        >
           <Image
             src="/images/hero-recording.png"
             alt=""
-            width={1600}
-            height={900}
+            fill
             priority
-            className="h-auto w-full"
+            sizes="(max-width: 768px) 100vw, 560px"
+            className="object-cover [object-position:50%_22%]"
           />
+          <div className="absolute inset-x-4 bottom-4 flex items-center gap-3 rounded-2xl bg-inverse-surface/70 px-4 py-3.5 backdrop-blur">
+            <span className="size-2 flex-none rounded-full bg-danger" style={{ animation: 'loq-pulse 1.6s ease-in-out infinite' }} />
+            <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-inverse-fg/70">{t('recordingLabel')}</span>
+            <span className="flex-1" />
+            <span className="font-mono text-[13px] text-inverse-fg">42:18</span>
+          </div>
         </div>
       </section>
 

@@ -38,8 +38,8 @@
     "logout": "Sair"
   },
   "marketing": {
-    "heroTitle": "Transforme reuniões em contexto pronto para usar.",
-    "heroSubtitle": "A Loquia grava reuniões, estrutura a conversa e entrega um pacote que você cola direto no ChatGPT, no Claude ou na IA que preferir.",
+    "heroTitle": "Transforme reuniões em contexto pronto para IA",
+    "heroSubtitle": "A Loquia grava, transcreve e estrutura suas conversas para você continuar trabalhando no ChatGPT, Claude ou na IA que preferir.",
     "heroCtaPrimary": "Solicitar acesso",
     "heroCtaSecondary": "Ver como funciona",
     "problemTitle": "O conhecimento das reuniões evapora.",
@@ -58,7 +58,10 @@
     "privacyBody": "Você controla o que é armazenado e por quanto tempo. O áudio pode ser descartado após o processamento.",
     "ctaTitle": "Pronto para dar contexto real à sua IA?",
     "ctaBody": "Solicite acesso e ajudamos você a começar.",
-    "ctaButton": "Solicitar acesso"
+    "ctaButton": "Solicitar acesso",
+    "eyebrow": "Reuniões preparadas para IA",
+    "accessNote": "Acesso por convite · Seus dados ficam no seu dispositivo por padrão.",
+    "recordingLabel": "Gravando"
   },
   "access": {
     "requestTitle": "Solicitar acesso",

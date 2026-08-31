@@ -38,8 +38,8 @@
     "logout": "Log out"
   },
   "marketing": {
-    "heroTitle": "Turn meetings into context you can use.",
-    "heroSubtitle": "Loquia records meetings, structures the conversation and hands you a pack you can paste straight into ChatGPT, Claude or any AI you prefer.",
+    "heroTitle": "Turn meetings into AI-ready context",
+    "heroSubtitle": "Loquia records, transcribes and structures your meetings so you can keep working in ChatGPT, Claude or any AI you prefer.",
     "heroCtaPrimary": "Request access",
     "heroCtaSecondary": "See how it works",
     "problemTitle": "Meeting knowledge evaporates.",
@@ -58,7 +58,10 @@
     "privacyBody": "You control what is stored and for how long. Audio can be discarded after processing.",
     "ctaTitle": "Ready to give your AI real context?",
     "ctaBody": "Request access and we'll get you set up.",
-    "ctaButton": "Request access"
+    "ctaButton": "Request access",
+    "eyebrow": "Meetings prepared for AI",
+    "accessNote": "Invite-only · Your data stays on your device by default.",
+    "recordingLabel": "Recording"
   },
   "access": {
     "requestTitle": "Request access",
