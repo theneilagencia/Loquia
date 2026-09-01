@@ -1,0 +1,82 @@
+name: Render upgrade v2 (Loquia always-on)
+
+# Upgrade loquia-web + loquia-api from free to Starter (cheapest always-on) so
+# they stop spinning down. The account already has active billing (minervault is
+# on Starter). The Render API's support for free->paid is uncertain, so this
+# tries a couple of request shapes and surfaces the exact response; on success it
+# verifies the new plan + waits for /health. Does NOT touch the database. Opt-in:
+# manual dispatch or an [upgrade2] commit marker. Never prints secrets.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: render-upgrade2
+  cancel-in-progress: false
+
+jobs:
+  upgrade:
+    name: Upgrade Loquia web+api to Starter
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[upgrade2]') }}
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      PLAN: starter
+    steps:
+      - name: Attempt plan change
+        run: |
+          set -euo pipefail
+          RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
+          API="https://api.render.com/v1"
+          auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json" -H "Content-Type: application/json")
+
+          svc="$(curl -fsS -m 30 "${auth[@]}" "${API}/services?limit=100")"
+          web_id="$(jq -r '.[].service|select(.name=="loquia-web")|.id' <<<"$svc" | head -n1)"
+          api_id="$(jq -r '.[].service|select(.name=="loquia-api")|.id' <<<"$svc" | head -n1)"
+          echo "web=${web_id} api=${api_id}"
+
+          try () { # $1=id $2=name ; echo 'ok' on success
+            local id="$1" name="$2" code
+            echo "-- ${name}: variant A {serviceDetails:{plan}} --"
+            code="$(curl -sS -o /tmp/r -w '%{http_code}' -X PATCH "${auth[@]}" "${API}/services/${id}" -d "$(jq -cn --arg p "$PLAN" '{serviceDetails:{plan:$p}}')")"
+            echo "   HTTP ${code}"; [ "$code" = "200" ] && { echo ok; return 0; }
+            head -c 300 /tmp/r; echo
+            echo "-- ${name}: variant B {plan} --"
+            code="$(curl -sS -o /tmp/r -w '%{http_code}' -X PATCH "${auth[@]}" "${API}/services/${id}" -d "$(jq -cn --arg p "$PLAN" '{plan:$p}')")"
+            echo "   HTTP ${code}"; [ "$code" = "200" ] && { echo ok; return 0; }
+            head -c 300 /tmp/r; echo
+            return 1
+          }
+
+          web_ok=0; api_ok=0
+          try "$web_id" loquia-web && web_ok=1 || true
+          try "$api_id" loquia-api && api_ok=1 || true
+
+          echo ""
+          echo "== Result =="
+          after="$(curl -fsS "${auth[@]}" "${API}/services?limit=100")"
+          echo "  loquia-web plan: $(jq -r '.[].service|select(.name=="loquia-web")|.serviceDetails.plan' <<<"$after")"
+          echo "  loquia-api plan: $(jq -r '.[].service|select(.name=="loquia-api")|.serviceDetails.plan' <<<"$after")"
+
+          if [ "$web_ok" = "1" ] || [ "$api_ok" = "1" ]; then
+            api_url="$(jq -r '.[].service|select(.name=="loquia-api")|.serviceDetails.url' <<<"$after")"
+            web_url="$(jq -r '.[].service|select(.name=="loquia-web")|.serviceDetails.url' <<<"$after")"
+            echo "== Waiting for restart to answer =="
+            for u in "${api_url}/health" "${web_url}/"; do
+              for i in $(seq 1 16); do
+                c="$(curl -sS -o /dev/null -m 60 -w '%{http_code}' "$u" || echo 000)"; echo "  GET $u -> $c"
+                [ "$c" = "200" ] && break; sleep 12
+              done
+            done
+          fi
+
+          if [ "$web_ok" = "1" ] && [ "$api_ok" = "1" ]; then
+            echo "SUCCESS: both services on ${PLAN} (always-on)."
+          else
+            echo "::warning::API could not change one or both plans (see HTTP/body above)."
+            echo "Free->paid is likely dashboard-only on Render. Steps: Dashboard > the"
+            echo "service > Settings > Instance Type > Starter > Save. Billing is already active."
+            # Do not fail the job for the known API limitation — the diagnostics are the deliverable.
+          fi
