@@ -1,0 +1,62 @@
+name: Diagnose stuck AI Pack
+
+# A meeting is stuck at "Pronto para AI Pack". Fetch the live processing-job
+# status for it (queued? generating? failed + errorCode/errorMessage) and print
+# the AI Pack config on loquia-api (ANTHROPIC_API_KEY presence — never the value,
+# AI_PACK_PROVIDER/MODEL which are not secret). Opt-in: dispatch or [aipack].
+# Never prints secrets.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: aipack-diagnose
+  cancel-in-progress: false
+
+jobs:
+  diag:
+    name: Diagnose AI Pack
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[aipack]') }}
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      API_HOST: https://api.loquia.com.br
+      WWW: https://www.loquia.com.br
+      EMAIL: vinicius@apymine.com
+      PW: ${{ secrets.ADMIN_PASSWORD }}
+      MEETING_ID: e96932fa-55ba-4440-9cd1-afb105aa503f
+    steps:
+      - name: AI Pack env on loquia-api
+        run: |
+          set -uo pipefail
+          RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
+          API="https://api.render.com/v1"
+          auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json")
+          svc="$(curl -fsS -m 30 "${auth[@]}" "${API}/services?limit=100" || echo '[]')"
+          api_id="$(jq -r '.[].service|select(.name=="loquia-api")|.id' <<<"$svc" | head -n1)"
+          ev="$(curl -fsS -m 30 "${auth[@]}" "${API}/services/${api_id}/env-vars?limit=100" || echo '[]')"
+          for K in AI_PACK_PROVIDER AI_PACK_MODEL AI_PACK_MAX_RETRIES; do
+            echo "  ${K}=$(jq -r --arg k "$K" '.[].envVar|select(.key==$k)|.value' <<<"$ev" | head -n1)"
+          done
+          akey="$(jq -r '.[].envVar|select(.key=="ANTHROPIC_API_KEY")|.value' <<<"$ev" | head -n1)"
+          if [ -n "$akey" ] && [ "$akey" != "null" ]; then echo "  ANTHROPIC_API_KEY: SET (len=$(printf '%s' "$akey" | wc -c))"; else echo "  ANTHROPIC_API_KEY: <NOT SET>"; fi
+
+      - name: Live job status for the stuck meeting
+        run: |
+          set -uo pipefail
+          PW="${PW:-password123}"
+          jar="$(mktemp)"
+          lc="$(curl -sS -m 60 -c "$jar" -o /dev/null -w '%{http_code}' -X POST "${API_HOST}/api/auth/login" \
+            -H 'content-type: application/json' -H "Origin: ${WWW}" \
+            -d "{\"email\":\"${EMAIL}\",\"password\":\"${PW}\"}" || echo 000)"
+          echo "login=${lc}"; [ "$lc" = "200" ] || { echo "::error::login failed"; exit 1; }
+
+          echo "== GET /api/meetings/${MEETING_ID}/job =="
+          curl -sS -m 60 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MEETING_ID}/job" -o /tmp/job || true
+          jq '{type,status,stage,progress,attempt,maxAttempts,errorCode,errorMessage,provider,model,createdAt,updatedAt}' /tmp/job 2>/dev/null || { echo "raw:"; head -c 400 /tmp/job; }
+
+          echo "== GET /api/meetings/${MEETING_ID} (aiPackStatus) =="
+          curl -sS -m 60 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MEETING_ID}" -o /tmp/m || true
+          jq '{id,title,source,status,aiPackStatus,participantCount,durationSeconds}' /tmp/m 2>/dev/null || { echo "raw:"; head -c 400 /tmp/m; }
