@@ -1,0 +1,88 @@
+name: Check delete-user live
+
+# "ainda não consigo excluir usuários": confirm loquia-api's newest deploy is
+# live, then exercise the real endpoint end-to-end — login as admin, create a
+# throwaway user, DELETE it, and confirm it's gone — printing the exact HTTP
+# status/body at each step. Distinguishes route-not-deployed (404), a server
+# error (500 + body), or a working API (=> the issue is the web build/button).
+# Cleans up the throwaway user. Opt-in: dispatch or [userdel]. Never prints secrets.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: user-delete-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Exercise delete-user endpoint
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[userdel]') }}
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      API_HOST: https://api.loquia.com.br
+      WWW: https://www.loquia.com.br
+      EMAIL: vinicius@apymine.com
+      PW: ${{ secrets.ADMIN_PASSWORD }}
+    steps:
+      - name: Wait for loquia-api/web deploys to settle
+        run: |
+          set -uo pipefail
+          RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
+          API="https://api.render.com/v1"
+          auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json")
+          svc="$(curl -fsS -m 30 "${auth[@]}" "${API}/services?limit=100" || echo '[]')"
+          for name in loquia-api loquia-web; do
+            id="$(jq -r --arg n "$name" '.[].service|select(.name==$n)|.id' <<<"$svc" | head -n1)"
+            for i in $(seq 1 40); do
+              st="$(curl -fsS -m 30 "${auth[@]}" "${API}/services/${id}/deploys?limit=1" | jq -r '.[0].deploy.status')"
+              echo "  ${name} newest deploy: ${st} (poll ${i})"
+              case "$st" in live) break;; build_failed|update_failed|canceled) echo "::warning::${name} ${st}"; break;; esac
+              sleep 15
+            done
+          done
+
+      - name: Login → create throwaway user → DELETE → confirm gone
+        run: |
+          set -uo pipefail
+          PW="${PW:-password123}"
+          jar="$(mktemp)"
+          TS="$(date +%s)"
+          TEST_EMAIL="deltest+${TS}@loquia.test"
+
+          echo "== 1) Login as admin =="
+          lc="$(curl -sS -m 60 -c "$jar" -o /tmp/l -w '%{http_code}' -X POST "${API_HOST}/api/auth/login" \
+            -H 'content-type: application/json' -H "Origin: ${WWW}" \
+            -d "{\"email\":\"${EMAIL}\",\"password\":\"${PW}\"}" || echo 000)"
+          echo "  login=${lc}"
+          [ "$lc" = "200" ] || { echo "::error::login failed"; exit 1; }
+
+          echo "== 2) Create throwaway user (${TEST_EMAIL}) =="
+          cc="$(curl -sS -m 60 -b "$jar" -o /tmp/c -w '%{http_code}' -X POST "${API_HOST}/api/admin/users" \
+            -H 'content-type: application/json' -H "Origin: ${WWW}" \
+            -d "{\"email\":\"${TEST_EMAIL}\",\"name\":\"Delete Test\",\"role\":\"member\"}" || echo 000)"
+          echo "  create=${cc}  body=$(head -c 160 /tmp/c)"
+          uid="$(jq -r '.user.id // empty' /tmp/c 2>/dev/null)"
+          echo "  new user id=${uid:-<none>}"
+          if [ -z "$uid" ]; then echo "::error::create-user failed — cannot test delete"; exit 1; fi
+
+          echo "== 3) DELETE /api/admin/users/${uid} =="
+          dc="$(curl -sS -m 60 -b "$jar" -o /tmp/d -w '%{http_code}' -X DELETE "${API_HOST}/api/admin/users/${uid}" \
+            -H "Origin: ${WWW}" || echo 000)"
+          echo "  delete=${dc}  body=$(head -c 200 /tmp/d)"
+
+          echo "== 4) Confirm the user is gone from the list =="
+          curl -sS -m 60 -b "$jar" -o /tmp/list -H "Origin: ${WWW}" "${API_HOST}/api/admin/users" || true
+          still="$(jq -r --arg e "$TEST_EMAIL" '[.[]?|select(.email==$e)]|length' /tmp/list 2>/dev/null || echo '?')"
+          echo "  users still matching ${TEST_EMAIL}: ${still}"
+
+          echo ""
+          case "$dc" in
+            200) echo "VERDICT: DELETE works on the live API. If the button doesn't work in the browser, it's a stale web build — hard-refresh / clear cache." ;;
+            404) echo "VERDICT: DELETE route is 404 — the new loquia-api build is not live yet." ;;
+            401|403) echo "VERDICT: DELETE rejected (${dc}) — auth/permission issue." ;;
+            *) echo "VERDICT: DELETE returned ${dc}. See body above." ;;
+          esac
