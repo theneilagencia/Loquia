@@ -1,0 +1,72 @@
+name: Login diagnose 2 (curl)
+
+# Compact, browser-free ground truth: (1) API health + direct POST login status;
+# (2) CORS preflight for the custom-domain origin; (3) whether the login HTML and
+# its referenced _next chunk actually return 200 on www.loquia.com.br vs the
+# onrender domain. Never prints the cookie token or password. Opt-in: [logindiag2].
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: login-diagnose2
+  cancel-in-progress: false
+
+jobs:
+  diag:
+    name: curl diagnose
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[logindiag2]') }}
+    env:
+      API: https://loquia-api.onrender.com
+      WWW: https://www.loquia.com.br
+      ONR: https://loquia-web.onrender.com
+      EMAIL: vinicius@apymine.com
+      PW: ${{ secrets.ADMIN_PASSWORD }}
+    steps:
+      - name: curl checks
+        run: |
+          set -uo pipefail
+          PW="${PW:-password123}"
+
+          echo "== 1) API health (wake) =="
+          for i in $(seq 1 12); do
+            c="$(curl -sS -o /dev/null -m 60 -w '%{http_code}' "${API}/health" || echo 000)"
+            echo "  /health -> ${c} (try ${i})"; [ "$c" = "200" ] && break; sleep 10
+          done
+
+          echo ""
+          echo "== 2) Direct API login =="
+          code="$(curl -sS -m 60 -o /tmp/b -D /tmp/h -w '%{http_code}' -X POST "${API}/api/auth/login" \
+            -H 'content-type: application/json' -H "Origin: ${WWW}" \
+            -d "{\"email\":\"${EMAIL}\",\"password\":\"${PW}\"}" || echo 000)"
+          echo "  POST /api/auth/login -> ${code}"
+          echo "  set-cookie: $(grep -i '^set-cookie:' /tmp/h | sed -E 's/loquia_session=[^;]*/loquia_session=<redacted>/I; s/^set-cookie: *//I' || echo '(none)')"
+          echo "  acao: $(grep -i '^access-control-allow-origin:' /tmp/h || echo '(none)')"
+          echo "  body: $(head -c 160 /tmp/b)"
+          case "$code" in
+            200) echo "  => backend accepts creds (login itself works).";;
+            401|400) echo "  => backend REJECTS creds (user/password issue).";;
+            *) echo "  => API unreachable / timeout / 5xx.";;
+          esac
+
+          echo ""
+          echo "== 3) Login HTML + referenced JS chunk on each host =="
+          for host in "$WWW" "$ONR"; do
+            echo "  -- ${host} --"
+            hc="$(curl -sS -o /tmp/html -m 60 -w '%{http_code}' "${host}/pt-BR/login" || echo 000)"
+            echo "     GET /pt-BR/login -> ${hc}  (bytes: $(wc -c < /tmp/html 2>/dev/null || echo 0))"
+            chunk="$(grep -oE '/_next/static/chunks/[^\"]+\.js' /tmp/html | head -n1 || true)"
+            echo "     first chunk ref: ${chunk:-<none found>}"
+            if [ -n "${chunk:-}" ]; then
+              cc="$(curl -sS -o /dev/null -m 60 -w '%{http_code}' "${host}${chunk}" || echo 000)"
+              ct="$(curl -sS -o /dev/null -m 60 -w '%{content_type}' "${host}${chunk}" || echo '?')"
+              echo "     GET chunk -> ${cc}  content-type: ${ct}"
+            fi
+          done
+          echo ""
+          echo "  (If the chunk returns 200 with a JS content-type on www, the JS is fine —"
+          echo "   the earlier ERR_ABORTED was the test clicking before hydration. If it 404s"
+          echo "   or returns HTML, the custom domain is serving stale/mismatched assets.)"
