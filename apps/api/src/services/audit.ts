@@ -20,6 +20,7 @@ export type ServerAuditAction =
   | 'user_suspended'
   | 'user_reactivated'
   | 'user_deactivated'
+  | 'user_deleted'
   | 'workspace_suspended'
   | 'workspace_reactivated'
   | 'export_created'

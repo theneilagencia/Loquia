@@ -402,7 +402,10 @@
       "suspend": "Suspend",
       "activate": "Activate",
       "makeAdmin": "Make admin",
-      "makeMember": "Make member"
+      "makeMember": "Make member",
+      "delete": "Delete user",
+      "confirmDelete": "Delete {email}? Their meetings are reassigned to you. This cannot be undone.",
+      "deleteError": "Could not delete the user."
     },
     "createUser": {
       "title": "Create user",

@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import { Badge, Button, Input, Skeleton } from '@loquia/ui';
-import { Check, Copy, Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { Check, Copy, Eye, EyeOff, RefreshCw, Trash2 } from 'lucide-react';
 import { useServices } from '@/lib/services-context';
 
 /** Strong, human-typable provisional password (no ambiguous characters). */
@@ -36,6 +36,12 @@ export default function AdminUsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<{ email: string; password: string; link: string } | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [meId, setMeId] = useState<string | null>(null);
+  const [rowError, setRowError] = useState<string | null>(null);
+
+  useEffect(() => {
+    services.auth.getSession().then((s) => setMeId(s?.user.id ?? null)).catch(() => {});
+  }, [services]);
 
   async function copy(key: string, value: string) {
     try {
@@ -53,6 +59,17 @@ export default function AdminUsersPage() {
   }
   async function actor() {
     return (await services.auth.getSession())?.user.id ?? 'u1';
+  }
+
+  async function onDelete(id: string, email: string) {
+    setRowError(null);
+    if (!window.confirm(t('userActions.confirmDelete', { email }))) return;
+    const result = await services.admin.deleteUser(id, await actor());
+    if (!result.ok) {
+      setRowError(t('userActions.deleteError'));
+      return;
+    }
+    refetch();
   }
 
   async function onCreate(e: React.FormEvent) {
@@ -221,11 +238,23 @@ export default function AdminUsersPage() {
                     </Button>
                   )
                 )}
+                {u.role !== 'owner' && u.id !== meId && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    aria-label={t('userActions.delete')}
+                    className="text-danger hover:bg-danger-soft hover:text-danger"
+                    onClick={() => void onDelete(u.id, u.email)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                )}
               </div>
             </div>
           ))}
         </div>
       )}
+      {rowError && <p className="mt-3 text-sm text-danger">{rowError}</p>}
     </div>
   );
 }

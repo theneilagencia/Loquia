@@ -344,6 +344,20 @@ export function createMockServices(deps: MockDeps): Services {
         logAudit(store, 'invitation.sent', { id: actorId, label: actor?.name ?? 'Admin' }, { type: 'user', id: user.id, label: email });
         return ok({ user, provisionalPassword: input.password || 'Prov1sional23', inviteToken: token });
       },
+      async deleteUser(id, actorId) {
+        await delay();
+        const db = store.read();
+        const actor = db.users.find((u) => u.id === actorId);
+        const target = db.users.find((u) => u.id === id);
+        if (!target) return err({ code: 'not_found', message: 'errors.notFoundBody' });
+        if (target.id === actorId) return err({ code: 'bad_request', message: 'cannot_delete_self' });
+        if (target.role === 'owner') return err({ code: 'bad_request', message: 'cannot_delete_owner' });
+        store.write((d) => {
+          d.users = d.users.filter((u) => u.id !== id);
+        });
+        logAudit(store, 'user.deleted', { id: actorId, label: actor?.name ?? 'Admin' }, { type: 'user', id, label: target.email });
+        return ok({ id });
+      },
       async revokeInvitation(id, actorId) {
         const db = store.read();
         const actor = db.users.find((u) => u.id === actorId);

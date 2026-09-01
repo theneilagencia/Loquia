@@ -259,6 +259,14 @@ export function createApiServices(deps: ApiDeps): Services {
           throw e;
         }
       },
+      async deleteUser(id) {
+        try {
+          return ok(await api.del<{ id: string }>(`/api/admin/users/${id}`));
+        } catch (e) {
+          if (e instanceof ApiHttpError) return err({ code: e.code, message: e.message });
+          throw e;
+        }
+      },
       listUsers: () => api.get('/api/admin/users'),
       async setUserStatus(id, status) {
         try {

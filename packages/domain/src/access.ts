@@ -92,6 +92,7 @@ export type AuditAction =
   | 'user.activated'
   | 'user.suspended'
   | 'user.role_changed'
+  | 'user.deleted'
   | 'workspace.created'
   | 'workspace.archived'
   | 'meeting.created'

@@ -83,6 +83,8 @@ export interface AdminService {
   listUsers(): Promise<User[]>;
   setUserStatus(id: Id, status: User['status'], actorId: Id): Promise<Result<User>>;
   setUserRole(id: Id, role: User['role'], actorId: Id): Promise<Result<User>>;
+  /** Permanently remove a user (their meetings are reassigned to the actor). */
+  deleteUser(id: Id, actorId: Id): Promise<Result<{ id: Id }>>;
   listWorkspaces(): Promise<Workspace[]>;
   archiveWorkspace(id: Id, actorId: Id): Promise<Result<Workspace>>;
   listAudit(page?: number, pageSize?: number): Promise<Paginated<AuditEvent>>;

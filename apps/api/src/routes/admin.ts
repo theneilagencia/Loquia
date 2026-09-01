@@ -6,8 +6,10 @@ import { rejectAccessSchema, inviteUserSchema, createUserSchema } from '@loquia/
 import {
   accessRequests,
   auditEvents,
+  exportPresets,
   invitations,
   meetings,
+  sessions,
   userSettings,
   users,
   workspaces,
@@ -349,6 +351,32 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
     assertWorkspace(admin, target[0].workspaceId);
     const rows = await db.update(users).set({ role, updatedAt: new Date() }).where(eq(users.id, id)).returning();
     return toUserDTO(rows[0]!);
+  });
+
+  // Delete a user. Non-destructive to meeting content: their meetings are
+  // reassigned to the acting admin so transcripts/AI Packs survive; sessions and
+  // personal presets are removed; settings/reset tokens cascade. You cannot
+  // delete yourself or the workspace owner.
+  app.delete('/users/:id', async (request) => {
+    const admin = requireAdmin(request.auth);
+    const { id } = request.params as { id: string };
+    const target = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    if (!target[0]) throw errors.notFound();
+    assertWorkspace(admin, target[0].workspaceId);
+    if (target[0].id === admin.user.id) throw errors.badRequest('cannot_delete_self');
+    if (target[0].role === 'owner') throw errors.badRequest('cannot_delete_owner');
+
+    await db.transaction(async (tx) => {
+      // Preserve meeting content — hand the user's meetings to the acting admin.
+      await tx.update(meetings).set({ ownerId: admin.user.id, updatedAt: new Date() }).where(eq(meetings.ownerId, id));
+      await tx.delete(exportPresets).where(eq(exportPresets.userId, id));
+      await tx.delete(sessions).where(eq(sessions.userId, id));
+      // userSettings + passwordResetTokens cascade on the user delete.
+      await tx.delete(users).where(eq(users.id, id));
+    });
+
+    await writeAudit(db, { action: 'user_deleted', actorId: admin.user.id, actorLabel: admin.user.name, targetType: 'user', targetId: id, targetLabel: target[0].email, workspaceId: admin.user.workspaceId });
+    return { id };
   });
 
   // ---- Workspaces ----

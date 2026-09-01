@@ -402,7 +402,10 @@
       "suspend": "Suspender",
       "activate": "Ativar",
       "makeAdmin": "Tornar admin",
-      "makeMember": "Tornar membro"
+      "makeMember": "Tornar membro",
+      "delete": "Excluir usuário",
+      "confirmDelete": "Excluir {email}? As reuniões desse usuário passam para você. Esta ação não pode ser desfeita.",
+      "deleteError": "Não foi possível excluir o usuário."
     },
     "createUser": {
       "title": "Criar usuário",
