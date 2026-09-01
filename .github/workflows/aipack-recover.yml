@@ -26,7 +26,7 @@ jobs:
       EMAIL: vinicius@apymine.com
       PW: ${{ secrets.ADMIN_PASSWORD }}
     steps:
-      - name: Wait for a fully-settled, stable loquia-api
+      - name: Wait for THIS COMMIT to be live on loquia-api
         run: |
           set -uo pipefail
           RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
@@ -34,17 +34,25 @@ jobs:
           auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json")
           svc="$(curl -fsS -m 30 "${auth[@]}" "${API}/services?limit=100" || echo '[]')"
           api_id="$(jq -r '.[].service|select(.name=="loquia-api")|.id' <<<"$svc" | head -n1)"
-          stable=0
-          for i in $(seq 1 60); do
-            st="$(curl -fsS -m 30 "${auth[@]}" "${API}/services/${api_id}/deploys?limit=1" | jq -r '.[0].deploy.status')"
-            echo "  deploy: ${st} (poll ${i}, stable=${stable})"
-            if [ "$st" = "live" ]; then stable=$((stable+1)); else stable=0; fi
-            [ "$stable" -ge 2 ] && break
-            case "$st" in build_failed|update_failed|canceled) echo "::warning::${st}"; break;; esac
+          SHA="${GITHUB_SHA}"
+          echo "  waiting for deploy of commit ${SHA} on ${api_id}"
+          live=0
+          for i in $(seq 1 80); do
+            d="$(curl -fsS -m 30 "${auth[@]}" "${API}/services/${api_id}/deploys?limit=20" || echo '[]')"
+            st="$(jq -r --arg s "$SHA" '.[] | select(.deploy.commit.id==$s) | .deploy.status' <<<"$d" | head -n1)"
+            if [ -z "$st" ] || [ "$st" = "null" ]; then echo "  our deploy not created yet (poll ${i})"; sleep 15; continue; fi
+            echo "  our commit deploy: ${st} (poll ${i})"
+            case "$st" in
+              live) live=1; break;;
+              build_failed|update_failed|canceled|deactivated|pre_deploy_failed) echo "::error::deploy ${st} for ${SHA}"; exit 1;;
+            esac
             sleep 15
           done
+          [ "$live" = "1" ] || { echo "::error::commit ${SHA} never went live"; exit 1; }
+          # Settle + health.
+          sleep 20
           for k in 1 2 3 4 5; do c="$(curl -sS -o /dev/null -m 30 -w '%{http_code}' "${API_HOST}/health" || echo 000)"; echo "  health -> $c"; [ "$c" = "200" ] && break; sleep 5; done
-          sleep 15
+          sleep 10
 
       - name: Create small text meeting + poll to ready/failed
         run: |
