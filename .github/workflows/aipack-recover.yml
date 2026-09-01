@@ -94,8 +94,9 @@ jobs:
 
           echo "== Generated AI Pack CONTENT (quality check) =="
           curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/aipack" -o /tmp/pack || true
-          # Show section keys + fact count + classification, and each fact's text.
-          jq -r '(.source.sections // []) | if length==0 then "  <no sections>" else .[] | "  [\(.key)] facts=\((.facts//[])|length)\n" + ((.facts//[])|map("     - (\(.classification)) \(.text)  ev=\((.segmentIds//[])|join(","))")|join("\n")) end' /tmp/pack 2>/dev/null || { echo "  raw:"; head -c 800 /tmp/pack; }
+          # The persisted pack stores each section's content in `.lines` (text or
+          # pt/en synthesized), NOT `.facts`. Show line count + the text per line.
+          jq -r '(.source.sections // []) | if length==0 then "  <no sections>" else .[] | "  [\(.key)] lines=\((.lines//[])|length)\n" + ((.lines//[])|map("     - \(.classification // "-") \((.text // .pt // .en) // "")  @\(.atSeconds // "-") ev=\((.segmentIds//[])|join(","))")|join("\n")) end' /tmp/pack 2>/dev/null || { echo "  raw:"; head -c 1200 /tmp/pack; }
 
           case "$final" in
             ready) echo "RESULT: AI Pack generation WORKS in production. Inspect the CONTENT above for coherence." ;;

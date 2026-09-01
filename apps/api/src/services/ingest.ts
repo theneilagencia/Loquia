@@ -176,8 +176,15 @@ function timestampToSeconds(ts: string): number {
 const TIMESTAMP_RE = /^(\d{1,2}:\d{2}(?::\d{2})?)$/;
 /** A standalone diarization label line: "Speaker 1", "Falante 2", "Locutor 3". */
 const SPEAKER_LABEL_RE = /^(?:speaker|falante|locutor|orador)\s*[#]?\s*(\w{1,20})$/i;
-/** Inline "Speaker 1:" / "Paulo:" prefix at the start of a paragraph. */
-const INLINE_SPEAKER_RE = /^([\p{Lu}][\p{L}.'-]*(?:\s+[\p{Lu}][\p{L}.'-]*){0,3}|(?:speaker|falante|locutor|orador)\s*\w{1,20})\s*:\s+/iu;
+/**
+ * Inline speaker prefix at the start of a paragraph. Deliberately conservative —
+ * only a diarization keyword label ("Speaker 1:", "Falante 2:") or a SINGLE
+ * capitalized name token ("Paulo:", "Vinícius:"). Matching multi-word phrases
+ * here caused ordinary sentences that contain a colon (e.g. "Ficou decidido:")
+ * to be mistaken for speakers, so that is intentionally NOT matched.
+ */
+const INLINE_KEYWORD_RE = /^((?:speaker|falante|locutor|orador)\s*#?\s*\w{1,20})\s*:\s+/i;
+const INLINE_NAME_RE = /^(\p{Lu}[\p{Ll}'-]{1,19})\s*:\s+/u;
 
 /**
  * Parse a speaker-labeled transcript (Plaud / Otter / Zoom exports) into
@@ -233,7 +240,7 @@ export function parseSpeakerTranscript(
       sawLabel = true;
       continue;
     }
-    const inline = line.match(INLINE_SPEAKER_RE);
+    const inline = line.match(INLINE_KEYWORD_RE) ?? line.match(INLINE_NAME_RE);
     if (inline) {
       flush();
       curSpeaker = inline[1]!.trim();

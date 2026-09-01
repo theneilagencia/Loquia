@@ -43,6 +43,24 @@ describe('parseSpeakerTranscript', () => {
     expect(parsed!.segments[0]!.text).toBe('Vamos decidir o orçamento hoje.');
   });
 
+  it('does NOT treat a sentence containing a colon as a speaker', () => {
+    // Regression: an ordinary sentence like "Ficou decidido entao: ..." must not
+    // become a phantom speaker (previously inflated participantCount).
+    const raw = [
+      '00:00:00',
+      'Speaker 1',
+      'Ficou decidido entao: lancar o produto na sexta-feira.',
+      '',
+      '00:00:20',
+      'Speaker 2',
+      'Perfeito, combinado. O prazo esta claro para todos.',
+    ].join('\n');
+    const parsed = parseSpeakerTranscript(raw);
+    expect(parsed).not.toBeNull();
+    expect(parsed!.speakerCount).toBe(2); // NOT 3
+    expect(parsed!.segments[0]!.text).toContain('Ficou decidido entao:');
+  });
+
   it('returns null for plain prose (falls back to paragraph splitting)', () => {
     expect(parseSpeakerTranscript('Este é um texto simples sem falantes.\n\nApenas parágrafos.')).toBeNull();
   });
