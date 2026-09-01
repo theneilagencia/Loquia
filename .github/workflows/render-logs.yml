@@ -41,16 +41,21 @@ jobs:
             | jq -r '.[0].deploy | "status=\(.status) startedAt=\(.startedAt) finishedAt=\(.finishedAt) commit=\(.commit.id // "?")"' || true
 
           # Try the Logs API a couple of ways (shape varies); print whatever comes back.
-          echo "== App logs (type=app) =="
+          echo "== App logs (type=app, last 200) =="
           code="$(curl -sS -m 30 "${auth[@]}" -o /tmp/logs1 -w '%{http_code}' \
-            "${API}/logs?ownerId=${owner}&resource=${sid}&type=app&limit=100&direction=backward" || echo 000)"
+            "${API}/logs?ownerId=${owner}&resource=${sid}&type=app&limit=200&direction=backward" || echo 000)"
           echo "HTTP ${code}"
           if [ "$code" = "200" ]; then
-            jq -r '(.logs // .events // [])[] | "\(.timestamp // "") \(.message // .text // .)"' /tmp/logs1 2>/dev/null | tail -n 80 || { echo "raw:"; head -c 2000 /tmp/logs1; }
+            jq -r '(.logs // .events // [])[] | "\(.timestamp // "") \(.message // .text // .)"' /tmp/logs1 > /tmp/lines 2>/dev/null || cp /tmp/logs1 /tmp/lines
+            echo "---- lines mentioning error / 500 / admin/users / create ----"
+            grep -iE 'error|internal|500|admin/users|createUser|user_created|invitation|null value|violates|column|relation|does not exist' /tmp/lines | tail -n 60 || echo "(no matching lines)"
+            echo "---- last 40 lines (context) ----"
+            tail -n 40 /tmp/lines
           else
             echo "body:"; head -c 800 /tmp/logs1; echo
             echo "== Retry without type filter =="
             code2="$(curl -sS -m 30 "${auth[@]}" -o /tmp/logs2 -w '%{http_code}' \
-              "${API}/logs?ownerId=${owner}&resource=${sid}&limit=100&direction=backward" || echo 000)"
-            echo "HTTP ${code2}"; head -c 2000 /tmp/logs2; echo
+              "${API}/logs?ownerId=${owner}&resource=${sid}&limit=200&direction=backward" || echo 000)"
+            echo "HTTP ${code2}"
+            jq -r '(.logs // .events // [])[] | "\(.timestamp // "") \(.message // .text // .)"' /tmp/logs2 2>/dev/null | grep -iE 'error|internal|500|admin/users|null value|violates|column|relation|does not exist' | tail -n 60 || head -c 2000 /tmp/logs2
           fi
