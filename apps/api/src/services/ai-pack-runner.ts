@@ -109,7 +109,7 @@ async function processAiPackJob(deps: JobDeps, job: JobRow): Promise<ProcessResu
     const result = await generator.generate(input);
     // Validate + resolve evidence against the REAL segments (reject hallucinated ids).
     const { source, stats } = buildPackSource(input, result.sections, genSegments);
-    log('ai_pack_generated', { processingJobId, provider: result.provider, model: result.model, sectionCount: source.sections.length, droppedFacts: stats.droppedFacts, citedSegments: stats.citedSegments });
+    log('ai_pack_generated', { processingJobId, provider: result.provider, model: result.model, sectionCount: source.sections.length, totalFacts: stats.totalFacts, droppedFacts: stats.droppedFacts, unresolvedEvidence: stats.unresolvedEvidence, citedSegments: stats.citedSegments });
 
     await db.transaction(async (tx) => {
       // Idempotent: if this job already wrote its version, do nothing.

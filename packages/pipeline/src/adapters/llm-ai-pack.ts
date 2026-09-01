@@ -115,7 +115,17 @@ export class LLMAIPackGenerator implements AIPackGenerator {
   private async generateChunk(
     input: AIPackGenerationInput,
   ): Promise<{ sections: GeneratedSection[]; usage: { inputTokens: number; outputTokens: number; requestCount: number } }> {
-    const prompt = buildAIPackPrompt(input);
+    // Show the model SHORT, echo-able segment ids (s0, s1, …) instead of the raw
+    // UUIDs — models cannot reproduce long random UUIDs verbatim, so citing them
+    // failed and evidence resolution dropped every fact, yielding an empty pack.
+    // We translate the model's citations back to the real ids before returning.
+    const realIdByShort = new Map<string, string>();
+    const shortTranscript = input.transcript.map((seg, i) => {
+      const short = `s${i}`;
+      realIdByShort.set(short, seg.id);
+      return { ...seg, id: short };
+    });
+    const prompt = buildAIPackPrompt({ ...input, transcript: shortTranscript });
     const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
       { role: 'user', content: prompt.user },
     ];
@@ -145,7 +155,16 @@ export class LLMAIPackGenerator implements AIPackGenerator {
       }
       const validation = validateCandidate(parsed);
       if (validation.ok && validation.value) {
-        return { sections: validation.value.sections as GeneratedSection[], usage };
+        // Translate the model's short ids (s0, s1, …) back to the real segment
+        // ids so evidence resolution matches this meeting's segments.
+        const sections = validation.value.sections.map((section) => ({
+          ...section,
+          facts: section.facts.map((fact) => ({
+            ...fact,
+            segmentIds: fact.segmentIds.map((id) => realIdByShort.get(id)).filter((id): id is string => Boolean(id)),
+          })),
+        }));
+        return { sections: sections as GeneratedSection[], usage };
       }
       lastError = validation.error ?? 'schema validation failed';
       messages.push({ role: 'assistant', content: text });

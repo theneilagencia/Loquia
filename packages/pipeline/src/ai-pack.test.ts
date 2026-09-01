@@ -116,22 +116,30 @@ describe('consolidation', () => {
 });
 
 describe('evidence resolution + pack building', () => {
-  it('resolves timestamps from segments and rejects hallucinated ids', () => {
+  it('resolves timestamps from segments; keeps synthesized facts but drops verbatim ones on bad ids', () => {
     const sections: GeneratedSection[] = [
       { key: 'topics', facts: [{ text: 'Orçamento', classification: 'explicit', segmentIds: ['s2'] }] },
       { key: 'importantStatements', facts: [{ text: 'label', classification: 'explicit', segmentIds: ['s2'] }] },
-      // hallucinated: cites a non-existent segment → dropped
-      { key: 'openPoints', facts: [{ text: 'ghost', classification: 'explicit', segmentIds: ['s999'] }] },
+      // hallucinated id in a SYNTHESIZED section: keep the text, omit the link.
+      { key: 'openPoints', facts: [{ text: 'ghost', classification: 'inferred', segmentIds: ['s999'] }] },
+      // hallucinated id in a VERBATIM/evidence-required section: dropped entirely.
+      { key: 'importantStatements', facts: [{ text: 'phantom', classification: 'explicit', segmentIds: ['s999'] }] },
     ];
     const { source, stats } = buildPackSource(input, sections, segs);
-    expect(stats.droppedFacts).toBe(1);
+    expect(stats.droppedFacts).toBe(1); // only the phantom importantStatement
+    expect(stats.unresolvedEvidence).toBe(1); // the ghost openPoint (kept, no link)
     const topics = source.sections.find((s) => s.key === 'topics')!;
     // Timestamp comes from the cited segment, not the model.
     expect(topics.lines[0]!.atSeconds).toBe(20);
     expect(topics.lines[0]!.speakerId).toBe('sp2');
+    // The synthesized openPoint survives (content over silence) without a link.
+    const open = source.sections.find((s) => s.key === 'openPoints')!;
+    expect(open.lines[0]!.pt).toBe('ghost');
+    expect(open.lines[0]!.segmentIds).toBeUndefined();
     // Important statements show ORIGINAL text (verbatim), not the label.
     const stmt = source.sections.find((s) => s.key === 'importantStatements')!;
     expect(stmt.lines[0]!.text).toContain('R$ 120 mil');
+    expect(stmt.lines).toHaveLength(1); // the phantom was dropped
     // A derived evidence section exists.
     expect(source.sections.some((s) => s.key === 'evidence')).toBe(true);
     // Always includes metadata + participants.

@@ -158,6 +158,102 @@ export interface IngestTextInput {
   text: string;
 }
 
+interface ParsedSegment {
+  speakerKey: string;
+  startSeconds: number;
+  text: string;
+}
+
+/** "HH:MM:SS" or "MM:SS" → seconds. */
+function timestampToSeconds(ts: string): number {
+  const parts = ts.split(':').map((n) => Number(n));
+  if (parts.some((n) => Number.isNaN(n))) return 0;
+  if (parts.length === 3) return parts[0]! * 3600 + parts[1]! * 60 + parts[2]!;
+  if (parts.length === 2) return parts[0]! * 60 + parts[1]!;
+  return 0;
+}
+
+const TIMESTAMP_RE = /^(\d{1,2}:\d{2}(?::\d{2})?)$/;
+/** A standalone diarization label line: "Speaker 1", "Falante 2", "Locutor 3". */
+const SPEAKER_LABEL_RE = /^(?:speaker|falante|locutor|orador)\s*[#]?\s*(\w{1,20})$/i;
+/** Inline "Speaker 1:" / "Paulo:" prefix at the start of a paragraph. */
+const INLINE_SPEAKER_RE = /^([\p{Lu}][\p{L}.'-]*(?:\s+[\p{Lu}][\p{L}.'-]*){0,3}|(?:speaker|falante|locutor|orador)\s*\w{1,20})\s*:\s+/iu;
+
+/**
+ * Parse a speaker-labeled transcript (Plaud / Otter / Zoom exports) into
+ * per-utterance segments, preserving WHO spoke and WHEN. Returns null when the
+ * text has no recognizable speaker structure (then we fall back to paragraphs).
+ *
+ * Two shapes are recognized:
+ *  - block form: a timestamp line and/or a standalone "Speaker N" line, then the
+ *    utterance text on the following line(s) (Plaud export — the common case);
+ *  - inline form: paragraphs that start with "Speaker N:" or "Name:".
+ */
+export function parseSpeakerTranscript(
+  raw: string,
+): { segments: ParsedSegment[]; aliases: Record<string, string>; speakerCount: number } | null {
+  const lines = raw.replace(/\r\n?/g, '\n').split('\n').map((l) => l.trim());
+  const labelToKey = new Map<string, string>();
+  const aliases: Record<string, string> = {};
+  const keyFor = (label: string): string => {
+    const norm = label.trim();
+    let key = labelToKey.get(norm);
+    if (!key) {
+      key = `speaker_${labelToKey.size}`;
+      labelToKey.set(norm, key);
+      aliases[key] = norm;
+    }
+    return key;
+  };
+
+  const segments: ParsedSegment[] = [];
+  let curSpeaker: string | null = null;
+  let curStart = 0;
+  let pendingStart = 0;
+  let buffer: string[] = [];
+  const flush = () => {
+    const text = buffer.join(' ').replace(/[ \t]+/g, ' ').trim();
+    if (curSpeaker && text) segments.push({ speakerKey: keyFor(curSpeaker), startSeconds: curStart, text });
+    buffer = [];
+  };
+
+  let sawLabel = false;
+  for (const line of lines) {
+    if (!line) continue;
+    const ts = line.match(TIMESTAMP_RE);
+    if (ts) {
+      pendingStart = timestampToSeconds(ts[1]!);
+      continue;
+    }
+    const label = line.match(SPEAKER_LABEL_RE);
+    if (label) {
+      flush();
+      curSpeaker = line;
+      curStart = pendingStart;
+      sawLabel = true;
+      continue;
+    }
+    const inline = line.match(INLINE_SPEAKER_RE);
+    if (inline) {
+      flush();
+      curSpeaker = inline[1]!.trim();
+      curStart = pendingStart;
+      buffer.push(line.slice(inline[0].length));
+      sawLabel = true;
+      continue;
+    }
+    // Utterance text; if no speaker seen yet, keep it under a default speaker.
+    if (!curSpeaker) curSpeaker = 'Speaker 1';
+    buffer.push(line);
+  }
+  flush();
+
+  // Only treat it as a real transcript if we actually found labels and >1 speaker
+  // (otherwise the paragraph fallback is just as good and simpler).
+  if (!sawLabel || segments.length === 0 || labelToKey.size < 2) return null;
+  return { segments, aliases, speakerCount: labelToKey.size };
+}
+
 /**
  * Ingest already-extracted TEXT (txt/docx/pasted notes/Plaud transcript/a link).
  * There is no transcription: the text IS the transcript, so we create the meeting
@@ -165,20 +261,30 @@ export interface IngestTextInput {
  * `aiPackStatus: 'queued'`), split the text into transcript segments, insert the
  * `ai_pack` job, and enqueue it. The AI Pack runner reads the segments from the
  * DB by meetingId and generates identically to the audio path.
+ *
+ * When the text is a speaker-labeled transcript (Plaud/Otter/Zoom), the speaker
+ * and timestamp of each utterance are preserved so the AI Pack can attribute who
+ * said what — otherwise the whole thing collapsed onto a single speaker and the
+ * pack lost all attribution.
  */
 export async function ingestText(
   db: Database,
   enqueue: (processingJobId: string) => Promise<void>,
   input: IngestTextInput,
 ): Promise<{ meetingId: string; processingJobId: string }> {
-  // One transcript segment per paragraph (keeps AI Pack chunking natural),
-  // falling back to a single segment when there are no blank-line breaks.
+  const parsed = parseSpeakerTranscript(input.text);
+
+  // Fallback (no speaker structure): one segment per paragraph, single speaker.
   const paragraphs = input.text
     .replace(/\r\n?/g, '\n')
     .split(/\n{2,}/)
     .map((p) => p.replace(/[ \t]+/g, ' ').trim())
     .filter((p) => p.length > 0);
-  const chunks = paragraphs.length > 0 ? paragraphs : [input.text.trim()];
+  const fallbackChunks = paragraphs.length > 0 ? paragraphs : [input.text.trim()];
+
+  const rows = parsed
+    ? parsed.segments.map((s, i) => ({ speakerKey: s.speakerKey, startSeconds: s.startSeconds, text: s.text, orderIndex: i, sequence: i }))
+    : fallbackChunks.map((text, i) => ({ speakerKey: 'speaker_0', startSeconds: 0, text, orderIndex: i, sequence: i }));
 
   const created = await db.transaction(async (tx) => {
     const [meeting] = await tx
@@ -190,22 +296,23 @@ export async function ingestText(
         source: 'text',
         status: 'ready',
         meetingLanguage: input.meetingLanguage,
-        durationSeconds: 0,
-        participantCount: 1,
+        durationSeconds: parsed ? parsed.segments[parsed.segments.length - 1]!.startSeconds : 0,
+        participantCount: parsed ? parsed.speakerCount : 1,
+        speakerAliases: parsed ? parsed.aliases : {},
         aiPackStatus: 'queued',
       })
       .returning();
 
     await tx.insert(transcriptSegments).values(
-      chunks.map((text, i) => ({
+      rows.map((r) => ({
         workspaceId: input.workspaceId,
         meetingId: meeting!.id,
-        speakerKey: 'speaker_0',
-        orderIndex: i,
-        sequence: i,
-        startSeconds: 0,
-        endSeconds: 0,
-        text,
+        speakerKey: r.speakerKey,
+        orderIndex: r.orderIndex,
+        sequence: r.sequence,
+        startSeconds: r.startSeconds,
+        endSeconds: r.startSeconds,
+        text: r.text,
         language: input.meetingLanguage,
       })),
     );

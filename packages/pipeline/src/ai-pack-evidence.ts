@@ -25,8 +25,10 @@ const EVIDENCE_REQUIRED = new Set(['importantStatements']);
 export interface BuildResult {
   source: PackSource;
   stats: {
-    /** Facts dropped because every cited segment id was invalid (hallucinated). */
+    /** Facts removed entirely (evidence-required section with no valid citation). */
     droppedFacts: number;
+    /** Facts kept, but whose cited ids did not resolve (evidence link omitted). */
+    unresolvedEvidence: number;
     /** Distinct valid segment ids that survived resolution. */
     citedSegments: number;
     totalFacts: number;
@@ -64,6 +66,7 @@ export function buildPackSource(
   const pt = input.outputLanguage.toLowerCase().startsWith('pt');
   const citedIds = new Set<string>();
   let droppedFacts = 0;
+  let unresolvedEvidence = 0;
   let totalFacts = 0;
 
   const out: SourceSection[] = [metadataSection(input), participantsSection(input)];
@@ -77,17 +80,17 @@ export function buildPackSource(
       totalFacts += 1;
       // Referential integrity: keep only ids that exist in THIS meeting.
       const valid = fact.segmentIds.filter((id) => byId.has(id));
-      const hadEvidence = fact.segmentIds.length > 0;
-      // Reject hallucinated evidence: cited ids but none resolve.
-      if (hadEvidence && valid.length === 0) {
-        droppedFacts += 1;
-        continue;
-      }
-      // Some sections require real evidence to appear at all.
+      // Sections that SHOW original transcript text require real evidence to
+      // appear at all (a quote with no source is meaningless).
       if (EVIDENCE_REQUIRED.has(section.key) && valid.length === 0) {
         droppedFacts += 1;
         continue;
       }
+      // For synthesized sections (purpose, decisions, numbers, …) keep the fact
+      // even when its citation did not resolve: a coherent statement without a
+      // clickable segment link is far better than silently dropping it and
+      // returning an empty pack. The evidence link is simply omitted.
+      if (fact.segmentIds.length > 0 && valid.length === 0) unresolvedEvidence += 1;
 
       const resolved = valid.map((id) => byId.get(id)!);
       const atSeconds = resolved.length ? Math.min(...resolved.map((s) => s.startSeconds)) : undefined;
@@ -128,6 +131,6 @@ export function buildPackSource(
 
   return {
     source: { meetingId: input.meeting.id, sections: out },
-    stats: { droppedFacts, citedSegments: citedIds.size, totalFacts },
+    stats: { droppedFacts, unresolvedEvidence, citedSegments: citedIds.size, totalFacts },
   };
 }

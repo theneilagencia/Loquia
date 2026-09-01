@@ -56,8 +56,9 @@ jobs:
             -d "{\"email\":\"${EMAIL}\",\"password\":\"${PW}\"}" || echo 000)"
           echo "login=${lc}"; [ "$lc" = "200" ] || { echo "::error::login failed"; exit 1; }
 
-          echo "== Create text meeting (multi-paragraph) =="
-          TX=$'Ana abriu a reuniao e disse que o objetivo era decidir o preco do plano Pro e o cronograma de lancamento. Ela lembrou que o trimestre passado fechou 12% abaixo da meta.\n\nBruno apresentou tres cenarios de preco: R$ 79, R$ 99 e R$ 129 por mes. Ele defendeu R$ 99 como o ponto de equilibrio entre volume e margem, citando a pesquisa com 40 clientes.\n\nCarla, do financeiro, alertou que a margem so fecha se o churn ficar abaixo de 4% ao mes. Ela pediu que o time de sucesso do cliente prepare um plano de retencao antes do lancamento.\n\nDiego, de engenharia, disse que a pagina de precos e o fluxo de upgrade ficam prontos em duas semanas, mas o gateway de pagamento novo depende de aprovacao juridica do contrato.\n\nAna perguntou sobre riscos. Bruno citou a reacao da concorrencia e a possibilidade de precisar de um plano anual com desconto. Carla sugeriu 2 meses gratis no plano anual.\n\nFicou decidido: lancar o plano Pro a R$ 99 por mes, oferecer plano anual com 2 meses gratis, revisar os numeros em 30 dias. Bruno prepara a pagina de precos ate sexta, Diego entrega o fluxo de upgrade em duas semanas, e Carla monta o plano de retencao. Juridico revisa o contrato do gateway ate quarta.'
+          echo "== Create text meeting (Plaud-style, speaker-labeled) =="
+          # Block form: timestamp / Speaker N / utterance — exercises speaker parsing.
+          TX=$'00:00:00\nSpeaker 1\nBom dia a todos. Vamos comecar a reuniao comercial. O Paulo vai abrir.\n\n00:00:12\nSpeaker 2\nObrigado. Estou abrindo a reuniao como acionista e conselho. O objetivo hoje e decidir o preco do plano Pro e alinhar o cronograma.\n\n00:00:35\nSpeaker 1\nProponho R$ 99 por mes, com base na pesquisa com 40 clientes.\n\n00:00:52\nSpeaker 2\nConcordo com R$ 99. Vamos oferecer tambem um plano anual com 2 meses gratis e revisar os numeros em 30 dias.\n\n00:01:20\nSpeaker 1\nFicou decidido entao: lancar o Pro a R$ 99 por mes, plano anual com 2 meses gratis, e eu preparo a pagina de precos ate sexta.'
           body="$(jq -n --arg t "AIPack livetest" --arg l "pt-BR" --arg x "$TX" '{title:$t,meetingLanguage:$l,text:$x}')"
           cc="$(curl -sS -m 60 -b "$jar" -o /tmp/c -w '%{http_code}' -X POST "${API_HOST}/api/meetings/process-text" \
             -H 'content-type: application/json' -H "Origin: ${WWW}" -d "$body" || echo 000)"
@@ -80,6 +81,9 @@ jobs:
           curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/job" -o /tmp/job || true
           jq '{type,status,progress,errorCode,errorMessage,provider,model}' /tmp/job 2>/dev/null || head -c 400 /tmp/job
 
+          echo "== Meeting speakers (attribution check) =="
+          jq '{participantCount, speakerAliases}' /tmp/m 2>/dev/null || true
+
           echo "== Generated AI Pack CONTENT (quality check) =="
           curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/aipack" -o /tmp/pack || true
           # Show section keys + fact count + classification, and each fact's text.
@@ -90,3 +94,10 @@ jobs:
             failed) echo "::error::RESULT: AI Pack FAILED — errorCode/errorMessage above pinpoints the fix." ;;
             *) echo "::warning::RESULT: still generating after 5 min for a tiny input — the generation path is stuck; see the job above." ;;
           esac
+
+          echo "== Cleanup: delete ALL 'AIPack livetest' meetings (keep the account tidy) =="
+          curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings?includeArchived=true" -o /tmp/all || true
+          for DID in $(jq -r '.[] | select(.title=="AIPack livetest") | .id' /tmp/all 2>/dev/null); do
+            dc="$(curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" -o /dev/null -w '%{http_code}' -X DELETE "${API_HOST}/api/meetings/${DID}" || echo 000)"
+            echo "  deleted ${DID} -> ${dc}"
+          done
