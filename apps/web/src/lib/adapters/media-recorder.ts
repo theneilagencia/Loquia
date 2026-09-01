@@ -25,6 +25,36 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
   let chunks: Blob[] = [];
   const peaks: number[] = [];
 
+  // Screen Wake Lock — on mobile the OS screensaver/auto-lock suspends the page
+  // and kills the mic capture, so a recording silently stops when the screen
+  // sleeps. Holding a 'screen' wake lock while recording keeps the display awake.
+  // The lock is auto-released by the browser when the tab is hidden, so we also
+  // re-acquire it on visibilitychange whenever we're still recording.
+  type WakeLockSentinelLike = { release: () => Promise<void> | void };
+  let wakeLock: WakeLockSentinelLike | null = null;
+  let onVisibility: (() => void) | null = null;
+
+  async function acquireWakeLock(): Promise<void> {
+    try {
+      const wl = (navigator as unknown as {
+        wakeLock?: { request: (type: 'screen') => Promise<WakeLockSentinelLike> };
+      }).wakeLock;
+      if (!wl || wakeLock) return;
+      wakeLock = await wl.request('screen');
+    } catch {
+      // Not supported (older iOS/Safari) or blocked — non-fatal; recording still runs.
+    }
+  }
+
+  function releaseWakeLock(): void {
+    try {
+      void wakeLock?.release();
+    } catch {
+      /* ignore */
+    }
+    wakeLock = null;
+  }
+
   function supported(): boolean {
     return (
       typeof navigator !== 'undefined' &&
@@ -115,6 +145,16 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
         }
       }
 
+      // Keep the screen awake so the mobile screensaver can't suspend capture,
+      // and re-arm the lock each time the tab returns to the foreground.
+      void acquireWakeLock();
+      if (typeof document !== 'undefined') {
+        onVisibility = () => {
+          if (document.visibilityState === 'visible' && running) void acquireWakeLock();
+        };
+        document.addEventListener('visibilitychange', onVisibility);
+      }
+
       const step = 100;
       timer = setInterval(() => {
         if (!running) return;
@@ -127,6 +167,7 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
 
     pause() {
       running = false;
+      releaseWakeLock();
       try {
         recorder?.state === 'recording' && recorder.pause();
       } catch {
@@ -136,6 +177,7 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
 
     resume() {
       running = true;
+      void acquireWakeLock();
       try {
         recorder?.state === 'paused' && recorder.resume();
       } catch {
@@ -145,6 +187,11 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
 
     async stop(): Promise<RecorderResult> {
       running = false;
+      releaseWakeLock();
+      if (onVisibility && typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVisibility);
+        onVisibility = null;
+      }
       if (timer) {
         clearInterval(timer);
         timer = null;
