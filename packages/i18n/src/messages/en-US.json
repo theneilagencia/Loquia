@@ -404,6 +404,25 @@
       "makeAdmin": "Make admin",
       "makeMember": "Make member"
     },
+    "createUser": {
+      "title": "Create user",
+      "email": "Email",
+      "name": "Name (optional)",
+      "role": "Role",
+      "password": "Provisional password",
+      "generate": "Generate",
+      "show": "Show password",
+      "hide": "Hide password",
+      "submit": "Create user",
+      "created": "User created",
+      "provisionalPassword": "Provisional password",
+      "inviteLink": "Invite link",
+      "copy": "Copy",
+      "copied": "Copied!",
+      "hint": "Hand over the provisional password (the user signs in and changes it later via ‘Forgot password’) or send the invite link so they set their own password.",
+      "error": "Could not create the user. Check whether the email already exists.",
+      "emailInvalid": "Enter a valid email."
+    },
     "roles": {
       "owner": "Owner",
       "admin": "Admin",

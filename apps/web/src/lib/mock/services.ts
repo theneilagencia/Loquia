@@ -308,6 +308,42 @@ export function createMockServices(deps: MockDeps): Services {
         logAudit(store, 'invitation.sent', { id: actorId, label: actor?.name ?? 'Admin' }, { type: 'invitation', id: invitation.id, label: invitation.email });
         return ok(invitation);
       },
+      async createUser(actorId, input) {
+        await delay();
+        const db = store.read();
+        const actor = db.users.find((u) => u.id === actorId);
+        const now = nowIso();
+        const email = input.email.toLowerCase();
+        const user = {
+          id: newId('u'),
+          email,
+          name: input.name?.trim() || email.split('@')[0] || email,
+          role: input.role,
+          status: 'active' as const,
+          workspaceId: actor?.workspaceId ?? 'w1',
+          locale: actor?.locale ?? 'pt-BR',
+          createdAt: now,
+          updatedAt: now,
+          lastActiveAt: undefined,
+        };
+        const token = newId('tok');
+        store.write((d) => {
+          d.users.unshift(user);
+          d.invitations.unshift({
+            id: newId('inv'),
+            email,
+            workspaceId: user.workspaceId,
+            role: input.role,
+            token,
+            status: 'sent',
+            invitedByUserId: actorId,
+            createdAt: now,
+            expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14).toISOString(),
+          });
+        });
+        logAudit(store, 'invitation.sent', { id: actorId, label: actor?.name ?? 'Admin' }, { type: 'user', id: user.id, label: email });
+        return ok({ user, provisionalPassword: input.password || 'Prov1sional23', inviteToken: token });
+      },
       async revokeInvitation(id, actorId) {
         const db = store.read();
         const actor = db.users.find((u) => u.id === actorId);

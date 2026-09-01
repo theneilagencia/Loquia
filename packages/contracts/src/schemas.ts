@@ -70,3 +70,14 @@ export const inviteUserSchema = z.object({
   role: z.enum(['owner', 'admin', 'member']),
 });
 export type InviteUserInput = z.infer<typeof inviteUserSchema>;
+
+// Admin creates a user directly with a provisional password (the user changes
+// it later via the invite link or "forgot password"). Password is optional —
+// when omitted the API generates a strong provisional one and echoes it once.
+export const createUserSchema = z.object({
+  email: z.string().email('validation.email_invalid'),
+  name: z.string().trim().min(1).max(120).optional(),
+  role: z.enum(['admin', 'member']).default('member'),
+  password: z.string().min(8, 'validation.password_min').max(200).optional(),
+});
+export type CreateUserInput = z.infer<typeof createUserSchema>;

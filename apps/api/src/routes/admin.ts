@@ -1,12 +1,14 @@
+import { randomInt } from 'node:crypto';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { FastifyInstance } from 'fastify';
-import { rejectAccessSchema, inviteUserSchema } from '@loquia/contracts';
+import { rejectAccessSchema, inviteUserSchema, createUserSchema } from '@loquia/contracts';
 import {
   accessRequests,
   auditEvents,
   invitations,
   meetings,
+  userSettings,
   users,
   workspaces,
 } from '../db/schema';
@@ -19,11 +21,26 @@ import {
 } from '../dto';
 import { requireAdmin, assertWorkspace } from '../context';
 import { errors } from '../lib/errors';
-import { generateToken, hashToken } from '../lib/crypto';
+import { generateToken, hashToken, hashPassword } from '../lib/crypto';
+import { defaultSettings } from '../services/defaults';
 import { writeAudit, type ServerAuditAction } from '../services/audit';
 import { sendInvitationEmail, sendMoreInformationEmail, sendRejectionEmail } from '../services/notifications';
 
 const INVITE_TTL_MS = 1000 * 60 * 60 * 24 * 14;
+
+/** A strong, human-typable provisional password (no ambiguous chars). */
+function generateProvisionalPassword(length = 12): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  let out = '';
+  for (let i = 0; i < length; i += 1) out += chars[randomInt(chars.length)];
+  return out;
+}
+
+/** Default user-settings JSON columns for a freshly created user. */
+function jsonSettings(userId: string) {
+  const s = defaultSettings(userId);
+  return { general: s.general, recording: s.recording, export: s.export, language: s.language, privacy: s.privacy, appearance: s.appearance };
+}
 
 function slugify(name: string): string {
   return (
@@ -244,6 +261,69 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
     const admin = requireAdmin(request.auth);
     const rows = await db.select().from(users).where(eq(users.workspaceId, admin.user.workspaceId));
     return rows.map(toUserDTO);
+  });
+
+  // Create a user directly with a provisional password. Returns the password
+  // (echoed once) and an invite token so the admin can copy an activation link
+  // — the user can log in with the provisional password and change it later, or
+  // use the link to set their own password. Email is best-effort.
+  app.post('/users', async (request) => {
+    const admin = requireAdmin(request.auth);
+    const input = createUserSchema.parse(request.body);
+    const email = input.email.toLowerCase();
+    const name = input.name?.trim() || (email.split('@')[0] ?? email);
+    const password = input.password ?? generateProvisionalPassword();
+    const passwordHash = await hashPassword(password);
+    const token = generateToken();
+    const now = new Date();
+
+    const result = await db.transaction(async (tx) => {
+      const existing = await tx.select().from(users).where(eq(users.email, email)).limit(1);
+      if (existing[0] && existing[0].workspaceId !== admin.user.workspaceId) {
+        throw errors.conflict('email_taken');
+      }
+
+      let user: typeof users.$inferSelect;
+      if (existing[0]) {
+        const upd = await tx
+          .update(users)
+          .set({ name, role: input.role, status: 'active', passwordHash, activatedAt: existing[0].activatedAt ?? now, updatedAt: now })
+          .where(eq(users.id, existing[0].id))
+          .returning();
+        user = upd[0]!;
+      } else {
+        const ins = await tx
+          .insert(users)
+          .values({ email, name, role: input.role, status: 'active', workspaceId: admin.user.workspaceId, passwordHash, activatedAt: now, locale: admin.user.locale })
+          .returning();
+        user = ins[0]!;
+      }
+
+      await tx.insert(userSettings).values({ userId: user.id, ...jsonSettings(user.id) }).onConflictDoNothing();
+
+      const invIns = await tx
+        .insert(invitations)
+        .values({
+          email,
+          workspaceId: admin.user.workspaceId,
+          role: input.role,
+          tokenHash: hashToken(token),
+          status: 'pending',
+          invitedByUserId: admin.user.id,
+          expiresAt: new Date(now.getTime() + INVITE_TTL_MS),
+        })
+        .returning();
+
+      await writeAudit(tx, { action: 'user_created', actorId: admin.user.id, actorLabel: admin.user.name, targetType: 'user', targetId: user.id, targetLabel: email, workspaceId: admin.user.workspaceId });
+
+      return { user, invitation: invIns[0]! };
+    });
+
+    // Best-effort invite email (never fatal — the admin already has the link).
+    const f = await invitationEmailFields(admin.user.workspaceId, email);
+    await sendInvitationEmail(ctx, request.log, { email, name: f.name, workspaceName: f.workspaceName, token, expiresAt: result.invitation.expiresAt, locale: admin.user.locale });
+
+    return { user: toUserDTO(result.user), provisionalPassword: password, inviteToken: token };
   });
 
   app.patch('/users/:id/status', async (request) => {

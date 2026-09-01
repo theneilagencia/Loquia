@@ -29,10 +29,19 @@ import type {
   ForgotPasswordInput,
   ResetPasswordInput,
   InviteUserInput,
+  CreateUserInput,
   LoginInput,
   RejectAccessInput,
   RequestAccessInput,
 } from './schemas';
+
+/** Result of admin-creating a user: the row, the provisional password (shown
+ * once), and the invite token used to build a copyable activation link. */
+export interface CreateUserResult {
+  user: User;
+  provisionalPassword: string;
+  inviteToken: string;
+}
 
 /**
  * Service contracts (task spec §11). The UI depends ONLY on these interfaces;
@@ -68,6 +77,8 @@ export interface AdminService {
   ): Promise<Result<AccessRequest>>;
   listInvitations(): Promise<Invitation[]>;
   createInvitation(actorId: Id, input: InviteUserInput): Promise<Result<Invitation>>;
+  /** Create a user directly with a provisional password + copyable invite link. */
+  createUser(actorId: Id, input: CreateUserInput): Promise<Result<CreateUserResult>>;
   revokeInvitation(id: Id, actorId: Id): Promise<Result<Invitation>>;
   listUsers(): Promise<User[]>;
   setUserStatus(id: Id, status: User['status'], actorId: Id): Promise<Result<User>>;

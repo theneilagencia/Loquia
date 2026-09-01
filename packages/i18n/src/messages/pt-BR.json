@@ -404,6 +404,25 @@
       "makeAdmin": "Tornar admin",
       "makeMember": "Tornar membro"
     },
+    "createUser": {
+      "title": "Criar usuário",
+      "email": "E-mail",
+      "name": "Nome (opcional)",
+      "role": "Função",
+      "password": "Senha provisória",
+      "generate": "Gerar",
+      "show": "Mostrar senha",
+      "hide": "Ocultar senha",
+      "submit": "Criar usuário",
+      "created": "Usuário criado",
+      "provisionalPassword": "Senha provisória",
+      "inviteLink": "Link do convite",
+      "copy": "Copiar",
+      "copied": "Copiado!",
+      "hint": "Entregue a senha provisória (o usuário entra e troca depois em ‘Esqueci minha senha’) ou envie o link do convite para o próprio usuário definir a senha.",
+      "error": "Não foi possível criar o usuário. Verifique se o e-mail já existe.",
+      "emailInvalid": "Informe um e-mail válido."
+    },
     "roles": {
       "owner": "Dono",
       "admin": "Admin",

@@ -18,6 +18,7 @@ import { runExport, type ExportInput } from '@loquia/export-engine';
 import type {
   BrowserStorageAdapter,
   ClipboardAdapter,
+  CreateUserResult,
   DownloadAdapter,
   ProcessAudioResult,
   Services,
@@ -245,6 +246,14 @@ export function createApiServices(deps: ApiDeps): Services {
       async revokeInvitation(id) {
         try {
           return ok(await api.post<Invitation>(`/api/admin/invitations/${id}/revoke`));
+        } catch (e) {
+          if (e instanceof ApiHttpError) return err({ code: e.code, message: e.message });
+          throw e;
+        }
+      },
+      async createUser(_actorId, input) {
+        try {
+          return ok(await api.post<CreateUserResult>('/api/admin/users', input));
         } catch (e) {
           if (e instanceof ApiHttpError) return err({ code: e.code, message: e.message });
           throw e;

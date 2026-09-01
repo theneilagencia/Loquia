@@ -11,6 +11,7 @@ export type ServerAuditAction =
   | 'request_cancelled'
   | 'request_reopened'
   | 'invitation_created'
+  | 'user_created'
   | 'invitation_resent'
   | 'invitation_revoked'
   | 'account_activated'
