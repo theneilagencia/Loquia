@@ -15,7 +15,39 @@ const DOC_MAX_BYTES = 25 * 1024 * 1024;
 type Mode = 'audio' | 'doc' | 'link';
 type Phase = 'idle' | 'uploading' | 'processing' | 'error';
 
-/** Extract plain text from a picked file (.txt/.md/.csv read directly, .docx via mammoth). */
+/** Minimal RTF → plain text (control words/groups stripped; enough for notes). */
+function rtfToText(rtf: string): string {
+  return rtf
+    .replace(/\\'([0-9a-fA-F]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/\\par[d]?\b/g, '\n')
+    .replace(/\\line\b/g, '\n')
+    .replace(/\\tab\b/g, '\t')
+    .replace(/\{\\\*[^{}]*\}/g, '')
+    .replace(/\\[a-zA-Z]+-?\d* ?/g, '')
+    .replace(/[{}]/g, '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .trim();
+}
+
+/** Extract text from a PDF in the browser via pdf.js. */
+async function pdfToText(f: File): Promise<string> {
+  const pdfjs = await import('pdfjs-dist');
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+  const data = new Uint8Array(await f.arrayBuffer());
+  const loadingTask = pdfjs.getDocument({ data });
+  const doc = await loadingTask.promise;
+  const parts: string[] = [];
+  for (let p = 1; p <= doc.numPages; p += 1) {
+    const page = await doc.getPage(p);
+    const content = await page.getTextContent();
+    parts.push(content.items.map((it) => ('str' in it ? it.str : '')).join(' '));
+  }
+  await loadingTask.destroy();
+  return parts.join('\n\n');
+}
+
+/** Extract plain text from a picked file. .txt/.md/.csv direct; .docx (mammoth); .pdf (pdf.js); .rtf. */
 async function extractText(f: File): Promise<string> {
   const name = f.name.toLowerCase();
   if (name.endsWith('.docx')) {
@@ -25,6 +57,8 @@ async function extractText(f: File): Promise<string> {
     const result = await extractRawText({ arrayBuffer });
     return result.value;
   }
+  if (name.endsWith('.pdf')) return pdfToText(f);
+  if (name.endsWith('.rtf')) return rtfToText(await f.text());
   return f.text();
 }
 
@@ -116,7 +150,7 @@ export default function UploadPage() {
       setError(t('tooLarge'));
       return;
     }
-    const okType = /\.(txt|md|markdown|csv|docx)$/i.test(f.name);
+    const okType = /\.(txt|md|markdown|csv|docx|pdf|rtf)$/i.test(f.name);
     if (!okType) {
       setError(t('docInvalidType'));
       return;
@@ -285,7 +319,7 @@ export default function UploadPage() {
             <input
               ref={docInputRef}
               type="file"
-              accept=".txt,.md,.markdown,.csv,.docx"
+              accept=".txt,.md,.markdown,.csv,.docx,.pdf,.rtf"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
