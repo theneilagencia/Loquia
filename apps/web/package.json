@@ -35,8 +35,8 @@
     "framer-motion": "11.18.0",
     "lucide-react": "0.469.0",
     "mammoth": "^1.12.2",
-    "next": "15.1.6",
-    "next-intl": "3.26.3",
+    "next": "15.5.21",
+    "next-intl": "4.9.2",
     "pdfjs-dist": "^6.3.289",
     "react": "18.3.1",
     "react-dom": "18.3.1",
@@ -63,12 +63,12 @@
     "eslint": "8.57.1",
     "eslint-config-next": "15.1.6",
     "jsdom": "25.0.1",
-    "playwright": "1.49.1",
-    "postcss": "8.4.49",
+    "playwright": "1.55.1",
+    "postcss": "8.5.23",
     "postgres": "3.4.5",
-    "storybook": "8.4.7",
+    "storybook": "8.6.17",
     "tailwindcss": "3.4.17",
     "typescript": "5.7.3",
-    "vitest": "2.1.8"
+    "vitest": "3.2.6"
   }
 }
