@@ -1,0 +1,84 @@
+name: Render upgrade (min cost)
+
+# Upgrade the two web services (loquia-web, loquia-api) to the cheapest always-on
+# paid plan (Starter) via the Render API, to stop free-tier spin-down. Does NOT
+# touch the database: it only READS and reports the Postgres plan/status, because
+# a free->paid Postgres change can recreate the DB and lose data — that step is
+# handled separately after inspecting the report. Opt-in: manual dispatch or an
+# [upgrade] commit marker. Never prints secrets.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: render-upgrade
+  cancel-in-progress: false
+
+jobs:
+  upgrade:
+    name: Upgrade web+api, report Postgres
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[upgrade]') }}
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      API_NAME: loquia-api
+      WEB_NAME: loquia-web
+      PLAN: starter
+    steps:
+      - name: Upgrade compute + report DB
+        run: |
+          set -euo pipefail
+          RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
+          API="https://api.render.com/v1"
+          auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json" -H "Content-Type: application/json")
+
+          services="$(curl -fsS -m 30 "${auth[@]}" "${API}/services?limit=100")"
+          api_id="$(jq -r --arg n "$API_NAME" '.[].service|select(.name==$n)|.id' <<<"$services" | head -n1)"
+          web_id="$(jq -r --arg n "$WEB_NAME" '.[].service|select(.name==$n)|.id' <<<"$services" | head -n1)"
+          api_plan="$(jq -r --arg n "$API_NAME" '.[].service|select(.name==$n)|.serviceDetails.plan // "?"' <<<"$services" | head -n1)"
+          web_plan="$(jq -r --arg n "$WEB_NAME" '.[].service|select(.name==$n)|.serviceDetails.plan // "?"' <<<"$services" | head -n1)"
+          echo "current: web=${web_id} (${web_plan})  api=${api_id} (${api_plan})"
+          [ -n "$web_id" ] && [ -n "$api_id" ] || { echo "::error::services not found"; exit 1; }
+
+          set_plan () { # $1=serviceId $2=name
+            local code
+            code="$(curl -sS -o /tmp/pbody -w '%{http_code}' -X PATCH "${auth[@]}" "${API}/services/$1" -d "$(jq -cn --arg p "$PLAN" '{serviceDetails:{plan:$p}}')")"
+            if [ "$code" = "200" ]; then echo "  $2 -> plan set to ${PLAN}";
+            else
+              echo "::error::$2 plan change HTTP ${code}"; echo "  body:"; head -c 500 /tmp/pbody; echo
+              echo "  (a 402/400 here usually means no payment method on the Render account — add a card in Dashboard > Billing, then re-run.)"
+              return 1
+            fi
+          }
+          echo "== Upgrading compute to ${PLAN} =="
+          rc=0
+          set_plan "$web_id" "$WEB_NAME" || rc=1
+          set_plan "$api_id" "$API_NAME" || rc=1
+          [ "$rc" = "0" ] || { echo "::error::plan change failed — see above"; exit 1; }
+
+          # Confirm the new plan + wait for the restart to go live and answer health.
+          echo "== Verifying new plans =="
+          after="$(curl -fsS "${auth[@]}" "${API}/services?limit=100")"
+          echo "  web plan now: $(jq -r --arg n "$WEB_NAME" '.[].service|select(.name==$n)|.serviceDetails.plan' <<<"$after")"
+          echo "  api plan now: $(jq -r --arg n "$API_NAME" '.[].service|select(.name==$n)|.serviceDetails.plan' <<<"$after")"
+          api_url="$(jq -r --arg n "$API_NAME" '.[].service|select(.name==$n)|.serviceDetails.url' <<<"$after")"
+          web_url="$(jq -r --arg n "$WEB_NAME" '.[].service|select(.name==$n)|.serviceDetails.url' <<<"$after")"
+          echo "== Waiting for services to answer (restart after plan change) =="
+          for u in "${api_url}/health" "${web_url}/"; do
+            for i in $(seq 1 20); do
+              c="$(curl -sS -o /dev/null -m 60 -w '%{http_code}' "$u" || echo 000)"
+              echo "  GET $u -> $c"
+              [ "$c" = "200" ] && break
+              sleep 12
+            done
+          done
+
+          echo ""
+          echo "==================  POSTGRES (READ-ONLY REPORT)  =================="
+          pg="$(curl -fsS "${auth[@]}" "${API}/postgres?limit=100" || echo '[]')"
+          jq -r '.[]?|.postgres // .|{id,name,plan,status,version,expiresAt,createdAt,highAvailabilityEnabled}' <<<"$pg" 2>/dev/null || echo "  (could not read /postgres — may need a newer API scope)"
+          echo "  NOTE: not changing the DB automatically — a free->paid switch can"
+          echo "  recreate it and lose data. We'll act on this after reviewing the above."
+          echo "=================================================================="
