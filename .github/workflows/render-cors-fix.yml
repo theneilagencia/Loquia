@@ -1,13 +1,12 @@
-name: Diagnose broken JS chunks (www)
+name: Settled browser login test (www)
 
-# "Não loga": the browser diagnostic showed the login request never fires because
-# _next/static/chunks/*.js abort (net::ERR_ABORTED) — the app never hydrates, so
-# the Entrar button does a plain form GET and no login fetch happens. This finds
-# out WHY the chunks fail: (1) loquia-web latest deploy status/commit; (2) fetch
-# the login HTML from www AND from the onrender host, extract the referenced
-# chunk URLs, and check each returns 200 with the right content-type; a mismatch
-# (HTML from one build, chunks 404) or www-vs-onrender difference pinpoints it.
-# Read-only. Opt-in: dispatch or [corsfix]. Never prints secrets.
+# Earlier ERR_ABORTED on JS chunks happened because the test ran during a
+# loquia-web deploy/cold-start window (every push auto-redeploys web). The chunks
+# themselves serve 200 fine. This test first WAITS for loquia-web's newest deploy
+# to be live, then WARMS www+api (defeats free-tier spin-down), THEN drives a real
+# browser (desktop + iPhone Safari) through login with generous waits — so it
+# measures the settled site, not a deploy window. Read-only vs Render. Opt-in:
+# dispatch or [corsfix]. Never prints secrets.
 
 on:
   workflow_dispatch:
@@ -19,16 +18,18 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  diag:
-    name: Diagnose JS chunk loading
+  test:
+    name: Settled browser login
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[corsfix]') }}
     env:
       RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
       WWW: https://www.loquia.com.br
+      API_HOST: https://api.loquia.com.br
+      EMAIL: vinicius@apymine.com
+      PW: ${{ secrets.ADMIN_PASSWORD }}
     steps:
-      - name: loquia-web deploy state + onrender host
-        continue-on-error: true
+      - name: Wait for loquia-web deploy to settle, then warm www + api
         run: |
           set -uo pipefail
           RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
@@ -36,46 +37,91 @@ jobs:
           auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json")
           svc="$(curl -fsS -m 30 "${auth[@]}" "${API}/services?limit=100" || echo '[]')"
           web_id="$(jq -r '.[].service|select(.name=="loquia-web")|.id' <<<"$svc" | head -n1)"
-          onr="$(jq -r '.[].service|select(.name=="loquia-web")|.serviceDetails.url' <<<"$svc" | head -n1)"
-          echo "loquia-web id=${web_id}  onrender=${onr}"
-          echo "ONRENDER=${onr}" >> "$GITHUB_ENV"
-          echo "== last 3 deploys =="
-          curl -fsS -m 30 "${auth[@]}" "${API}/services/${web_id}/deploys?limit=3" \
-            | jq -r '.[]|.deploy|"  \(.id)  \(.status)  commit=\(.commit.id[0:8])  \(.finishedAt // .createdAt)"' || true
+          echo "== Wait until newest loquia-web deploy is live =="
+          for i in $(seq 1 40); do
+            top="$(curl -fsS -m 30 "${auth[@]}" "${API}/services/${web_id}/deploys?limit=1" | jq -r '.[0].deploy.status')"
+            echo "  newest deploy: ${top} (poll ${i})"
+            case "$top" in live) break;; build_failed|update_failed|canceled) echo "::warning::deploy ${top}"; break;; esac
+            sleep 15
+          done
+          echo "== Warm www + api (a few hits to spin them up) =="
+          for h in "${WWW}/pt-BR/login" "${API_HOST}/health" "${WWW}/pt-BR/app"; do
+            for k in 1 2 3; do
+              c="$(curl -sS -o /dev/null -m 60 -w '%{http_code}' "$h" || echo 000)"
+              echo "  GET $h -> $c"
+              [ "$c" = "200" ] && break
+              sleep 5
+            done
+          done
 
-      - name: Compare served HTML + chunk reachability (www vs onrender)
-        continue-on-error: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm init -y >/dev/null 2>&1 && npm i playwright@1.49.1 >/dev/null 2>&1 && npx playwright install --with-deps chromium
+      - name: Real browser login — desktop + iPhone Safari (settled)
+        env:
+          PW: ${{ secrets.ADMIN_PASSWORD }}
         run: |
-          set -uo pipefail
-          check() {
-            local base="$1" label="$2"
-            echo ""
-            echo "================ ${label}: ${base} ================"
-            code="$(curl -sS -m 40 -o /tmp/html -w '%{http_code}' "${base}/pt-BR/login" || echo 000)"
-            echo "  GET /pt-BR/login -> ${code}  bytes=$(wc -c </tmp/html 2>/dev/null || echo 0)"
-            echo "  buildId: $(grep -oE '\"buildId\":\"[^\"]+\"' /tmp/html | head -n1 || echo '(none)')"
-            # Extract up to 6 distinct chunk paths referenced by the HTML.
-            grep -oE '/_next/static/[^"]+\.js' /tmp/html | sort -u | head -n 6 > /tmp/chunks || true
-            n="$(wc -l </tmp/chunks 2>/dev/null || echo 0)"
-            echo "  referenced chunks (showing up to 6 of the distinct set): ${n}"
-            if [ "$n" = "0" ]; then echo "  !! no chunk references found in HTML"; return; fi
-            while IFS= read -r path; do
-              [ -n "$path" ] || continue
-              cc="$(curl -sS -m 30 -o /dev/null -D /tmp/h -w '%{http_code}' "${base}${path}" || echo 000)"
-              ct="$(grep -i '^content-type:' /tmp/h | tr -d '\r' | sed 's/^[Cc]ontent-[Tt]ype: *//' || echo '?')"
-              cl="$(grep -i '^content-length:' /tmp/h | tr -d '\r' | sed 's/^[Cc]ontent-[Ll]ength: *//' || echo '?')"
-              echo "    ${cc}  ${path}   [${ct}] len=${cl}"
-            done < /tmp/chunks
-          }
-          check "${WWW}" "WWW (custom domain)"
-          if [ -n "${ONRENDER:-}" ]; then check "${ONRENDER%/}" "ONRENDER (origin)"; fi
+          cat > d.cjs <<'EOF'
+          const { chromium, devices } = require('playwright');
+          const WEB = 'https://www.loquia.com.br';
+          const email = 'vinicius@apymine.com';
+          const password = process.env.PW || 'password123';
 
-          echo ""
-          echo "== Does www HTML reference the SAME buildId as onrender? =="
-          curl -sS -m 40 -o /tmp/w "${WWW}/pt-BR/login" || true
-          curl -sS -m 40 -o /tmp/o "${ONRENDER%/}/pt-BR/login" || true
-          bw="$(grep -oE '\"buildId\":\"[^\"]+\"' /tmp/w | head -n1)"
-          bo="$(grep -oE '\"buildId\":\"[^\"]+\"' /tmp/o | head -n1)"
-          echo "  www buildId     : ${bw:-?}"
-          echo "  onrender buildId: ${bo:-?}"
-          [ -n "$bw" ] && [ "$bw" = "$bo" ] && echo "  => SAME build (no stale-HTML mismatch)" || echo "  => DIFFERENT or unknown — possible stale HTML/caching at the domain layer"
+          async function run(label, contextOpts, shot) {
+            const b = await chromium.launch();
+            const ctx = await b.newContext(contextOpts);
+            const p = await ctx.newPage();
+            const failed = [], cerr = [];
+            let status = 'none', host = '', acao = '(none)', setCookie = '(none)';
+            p.on('requestfailed', r => failed.push(r.method()+' '+r.url()+' :: '+((r.failure()||{}).errorText||'')));
+            p.on('console', m => { if (m.type()==='error') cerr.push(m.text().slice(0,180)); });
+            p.on('response', r => {
+              if (r.url().includes('/api/auth/login')) {
+                status = r.status();
+                try { host = new URL(r.url()).host; } catch {}
+                const h = r.headers();
+                acao = h['access-control-allow-origin'] || '(none)';
+                setCookie = h['set-cookie'] ? h['set-cookie'].replace(/loquia_session=[^;]*/i,'loquia_session=<redacted>') : '(none)';
+              }
+            });
+            // networkidle so all chunks finish before we interact (no deploy-window race).
+            await p.goto(`${WEB}/pt-BR/login`, { waitUntil: 'networkidle', timeout: 90000 }).catch(e=>console.log(`[${label}] goto err:`, e.message));
+            await p.waitForTimeout(1500);
+            await p.getByLabel('E-mail').fill(email).catch(()=>{});
+            await p.getByLabel('Senha', { exact: true }).fill(password).catch(()=>{});
+            await p.getByRole('button', { name: 'Entrar' }).click().catch(()=>{});
+            await p.waitForTimeout(8000);
+            const afterSubmit = p.url();
+            await p.goto(`${WEB}/pt-BR/app`, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(()=>{});
+            await p.waitForTimeout(3000);
+            const afterReload = p.url();
+            await p.screenshot({ path: shot, fullPage: true }).catch(()=>{});
+            const ok = /\/pt-BR\/app(\b|\/|\?|$)/.test(afterReload) && !/\/login/.test(afterReload);
+            console.log(`\n===== ${label} =====`);
+            console.log('  login host   :', host || '(request never fired — hydration failed)');
+            console.log('  login status :', status);
+            console.log('  login ACAO   :', acao);
+            console.log('  Set-Cookie   :', setCookie);
+            console.log('  after submit :', afterSubmit);
+            console.log('  after /app   :', afterReload);
+            console.log('  RESULT       :', ok ? 'LOGIN OK (session persists)' : 'LOGIN FAILED');
+            if (failed.length) console.log('  FAILED reqs  :\n    ' + failed.slice(0,8).join('\n    '));
+            if (cerr.length) console.log('  CONSOLE err  :\n    ' + cerr.slice(0,8).join('\n    '));
+            await b.close();
+            return ok;
+          }
+
+          (async () => {
+            const d = await run('DESKTOP Chrome', {}, 'login-desktop.png');
+            const m = await run('iPhone Safari', devices['iPhone 13'], 'login-iphone.png');
+            console.log(`\nSUMMARY: desktop=${d ? 'OK' : 'FAIL'}  iphone=${m ? 'OK' : 'FAIL'}`);
+          })().catch(e => { console.error(e.message); process.exit(1); });
+          EOF
+          node d.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: settled-login-screenshots
+          path: login-*.png
+          if-no-files-found: ignore
