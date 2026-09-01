@@ -56,20 +56,8 @@ jobs:
             -d "{\"email\":\"${EMAIL}\",\"password\":\"${PW}\"}" || echo 000)"
           echo "login=${lc}"; [ "$lc" = "200" ] || { echo "::error::login failed"; exit 1; }
 
-          echo "== Create text meeting (multi-paragraph, exercises chunking) =="
-          read -r -d '' TX <<'EOF' || true
-Ana abriu a reuniao e disse que o objetivo era decidir o preco do plano Pro e o cronograma de lancamento. Ela lembrou que o trimestre passado fechou 12% abaixo da meta.
-
-Bruno apresentou tres cenarios de preco: R$ 79, R$ 99 e R$ 129 por mes. Ele defendeu R$ 99 como o ponto de equilibrio entre volume e margem, citando a pesquisa com 40 clientes.
-
-Carla, do financeiro, alertou que a margem so fecha se o churn ficar abaixo de 4% ao mes. Ela pediu que o time de sucesso do cliente prepare um plano de retencao antes do lancamento.
-
-Diego, de engenharia, disse que a pagina de precos e o fluxo de upgrade ficam prontos em duas semanas, mas o gateway de pagamento novo depende de aprovacao juridica do contrato.
-
-Ana perguntou sobre riscos. Bruno citou a reacao da concorrencia e a possibilidade de precisar de um plano anual com desconto. Carla sugeriu 2 meses gratis no plano anual.
-
-Ficou decidido: lancar o plano Pro a R$ 99 por mes, oferecer plano anual com 2 meses gratis, revisar os numeros em 30 dias. Bruno prepara a pagina de precos ate sexta, Diego entrega o fluxo de upgrade em duas semanas, e Carla monta o plano de retencao. Juridico revisa o contrato do gateway ate quarta.
-EOF
+          echo "== Create text meeting (multi-paragraph) =="
+          TX=$'Ana abriu a reuniao e disse que o objetivo era decidir o preco do plano Pro e o cronograma de lancamento. Ela lembrou que o trimestre passado fechou 12% abaixo da meta.\n\nBruno apresentou tres cenarios de preco: R$ 79, R$ 99 e R$ 129 por mes. Ele defendeu R$ 99 como o ponto de equilibrio entre volume e margem, citando a pesquisa com 40 clientes.\n\nCarla, do financeiro, alertou que a margem so fecha se o churn ficar abaixo de 4% ao mes. Ela pediu que o time de sucesso do cliente prepare um plano de retencao antes do lancamento.\n\nDiego, de engenharia, disse que a pagina de precos e o fluxo de upgrade ficam prontos em duas semanas, mas o gateway de pagamento novo depende de aprovacao juridica do contrato.\n\nAna perguntou sobre riscos. Bruno citou a reacao da concorrencia e a possibilidade de precisar de um plano anual com desconto. Carla sugeriu 2 meses gratis no plano anual.\n\nFicou decidido: lancar o plano Pro a R$ 99 por mes, oferecer plano anual com 2 meses gratis, revisar os numeros em 30 dias. Bruno prepara a pagina de precos ate sexta, Diego entrega o fluxo de upgrade em duas semanas, e Carla monta o plano de retencao. Juridico revisa o contrato do gateway ate quarta.'
           body="$(jq -n --arg t "AIPack livetest" --arg l "pt-BR" --arg x "$TX" '{title:$t,meetingLanguage:$l,text:$x}')"
           cc="$(curl -sS -m 60 -b "$jar" -o /tmp/c -w '%{http_code}' -X POST "${API_HOST}/api/meetings/process-text" \
             -H 'content-type: application/json' -H "Origin: ${WWW}" -d "$body" || echo 000)"
