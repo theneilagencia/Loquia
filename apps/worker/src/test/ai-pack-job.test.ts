@@ -90,6 +90,39 @@ describe('ai_pack job (M5.2 — worker only does AI Pack)', () => {
     expect((await db.select().from(aiPacks).where(eq(aiPacks.meetingId, meetingId)))).toHaveLength(0);
   });
 
+  it('a retryable error re-queues until maxAttempts, then fails (never loops forever)', async () => {
+    // A persistently-retryable provider error (e.g. repeated timeouts on a long
+    // transcript) must not re-queue forever and strand the meeting in "generating".
+    const flaky: AIPackGenerator = {
+      name: 'flaky',
+      model: 'flaky-1',
+      async generate() {
+        throw new PipelineError('provider_timeout', 'timed out'); // retryable
+      },
+    };
+    const { meetingId, aiPackJobId } = await seedAiPackReady(db);
+    const deps = makeWorkerDeps(db, { generator: flaky });
+
+    // maxAttempts defaults to 3 → attempts 1 and 2 re-queue (meeting stays
+    // "generating"), attempt 3 exhausts and marks the job + meeting failed.
+    await expect(processJob(deps, aiPackJobId)).rejects.toThrow();
+    let job = (await db.select().from(processingJobs).where(eq(processingJobs.id, aiPackJobId)))[0]!;
+    expect(job.status).toBe('queued');
+    expect(job.attempt).toBe(2);
+    expect((await db.select().from(meetings).where(eq(meetings.id, meetingId)))[0]!.aiPackStatus).toBe('generating');
+
+    await expect(processJob(deps, aiPackJobId)).rejects.toThrow();
+    job = (await db.select().from(processingJobs).where(eq(processingJobs.id, aiPackJobId)))[0]!;
+    expect(job.status).toBe('queued');
+    expect(job.attempt).toBe(3);
+
+    await expect(processJob(deps, aiPackJobId)).rejects.toThrow();
+    job = (await db.select().from(processingJobs).where(eq(processingJobs.id, aiPackJobId)))[0]!;
+    expect(job.status).toBe('failed');
+    expect(job.attempt).toBe(4);
+    expect((await db.select().from(meetings).where(eq(meetings.id, meetingId)))[0]!.aiPackStatus).toBe('failed');
+  });
+
   it('skips a job whose type is not ai_pack (transcription is done in the API now)', async () => {
     const { workspaceId, meetingId } = await seedAiPackReady(db);
     const [legacy] = await db.insert(processingJobs).values({ workspaceId, meetingId, type: 'transcription', status: 'queued', stage: 'received', progress: 0 }).returning();

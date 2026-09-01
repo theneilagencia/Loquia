@@ -155,8 +155,13 @@ async function processAiPackJob(deps: JobDeps, job: JobRow): Promise<ProcessResu
     return { status: 'completed', sectionCount: source.sections.length };
   } catch (err) {
     // Failure preserves the transcript AND any current AI Pack; only mark status.
-    await failJob(deps, job, err);
-    if (!isRetryable(err)) {
+    // `terminal` is true when the job is left in a permanent `failed` state —
+    // either a non-retryable error OR a retryable one that exhausted its attempts.
+    // Only then is the meeting's AI Pack marked `failed`; while retries remain the
+    // meeting stays `generating` so the UI keeps showing honest progress rather
+    // than flashing a failure between attempts.
+    const terminal = await failJob(deps, job, err);
+    if (terminal) {
       await db.update(meetings).set({ aiPackStatus: 'failed', updatedAt: new Date() }).where(eq(meetings.id, job.meetingId));
     }
     // In-process mode has no BullMQ to re-deliver: swallow retryable errors (the
@@ -166,18 +171,30 @@ async function processAiPackJob(deps: JobDeps, job: JobRow): Promise<ProcessResu
   }
 }
 
-/** Shared failure handling: classify retryable vs permanent, record for audit. */
-async function failJob(deps: JobDeps, job: JobRow, err: unknown): Promise<void> {
+/**
+ * Shared failure handling: classify retryable vs permanent, record for audit.
+ * A retryable error is re-queued for another attempt UNTIL `maxAttempts` is
+ * reached, after which it is marked `failed` so a transient-but-persistent
+ * problem (e.g. repeated provider timeouts on a long transcript) can never loop
+ * forever and leave the meeting stuck. Returns whether the job was left in a
+ * terminal `failed` state.
+ */
+async function failJob(deps: JobDeps, job: JobRow, err: unknown): Promise<boolean> {
   const { db, log } = deps;
-  const retryable = isRetryable(err);
   const category = err instanceof PipelineError ? err.category : 'unknown';
   const message = err instanceof Error ? err.message : String(err);
 
+  const nextAttempt = (job.attempt ?? 1) + 1;
+  const exhausted = nextAttempt > (job.maxAttempts ?? 3);
+  const willRetry = isRetryable(err) && !exhausted;
+  const status = willRetry ? 'queued' : 'failed';
+
   await db
     .update(processingJobs)
-    .set({ status: retryable ? 'queued' : 'failed', errorCode: category, errorMessage: message.slice(0, 500), attempt: (job.attempt ?? 1) + 1, updatedAt: new Date() })
+    .set({ status, errorCode: category, errorMessage: message.slice(0, 500), attempt: nextAttempt, updatedAt: new Date() })
     .where(eq(processingJobs.id, job.id));
-  log('job_failed', { processingJobId: job.id, type: job.type, category, retryable });
+  log('job_failed', { processingJobId: job.id, type: job.type, category, retryable: isRetryable(err), attempt: nextAttempt, maxAttempts: job.maxAttempts ?? 3, willRetry });
+  return !willRetry;
 }
 
 /**

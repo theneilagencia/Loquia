@@ -25,13 +25,27 @@ export default function ProcessingPage({
     services.meetings.getProcessingJob(meetingId).then(setJob);
     const timer = setInterval(async () => {
       if (stop) return;
-      const updated = await services.meetings.tickProcessing(meetingId);
+      // Poll the job (for the timeline) AND the meeting (for the redirect
+      // decision). "Processing" means getting the transcript ready — NOT the AI
+      // Pack. As soon as the transcript is ready (meeting.status === 'ready') we
+      // move on to the meeting page, which shows AI Pack generation honestly.
+      // Waiting here for the ai_pack job to complete would strand the user at
+      // "Pronto para AI Pack" for the whole generation (and forever if it retries).
+      const [updated, meeting] = await Promise.all([
+        services.meetings.tickProcessing(meetingId),
+        services.meetings.get(meetingId).catch(() => null),
+      ]);
       setJob(updated);
-      if (updated && updated.status === 'completed') {
+      if (meeting && (meeting.status === 'ready' || meeting.status === 'archived')) {
+        stop = true;
         clearInterval(timer);
-        setTimeout(() => router.push(`/app/meetings/${meetingId}`), 700);
+        setTimeout(() => router.push(`/app/meetings/${meetingId}`), 500);
+        return;
       }
-      if (updated && updated.status === 'failed') {
+      // A failed transcription surfaces here (retry available); the meeting is
+      // marked failed too, but the job carries the error detail for the UI.
+      if ((meeting && meeting.status === 'failed') || (updated && updated.status === 'failed')) {
+        stop = true;
         clearInterval(timer);
       }
     }, 900);
