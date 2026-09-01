@@ -1,0 +1,66 @@
+name: Render delete loquia-backend
+
+# Delete the orphaned loquia-backend service (a dead Python/Supabase prototype in
+# a different repo, unrelated to the live Loquia). Safety-guarded: it re-verifies
+# the id maps to name==loquia-backend AND repo contains "loquia-backend" before
+# issuing DELETE, then confirms the service is gone. Opt-in: manual dispatch or a
+# [delete-backend] commit marker. Never prints secrets.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: render-delete-backend
+  cancel-in-progress: false
+
+jobs:
+  delete:
+    name: Delete loquia-backend (guarded)
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[delete-backend]') }}
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      TARGET_NAME: loquia-backend
+      TARGET_ID: srv-d4d7ea4hg0os73de4mr0
+      EXPECT_REPO: loquia-backend
+    steps:
+      - name: Verify then delete
+        run: |
+          set -euo pipefail
+          RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
+          API="https://api.render.com/v1"
+          auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json")
+
+          echo "== Re-verifying ${TARGET_ID} before deletion =="
+          body="$(curl -sS -o /tmp/svc -w '%{http_code}' "${auth[@]}" "${API}/services/${TARGET_ID}")"
+          [ "$body" = "200" ] || { echo "::error::GET service returned HTTP ${body}"; cat /tmp/svc; exit 1; }
+          name="$(jq -r '.name // .service.name // ""' /tmp/svc)"
+          repo="$(jq -r '.repo // .service.repo // ""' /tmp/svc)"
+          plan="$(jq -r '.serviceDetails.plan // .service.serviceDetails.plan // ""' /tmp/svc)"
+          echo "  name=${name}  repo=${repo}  plan=${plan}"
+
+          if [ "$name" != "$TARGET_NAME" ]; then echo "::error::name mismatch ('${name}' != '${TARGET_NAME}') — ABORT"; exit 1; fi
+          case "$repo" in *"$EXPECT_REPO"*) : ;; *) echo "::error::repo does not contain '${EXPECT_REPO}' (got '${repo}') — ABORT"; exit 1;; esac
+          if [ "$plan" != "free" ]; then echo "::error::plan is not free ('${plan}') — refusing to delete a paid service"; exit 1; fi
+          echo "  guards passed (name + repo + free plan) — proceeding"
+
+          echo "== Deleting ${TARGET_NAME} (${TARGET_ID}) =="
+          code="$(curl -sS -o /tmp/del -w '%{http_code}' -X DELETE "${auth[@]}" "${API}/services/${TARGET_ID}")"
+          echo "  DELETE -> HTTP ${code}"
+          case "$code" in
+            200|202|204) echo "  delete accepted" ;;
+            404) echo "  already gone (404)" ;;
+            *) echo "::error::unexpected DELETE status ${code}"; head -c 300 /tmp/del; echo; exit 1 ;;
+          esac
+
+          echo "== Confirming it is gone =="
+          for i in $(seq 1 6); do
+            c="$(curl -sS -o /dev/null -w '%{http_code}' "${auth[@]}" "${API}/services/${TARGET_ID}")"
+            echo "  GET ${TARGET_ID} -> ${c}"
+            [ "$c" = "404" ] && { echo "  confirmed deleted."; break; }
+            sleep 5
+          done
+          echo "== Remaining services =="
+          curl -sS "${auth[@]}" "${API}/services?limit=100" | jq -r '.[].service|"  - \(.name)  (\(.serviceDetails.plan // "?"))"'
