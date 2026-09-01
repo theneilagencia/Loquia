@@ -6,6 +6,7 @@ import { chunkTranscript } from './ai-pack-chunk';
 import { consolidateSections } from './ai-pack-consolidate';
 import { buildPackSource } from './ai-pack-evidence';
 import { MockAIPackGenerator } from './adapters/mock-ai-pack';
+import { LLMAIPackGenerator, extractJsonObject } from './adapters/llm-ai-pack';
 import { createAIPackGenerator, DEFAULT_AI_PACK_MODEL } from './factory';
 import type { AIPackGenerationInput, GenSegment, GeneratedSection } from './ai-pack';
 
@@ -29,6 +30,43 @@ describe('schema validation', () => {
     expect(validateCandidate({ sections: [{ key: 'not_a_section', facts: [] }] }).ok).toBe(false);
     expect(validateCandidate({ sections: [{ key: 'topics', facts: [{ text: 'x', classification: 'wrong', segmentIds: [] }] }] }).ok).toBe(false);
     expect(validateCandidate({ nope: true }).ok).toBe(false);
+  });
+});
+
+describe('Anthropic adapter (schema-in-prompt, tolerant JSON parse)', () => {
+  it('extractJsonObject strips code fences and surrounding prose', () => {
+    expect(extractJsonObject('```json\n{"sections":[]}\n```')).toBe('{"sections":[]}');
+    expect(extractJsonObject('Here is the pack:\n{"sections":[]}\nThanks!')).toBe('{"sections":[]}');
+    expect(extractJsonObject('{"sections":[]}')).toBe('{"sections":[]}');
+  });
+
+  it('delivers the schema in the system prompt, sends no output_config, and parses fenced JSON', async () => {
+    const bodies: Array<Record<string, unknown>> = [];
+    const originalFetch = globalThis.fetch;
+    const candidate = { sections: [{ key: 'purpose', facts: [{ text: 'Decidir o preço', classification: 'explicit', segmentIds: ['s2'] }] }] };
+    globalThis.fetch = (async (_url: string, init: { body: string }) => {
+      bodies.push(JSON.parse(init.body));
+      // Model wraps its JSON in a ```json fence despite instructions — must still parse.
+      return {
+        ok: true,
+        async json() {
+          return { stop_reason: 'end_turn', content: [{ type: 'text', text: '```json\n' + JSON.stringify(candidate) + '\n```' }], usage: { input_tokens: 10, output_tokens: 5 } };
+        },
+      };
+    }) as unknown as typeof globalThis.fetch;
+
+    try {
+      const gen = new LLMAIPackGenerator({ apiKey: 'k', model: 'claude-sonnet-5' });
+      const result = await gen.generate(input);
+      expect(result.sections.some((s) => s.key === 'purpose')).toBe(true);
+      // The request carried the schema in the system prompt and NO output_config.
+      const sent = bodies[0]!;
+      expect(sent).not.toHaveProperty('output_config');
+      expect(String(sent.system)).toContain('"sections"');
+      expect(String(sent.system)).toContain('OUTPUT FORMAT');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });
 

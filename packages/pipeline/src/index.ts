@@ -14,4 +14,4 @@ export * from './ai-pack-integrity';
 export { MockTranscriptionAdapter } from './adapters/mock-transcription';
 export { DeepgramTranscriptionAdapter, type DeepgramConfig } from './adapters/deepgram-transcription';
 export { MockAIPackGenerator } from './adapters/mock-ai-pack';
-export { LLMAIPackGenerator, type LLMAIPackConfig } from './adapters/llm-ai-pack';
+export { LLMAIPackGenerator, extractJsonObject, type LLMAIPackConfig } from './adapters/llm-ai-pack';

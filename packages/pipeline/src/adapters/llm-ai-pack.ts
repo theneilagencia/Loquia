@@ -12,12 +12,49 @@ import { consolidateSections } from '../ai-pack-consolidate';
 
 /**
  * Anthropic-backed AI Pack generator (Milestone 4). A typed HTTP client for the
- * Messages API — no SDK, mirroring the Deepgram adapter — using structured
- * output (`output_config.format`) so the model returns schema-shaped JSON, which
- * is then re-validated with Zod (never trusted raw). Long transcripts are
- * chunked deterministically and consolidated. Invalid output is retried a
- * bounded number of times with schema feedback.
+ * Messages API — no SDK, mirroring the Deepgram adapter. The JSON shape is
+ * enforced by INSTRUCTION: the system prompt carries an explicit "return only
+ * JSON" directive plus the canonical JSON Schema, and the response is re-parsed
+ * and re-validated with Zod (never trusted raw). Long transcripts are chunked
+ * deterministically and consolidated. Invalid output is retried a bounded number
+ * of times with schema feedback.
+ *
+ * NOTE: the Anthropic Messages API has no `output_config`/`response_format`
+ * parameter — sending one is silently ignored, which previously left the model
+ * with no schema at all and produced malformed, nonsensical packs. The schema
+ * now lives in the prompt where the model actually reads it.
  */
+
+/** Explicit output contract appended to the system prompt (the schema the model must follow). */
+function jsonFormatDirective(): string {
+  return [
+    '',
+    'OUTPUT FORMAT — READ CAREFULLY:',
+    'Respond with ONLY a single JSON object and nothing else — no prose before or after, no explanation, no markdown code fences.',
+    'The object MUST conform EXACTLY to this JSON Schema:',
+    JSON.stringify(CANDIDATE_JSON_SCHEMA),
+    'Shape rules:',
+    '- Top level is { "sections": [ ... ] }.',
+    '- Each section is { "key": <one of the allowed keys>, "facts": [ ... ] } and nothing else.',
+    '- Each fact is { "text": <concise synthesized statement>, "classification": "explicit" | "inferred" | "uncertain", "segmentIds": [<SEGMENT ids that support it>] } and nothing else.',
+    '- Use only the section keys allowed by the schema. Omit a section (or give it an empty "facts" array) when it has no supported content.',
+    'Return the JSON object now.',
+  ].join('\n');
+}
+
+/**
+ * Pull the JSON object out of a model reply — tolerant of stray prose or
+ * ```json code fences the model may add despite instructions.
+ */
+export function extractJsonObject(text: string): string {
+  let t = text.trim();
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence && fence[1]) t = fence[1].trim();
+  const first = t.indexOf('{');
+  const last = t.lastIndexOf('}');
+  if (first >= 0 && last > first) t = t.slice(first, last + 1);
+  return t;
+}
 export interface LLMAIPackConfig {
   apiKey: string;
   model: string;
@@ -99,7 +136,7 @@ export class LLMAIPackGenerator implements AIPackGenerator {
       const text = (res.content ?? []).filter((b) => b.type === 'text').map((b) => b.text ?? '').join('');
       let parsed: unknown;
       try {
-        parsed = JSON.parse(text);
+        parsed = JSON.parse(extractJsonObject(text));
       } catch {
         lastError = 'response was not valid JSON';
         messages.push({ role: 'assistant', content: text });
@@ -134,9 +171,10 @@ export class LLMAIPackGenerator implements AIPackGenerator {
         body: JSON.stringify({
           model: this.model,
           max_tokens: this.maxTokens,
-          system,
+          // The schema is delivered in the prompt (Anthropic has no output_config);
+          // this is where the model actually learns the required JSON shape.
+          system: `${system}\n${jsonFormatDirective()}`,
           messages,
-          output_config: { format: { type: 'json_schema', schema: CANDIDATE_JSON_SCHEMA } },
         }),
       });
     } catch (err) {

@@ -80,8 +80,13 @@ jobs:
           curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/job" -o /tmp/job || true
           jq '{type,status,progress,errorCode,errorMessage,provider,model}' /tmp/job 2>/dev/null || head -c 400 /tmp/job
 
+          echo "== Generated AI Pack CONTENT (quality check) =="
+          curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/aipack" -o /tmp/pack || true
+          # Show section keys + fact count + classification, and each fact's text.
+          jq -r '(.source.sections // []) | if length==0 then "  <no sections>" else .[] | "  [\(.key)] facts=\((.facts//[])|length)\n" + ((.facts//[])|map("     - (\(.classification)) \(.text)  ev=\((.segmentIds//[])|join(","))")|join("\n")) end' /tmp/pack 2>/dev/null || { echo "  raw:"; head -c 800 /tmp/pack; }
+
           case "$final" in
-            ready) echo "RESULT: AI Pack generation WORKS in production." ;;
+            ready) echo "RESULT: AI Pack generation WORKS in production. Inspect the CONTENT above for coherence." ;;
             failed) echo "::error::RESULT: AI Pack FAILED — errorCode/errorMessage above pinpoints the fix." ;;
             *) echo "::warning::RESULT: still generating after 5 min for a tiny input — the generation path is stuck; see the job above." ;;
           esac
