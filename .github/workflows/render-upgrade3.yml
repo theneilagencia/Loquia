@@ -43,7 +43,7 @@ jobs:
             echo "== ${name} (${id}) =="
             curl -fsS "${auth[@]}" "${API}/services/${id}" > /tmp/svc
             # Full serviceDetails with read-only bits removed + plan set.
-            sd="$(jq -c '(.serviceDetails // .service.serviceDetails) | del(.url, .buildPlan, .openPorts, .parentServer) | .plan=env.PLAN' /tmp/svc)"
+            sd="$(jq -c '(.serviceDetails // .service.serviceDetails) | del(.url, .buildPlan, .openPorts, .parentServer, .maintenanceMode, .maintenanceScheduledAt) | .plan=env.PLAN' /tmp/svc)"
             echo "  PATCH full serviceDetails (plan -> ${PLAN})"
             code="$(curl -sS -o /tmp/r -w '%{http_code}' -X PATCH "${auth[@]}" "${API}/services/${id}" -d "{\"serviceDetails\": ${sd}}")"
             echo "   HTTP ${code}"; [ "$code" = "200" ] || { echo "   body:"; head -c 400 /tmp/r; echo; }
