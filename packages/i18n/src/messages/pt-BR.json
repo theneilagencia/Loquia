@@ -396,7 +396,9 @@
       "email": "E-mail",
       "role": "Papel",
       "sent": "Convite enviado",
-      "revoked": "Convite revogado"
+      "revoked": "Convite revogado",
+      "delete": "Excluir convite",
+      "confirmDelete": "Excluir o convite de {email}? Esta ação não pode ser desfeita."
     },
     "userActions": {
       "suspend": "Suspender",

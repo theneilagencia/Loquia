@@ -251,6 +251,14 @@ export function createApiServices(deps: ApiDeps): Services {
           throw e;
         }
       },
+      async deleteInvitation(id) {
+        try {
+          return ok(await api.del<{ id: string }>(`/api/admin/invitations/${id}`));
+        } catch (e) {
+          if (e instanceof ApiHttpError) return err({ code: e.code, message: e.message });
+          throw e;
+        }
+      },
       async createUser(_actorId, input) {
         try {
           return ok(await api.post<CreateUserResult>('/api/admin/users', input));

@@ -80,6 +80,8 @@ export interface AdminService {
   /** Create a user directly with a provisional password + copyable invite link. */
   createUser(actorId: Id, input: CreateUserInput): Promise<Result<CreateUserResult>>;
   revokeInvitation(id: Id, actorId: Id): Promise<Result<Invitation>>;
+  /** Permanently remove an invitation row (pending/revoked/expired cleanup). */
+  deleteInvitation(id: Id, actorId: Id): Promise<Result<{ id: Id }>>;
   listUsers(): Promise<User[]>;
   setUserStatus(id: Id, status: User['status'], actorId: Id): Promise<Result<User>>;
   setUserRole(id: Id, role: User['role'], actorId: Id): Promise<Result<User>>;

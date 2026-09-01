@@ -396,7 +396,9 @@
       "email": "Email",
       "role": "Role",
       "sent": "Invitation sent",
-      "revoked": "Invitation revoked"
+      "revoked": "Invitation revoked",
+      "delete": "Delete invitation",
+      "confirmDelete": "Delete the invitation for {email}? This cannot be undone."
     },
     "userActions": {
       "suspend": "Suspend",

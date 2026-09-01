@@ -1,5 +1,19 @@
 import type { AppContext } from '../context';
-import { emailLocale, type EmailLocale } from '../email/provider';
+import { emailLocale, type EmailLocale, type SendResult } from '../email/provider';
+
+/**
+ * Guarantee the "best-effort, never throws" contract: a misconfigured provider
+ * (e.g. EMAIL_PROVIDER=resend without an API key, which throws when the lazy
+ * provider is first built) or a network failure must degrade to a logged failed
+ * send — never a 500 in the request path (invite / create-user / approve, etc.).
+ */
+async function safeSend(fn: () => Promise<SendResult>): Promise<SendResult> {
+  try {
+    return await fn();
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
 
 /**
  * Transactional notifications. These wrap the email provider so routes never
@@ -32,7 +46,7 @@ export async function sendInvitationEmail(
   const locale = emailLocale(input.locale);
   // Token appears ONLY in the link inside the email — never in logs.
   const activationUrl = `${ctx.env.APP_URL}/${locale}/activate-account/${input.token}`;
-  const res = await ctx.email.sendInvitation({ to: input.email, name: input.name, workspaceName: input.workspaceName, activationUrl, expiresAt: fmtExpiry(input.expiresAt, locale), locale });
+  const res = await safeSend(() => ctx.email.sendInvitation({ to: input.email, name: input.name, workspaceName: input.workspaceName, activationUrl, expiresAt: fmtExpiry(input.expiresAt, locale), locale }));
   if (res.ok) logSent(log, 'invitation', input.email, ctx.email.name, res.id);
   else logFailed(log, 'invitation', input.email, ctx.email.name, res.error);
   return res.ok;
@@ -45,7 +59,7 @@ export async function sendPasswordResetEmail(
 ): Promise<boolean> {
   const locale = emailLocale(input.locale);
   const resetUrl = `${ctx.env.APP_URL}/${locale}/reset-password/${input.token}`;
-  const res = await ctx.email.sendPasswordReset({ to: input.email, name: input.name, resetUrl, expiresAt: fmtExpiry(input.expiresAt, locale), locale });
+  const res = await safeSend(() => ctx.email.sendPasswordReset({ to: input.email, name: input.name, resetUrl, expiresAt: fmtExpiry(input.expiresAt, locale), locale }));
   if (res.ok) logSent(log, 'password_reset', input.email, ctx.email.name, res.id);
   else logFailed(log, 'password_reset', input.email, ctx.email.name, res.error);
   return res.ok;
@@ -57,7 +71,7 @@ export async function sendMoreInformationEmail(
   input: { email: string; name: string; message?: string; locale: string },
 ): Promise<boolean> {
   const locale = emailLocale(input.locale);
-  const res = await ctx.email.sendMoreInformationRequest({ to: input.email, name: input.name, message: input.message, locale });
+  const res = await safeSend(() => ctx.email.sendMoreInformationRequest({ to: input.email, name: input.name, message: input.message, locale }));
   if (res.ok) logSent(log, 'more_information', input.email, ctx.email.name, res.id);
   else logFailed(log, 'more_information', input.email, ctx.email.name, res.error);
   return res.ok;
@@ -69,7 +83,7 @@ export async function sendRejectionEmail(
   input: { email: string; name: string; reason?: string; locale: string },
 ): Promise<boolean> {
   const locale = emailLocale(input.locale);
-  const res = await ctx.email.sendRejection({ to: input.email, name: input.name, reason: input.reason, locale });
+  const res = await safeSend(() => ctx.email.sendRejection({ to: input.email, name: input.name, reason: input.reason, locale }));
   if (res.ok) logSent(log, 'rejection', input.email, ctx.email.name, res.id);
   else logFailed(log, 'rejection', input.email, ctx.email.name, res.error);
   return res.ok;

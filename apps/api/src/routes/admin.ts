@@ -258,6 +258,20 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
     return toInvitationDTO(rows[0]!);
   });
 
+  // Permanently remove an invitation row (clean up pending/revoked/expired ones).
+  app.delete('/invitations/:id', async (request) => {
+    const admin = requireAdmin(request.auth);
+    const { id } = request.params as { id: string };
+    const existing = await db.select().from(invitations).where(eq(invitations.id, id)).limit(1);
+    if (!existing[0]) throw errors.notFound();
+    assertWorkspace(admin, existing[0].workspaceId);
+    // Detach any access request that references this invitation, then delete it.
+    await db.update(accessRequests).set({ invitationId: null }).where(eq(accessRequests.invitationId, id));
+    await db.delete(invitations).where(eq(invitations.id, id));
+    await writeAudit(db, { action: 'invitation_deleted', actorId: admin.user.id, actorLabel: admin.user.name, targetType: 'invitation', targetId: id, targetLabel: existing[0].email, workspaceId: admin.user.workspaceId });
+    return { id };
+  });
+
   // ---- Users (workspace-scoped) ----
   app.get('/users', async (request) => {
     const admin = requireAdmin(request.auth);

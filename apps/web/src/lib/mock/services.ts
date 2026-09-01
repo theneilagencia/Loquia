@@ -371,6 +371,18 @@ export function createMockServices(deps: MockDeps): Services {
         logAudit(store, 'invitation.revoked', { id: actorId, label: actor?.name ?? 'Admin' }, { type: 'invitation', id: invitation.id, label: invitation.email });
         return ok(updated);
       },
+      async deleteInvitation(id, actorId) {
+        await delay();
+        const db = store.read();
+        const actor = db.users.find((u) => u.id === actorId);
+        const invitation = db.invitations.find((i) => i.id === id);
+        if (!invitation) return err({ code: 'not_found', message: 'errors.notFoundBody' });
+        store.write((d) => {
+          d.invitations = d.invitations.filter((i) => i.id !== id);
+        });
+        logAudit(store, 'invitation.revoked', { id: actorId, label: actor?.name ?? 'Admin' }, { type: 'invitation', id, label: invitation.email });
+        return ok({ id });
+      },
       async listUsers() {
         return store.read().users;
       },

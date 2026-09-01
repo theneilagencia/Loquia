@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Badge, Button, Input, Skeleton } from '@loquia/ui';
+import { Trash2 } from 'lucide-react';
 import { inviteUserSchema, type InviteUserInput } from '@loquia/contracts';
 import type { InvitationStatus } from '@loquia/domain';
 import { useServices } from '@/lib/services-context';
@@ -99,6 +100,20 @@ export default function AdminInvitationsPage() {
                       {t('invite.revoke')}
                     </Button>
                   )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    aria-label={t('invite.delete')}
+                    className="text-danger hover:bg-danger-soft hover:text-danger"
+                    onClick={async () => {
+                      if (!window.confirm(t('invite.confirmDelete', { email: inv.email }))) return;
+                      const actor = (await services.auth.getSession())?.user.id ?? 'u1';
+                      await services.admin.deleteInvitation(inv.id, actor);
+                      refetch();
+                    }}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
                 </div>
               </div>
             ))}
