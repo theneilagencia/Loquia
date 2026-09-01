@@ -1,0 +1,72 @@
+name: Render cost audit
+
+# READ-ONLY audit of the whole Render account: every service, database and
+# key-value/redis instance, with its plan and suspended state, plus a summary of
+# what is actually costing money. Changes nothing. Opt-in: manual dispatch or an
+# [audit] commit marker. Never prints secrets.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: render-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Audit Render account
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[audit]') }}
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+    steps:
+      - name: Enumerate every billable resource
+        run: |
+          set -euo pipefail
+          RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
+          API="https://api.render.com/v1"
+          auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json")
+          get () { curl -sS -m 30 "${auth[@]}" "$1" 2>/dev/null || echo '[]'; }
+
+          echo "================  RENDER ACCOUNT COST AUDIT  ================"
+          echo ""
+          echo "OWNERS / TEAMS:"
+          get "${API}/owners?limit=100" | jq -r '.[]?|.owner//.|"  - \(.name)  [\(.type)]  id=\(.id)"' || echo "  (n/a)"
+
+          echo ""
+          echo "SERVICES (web / static / worker / cron):"
+          svc="$(get "${API}/services?limit=100")"
+          jq -r '.[]?|.service|"  - \(.name)  type=\(.type)  plan=\(.serviceDetails.plan // "n/a")  suspended=\(.suspended // "?")  autoDeploy=\(.autoDeploy // "?")"' <<<"$svc" || echo "  (none)"
+
+          echo ""
+          echo "POSTGRES DATABASES:"
+          pg="$(get "${API}/postgres?limit=100")"
+          jq -r '.[]?|(.postgres//.)|"  - \(.name)  plan=\(.plan // "n/a")  status=\(.status // "?")  expiresAt=\(.expiresAt // "—")  created=\(.createdAt // "?")"' <<<"$pg" || echo "  (none / no access)"
+
+          echo ""
+          echo "KEY VALUE / REDIS:"
+          kv="$(get "${API}/key-value?limit=100")"
+          jq -r '.[]?|(.keyValue//.)|"  - \(.name)  plan=\(.plan // "n/a")  status=\(.status // "?")"' <<<"$kv" 2>/dev/null || echo "  (none)"
+          [ "$(jq 'length' <<<"$kv" 2>/dev/null || echo 0)" = "0" ] && echo "  (none)"
+
+          echo ""
+          echo "================  COST SUMMARY  ================"
+          # Count paid (non-free) resources.
+          paid_svc="$(jq '[.[]?|.service|select((.serviceDetails.plan // "free") != "free")]|length' <<<"$svc" 2>/dev/null || echo 0)"
+          free_svc="$(jq '[.[]?|.service|select((.serviceDetails.plan // "free") == "free")]|length' <<<"$svc" 2>/dev/null || echo 0)"
+          paid_pg="$(jq '[.[]?|(.postgres//.)|select((.plan // "free") != "free" and (.plan//"")!="")]|length' <<<"$pg" 2>/dev/null || echo 0)"
+          free_pg="$(jq '[.[]?|(.postgres//.)|select((.plan // "free") == "free")]|length' <<<"$pg" 2>/dev/null || echo 0)"
+          echo "  Services: ${free_svc} free, ${paid_svc} paid"
+          echo "  Postgres: ${free_pg} free, ${paid_pg} paid"
+          echo ""
+          if [ "${paid_svc}" = "0" ] && [ "${paid_pg}" = "0" ]; then
+            echo "  => No paid resources detected. Current Render spend ≈ US\$0 / month."
+            echo "     (Everything is on the free tier: spin-down + ~30-day Postgres expiry apply.)"
+          else
+            echo "  => Paid resources present (see above). Review whether each is needed."
+          fi
+          echo "  NOTE: plan slugs like 'free' cost \$0; 'starter' ≈ \$7/mo per web service;"
+          echo "  paid Postgres starts ≈ \$6/mo. Confirm exact prices in the Render dashboard."
+          echo "==============================================="
