@@ -81,25 +81,33 @@ export class LLMAIPackGenerator implements AIPackGenerator {
   constructor(private readonly config: LLMAIPackConfig) {
     this.model = config.model;
     this.maxRetries = Math.max(0, config.maxRetries ?? 2);
-    this.maxTokens = config.maxTokens ?? 8000;
+    // Generous output budget so a chunk's JSON is never truncated at the limit
+    // (truncation broke JSON parsing and triggered slow retries → apparent hang).
+    this.maxTokens = config.maxTokens ?? 16_000;
     this.timeoutMs = config.timeoutMs ?? 120_000;
     this.baseUrl = config.baseUrl ?? 'https://api.anthropic.com';
   }
 
   async generate(input: AIPackGenerationInput): Promise<AIPackGenerationResult> {
     const chunks = chunkTranscript(input.transcript);
-    const partials: GeneratedSection[][] = [];
-    let inputTokens = 0;
-    let outputTokens = 0;
-    let requestCount = 0;
+    const list = chunks.length ? chunks : [[]];
 
-    for (const chunk of chunks.length ? chunks : [[]]) {
-      const { sections, usage } = await this.generateChunk({ ...input, transcript: chunk });
-      partials.push(sections);
-      inputTokens += usage.inputTokens;
-      outputTokens += usage.outputTokens;
-      requestCount += usage.requestCount;
-    }
+    // Generate chunks with bounded concurrency so a long meeting finishes in
+    // seconds instead of minutes of serial calls (the cause of the "hang").
+    const CONCURRENCY = 4;
+    const results = new Array<{ sections: GeneratedSection[]; usage: { inputTokens: number; outputTokens: number; requestCount: number } }>(list.length);
+    let cursor = 0;
+    const worker = async (): Promise<void> => {
+      for (let i = cursor++; i < list.length; i = cursor++) {
+        results[i] = await this.generateChunk({ ...input, transcript: list[i]! });
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, list.length) }, () => worker()));
+
+    const partials = results.map((r) => r.sections);
+    const inputTokens = results.reduce((a, r) => a + r.usage.inputTokens, 0);
+    const outputTokens = results.reduce((a, r) => a + r.usage.outputTokens, 0);
+    const requestCount = results.reduce((a, r) => a + r.usage.requestCount, 0);
 
     return {
       sections: consolidateSections(partials),
@@ -142,6 +150,11 @@ export class LLMAIPackGenerator implements AIPackGenerator {
       };
       if (res.stop_reason === 'refusal') {
         throw new PipelineError('provider_rejected', 'AI Pack generation was refused by the provider');
+      }
+      // A truncated response (hit the token limit) yields invalid JSON; retrying
+      // the same prompt just truncates again, so fail fast instead of hanging.
+      if (res.stop_reason === 'max_tokens') {
+        throw new PipelineError('provider_rejected', 'AI Pack response exceeded the output token budget (transcript chunk too large)');
       }
       const text = (res.content ?? []).filter((b) => b.type === 'text').map((b) => b.text ?? '').join('');
       let parsed: unknown;

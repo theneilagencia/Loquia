@@ -68,6 +68,54 @@ describe('Anthropic adapter (schema-in-prompt, tolerant JSON parse)', () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  it('splits a long transcript into multiple chunk calls and consolidates', async () => {
+    // ~40 segments of real-length text force more than one 6k-char chunk.
+    const longSegs: GenSegment[] = Array.from({ length: 40 }, (_, i) => ({
+      id: `seg-${i}`,
+      speakerId: i % 2 === 0 ? 'sp1' : 'sp2',
+      speakerLabel: i % 2 === 0 ? 'Speaker 1' : 'Speaker 2',
+      startSeconds: i * 20,
+      endSeconds: i * 20 + 18,
+      text: `Sobre o item ${i}, precisamos alinhar melhor os numeros e os prazos antes de decidir qualquer coisa nesta reuniao.`,
+    }));
+    const longInput: AIPackGenerationInput = { ...input, transcript: longSegs };
+    let calls = 0;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => {
+      calls += 1;
+      return {
+        ok: true,
+        async json() {
+          return { stop_reason: 'end_turn', content: [{ type: 'text', text: '{"sections":[{"key":"topics","facts":[{"text":"t","classification":"explicit","segmentIds":["s0"]}]}]}' }], usage: { input_tokens: 5, output_tokens: 5 } };
+        },
+      };
+    }) as unknown as typeof globalThis.fetch;
+    try {
+      const gen = new LLMAIPackGenerator({ apiKey: 'k', model: 'claude-sonnet-5' });
+      const result = await gen.generate(longInput);
+      expect(calls).toBeGreaterThan(1); // multiple chunks
+      expect(result.usage?.requestCount).toBe(calls);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('fails fast when the response is truncated at the token limit', async () => {
+    const originalFetch = globalThis.fetch;
+    let calls = 0;
+    globalThis.fetch = (async () => {
+      calls += 1;
+      return { ok: true, async json() { return { stop_reason: 'max_tokens', content: [{ type: 'text', text: '{"sections":[' }] }; } };
+    }) as unknown as typeof globalThis.fetch;
+    try {
+      const gen = new LLMAIPackGenerator({ apiKey: 'k', model: 'claude-sonnet-5' });
+      await expect(gen.generate(input)).rejects.toThrow(/token budget/i);
+      expect(calls).toBe(1); // no wasted retries on a truncation
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });
 
 describe('prompt builder', () => {

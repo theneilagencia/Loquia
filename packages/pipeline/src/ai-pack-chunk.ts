@@ -14,7 +14,11 @@ export interface ChunkOptions {
 }
 
 export const DEFAULT_CHUNKING: ChunkOptions = {
-  maxCharsPerChunk: 12_000,
+  // Smaller chunks keep each LLM call's JSON output well under the token limit
+  // (a big chunk made the model produce more facts than fit, truncating the
+  // response and burning slow retries — long meetings appeared to hang). More,
+  // smaller chunks generate in parallel and each finishes fast.
+  maxCharsPerChunk: 6_000,
   overlapSegments: 1,
 };
 
