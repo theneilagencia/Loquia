@@ -1,0 +1,34 @@
+name: Keep Loquia warm
+
+# Free-tier mitigation for cold-start "não loga": Render free services spin down
+# after ~15 min idle, and the wake window can abort JS chunks so the page never
+# hydrates. This pings www + api every ~10 min to keep both instances awake.
+# NOTE: GitHub only runs `schedule` from the repo's DEFAULT branch — this takes
+# effect once merged there. Until then, run it manually via "Run workflow".
+# The definitive fix remains upgrading loquia-web/loquia-api to a paid instance
+# (no spin-down). Never prints secrets.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: keep-warm
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    name: Ping www + api
+    runs-on: ubuntu-latest
+    steps:
+      - name: Warm both services
+        run: |
+          set -uo pipefail
+          for u in \
+            "https://www.loquia.com.br/pt-BR" \
+            "https://api.loquia.com.br/health" \
+            "https://www.loquia.com.br/pt-BR/login"; do
+            c="$(curl -sS -o /dev/null -m 90 -w '%{http_code}' "$u" || echo 000)"
+            echo "  GET $u -> $c"
+          done
