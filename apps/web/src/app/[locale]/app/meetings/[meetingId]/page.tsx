@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LocalRecordingPanel } from '@/components/product/local-recording-panel';
 import { getLocalMediaStore } from '@/lib/local-media/provider';
 import { AIPackView } from '@/components/product/ai-pack-view';
+import { AiPackGenerating } from '@/components/product/ai-pack-generating';
 import { TranscriptView } from '@/components/product/transcript-view';
 import { MeetingStatusBadge } from '@/components/product/meeting-status-badge';
 import { ExportModal } from '@/components/product/export-modal';
@@ -189,7 +190,7 @@ export default function MeetingDetailPage({
             }
             // No pack yet — reflect the real state honestly.
             if (generating) {
-              return <p className="py-8 text-center text-sm text-muted-foreground">{aiPackT('generating')}</p>;
+              return <AiPackGenerating />;
             }
             if (status === 'failed') {
               return (

@@ -291,6 +291,7 @@
     "notProcessed": "Transcript complete. AI Pack not processed yet.",
     "generate": "Generate AI Pack",
     "generating": "Generating the AI Pack from your transcript…",
+    "generatingHint": "Analyzing the conversation to extract purpose, decisions, numbers and topics — with evidence from the transcript. Longer meetings can take up to a minute.",
     "regenerate": "Regenerate",
     "regenerating": "Generating a new version… the current AI Pack stays until it's ready.",
     "failed": "We couldn't prepare the AI Pack. Your recording and transcript were preserved. Try again.",
