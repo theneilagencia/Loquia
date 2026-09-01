@@ -1,0 +1,73 @@
+name: Render inspect service
+
+# READ-ONLY deep inspect of loquia-backend (and a loquia-api summary for
+# comparison) to validate whether loquia-backend is safe to delete: repo/branch,
+# URL, created/updated, last deploys, and env-var KEYS (never values). Changes
+# nothing. Opt-in: manual dispatch or an [inspect] commit marker.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: render-inspect
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    name: Inspect loquia-backend
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[inspect]') }}
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      TARGET: loquia-backend
+      REF: loquia-api
+    steps:
+      - name: Inspect
+        run: |
+          set -euo pipefail
+          RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
+          API="https://api.render.com/v1"
+          auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json")
+          get () { curl -sS -m 30 "${auth[@]}" "$1" 2>/dev/null || echo '[]'; }
+
+          svc="$(get "${API}/services?limit=100")"
+          tid="$(jq -r --arg n "$TARGET" '.[].service|select(.name==$n)|.id' <<<"$svc" | head -n1)"
+          rid="$(jq -r --arg n "$REF" '.[].service|select(.name==$n)|.id' <<<"$svc" | head -n1)"
+          echo "target(${TARGET})=${tid}  ref(${REF})=${rid}"
+          [ -n "$tid" ] || { echo "::error::${TARGET} not found"; exit 1; }
+
+          echo ""
+          echo "==============  ${TARGET}  (candidate for deletion)  =============="
+          jq -r --arg n "$TARGET" '.[].service|select(.name==$n)|{
+            name, id, type, suspended, autoDeploy,
+            repo: .repo, branch: .branch, rootDir: .rootDir,
+            url: .serviceDetails.url,
+            plan: .serviceDetails.plan,
+            createdAt, updatedAt,
+            start: .serviceDetails.envSpecificDetails.startCommand,
+            build: .serviceDetails.envSpecificDetails.buildCommand
+          }' <<<"$svc"
+
+          echo ""
+          echo "-- last deploys (${TARGET}) --"
+          get "${API}/services/${tid}/deploys?limit=5" \
+            | jq -r '.[]?|(.deploy//.)|"  \(.createdAt)  \(.status)  commit=\((.commit.id//"")[0:9])  \((.commit.message//"")|split("\n")[0])"' || echo "  (none)"
+
+          echo ""
+          echo "-- env var KEYS only (${TARGET}) --"
+          get "${API}/services/${tid}/env-vars?limit=200" \
+            | jq -r '.[]?|(.envVar//.)|"  \(.key)"' | sort || echo "  (none / no access)"
+
+          echo ""
+          echo "==============  ${REF} (${rid}) — for comparison  =============="
+          jq -r --arg n "$REF" '.[].service|select(.name==$n)|{
+            name, url: .serviceDetails.url, repo, branch, createdAt, updatedAt,
+            start: .serviceDetails.envSpecificDetails.startCommand
+          }' <<<"$svc"
+          echo ""
+          echo "-- last deploys (${REF}) --"
+          get "${API}/services/${rid}/deploys?limit=3" \
+            | jq -r '.[]?|(.deploy//.)|"  \(.createdAt)  \(.status)  commit=\((.commit.id//"")[0:9])"' || echo "  (none)"
+          echo "=================================================================="
