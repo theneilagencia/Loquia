@@ -1,10 +1,12 @@
 name: Diagnose AI Pack state
 
-# Read-only production diagnosis. Logs in as the account owner, lists ALL of
-# their meetings, and for each prints source/status/aiPackStatus plus the latest
-# processing job (type/status/stage/errorCode/errorMessage). This reveals exactly
-# which meetings are stuck and on which path (audio vs text; media_processing vs
-# ai_pack). Never prints secrets. Opt-in: dispatch or [aipack].
+# Read-only production diagnosis of the account owner's REAL meetings: source,
+# status, aiPackStatus, the transcript's speaker distribution + segment count,
+# the CURRENT pack's section/line content, and how many ai_pack jobs exist in the
+# last hour (regeneration-limit proximity). Reveals whether a meeting's pack is
+# empty vs coherent, and whether its transcript lost speaker attribution (old
+# single-speaker ingest) — which regeneration alone cannot fix. Never prints
+# secrets. Opt-in: [aipack].
 
 on:
   workflow_dispatch:
@@ -17,7 +19,7 @@ concurrency:
 
 jobs:
   diag:
-    name: Enumerate meetings + AI Pack state
+    name: Inspect real meetings
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[aipack]') }}
     env:
@@ -31,12 +33,10 @@ jobs:
           set -uo pipefail
           for k in $(seq 1 40); do
             c="$(curl -sS -o /dev/null -m 30 -w '%{http_code}' "${API_HOST}/health" || echo 000)"
-            echo "  health -> $c (try $k)"
-            [ "$c" = "200" ] && break
-            sleep 10
+            echo "  health -> $c (try $k)"; [ "$c" = "200" ] && break; sleep 10
           done
 
-      - name: List meetings + per-meeting AI Pack state
+      - name: Inspect meetings, transcripts and packs
         run: |
           set -uo pipefail
           PW="${PW:-password123}"
@@ -46,22 +46,27 @@ jobs:
             -d "{\"email\":\"${EMAIL}\",\"password\":\"${PW}\"}" || echo 000)"
           echo "login=${lc}"; [ "$lc" = "200" ] || { echo "::error::login failed"; exit 1; }
 
-          echo "== GET /api/meetings (including archived) =="
           curl -sS -m 60 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings?includeArchived=true" -o /tmp/list || true
-          n="$(jq 'length' /tmp/list 2>/dev/null || echo '?')"
-          echo "  meetings=${n}"
-          echo "  ---- summary ----"
-          jq -r '.[] | "\(.id)\t\(.source)\t\(.status)\tai=\(.aiPackStatus)\t\(.title)"' /tmp/list 2>/dev/null || head -c 400 /tmp/list
+          echo "== meetings: $(jq 'length' /tmp/list 2>/dev/null) =="
+          jq -r '.[] | "\(.id)\t\(.source)\t\(.status)\tai=\(.aiPackStatus)\tp=\(.participantCount)\t\(.title)"' /tmp/list 2>/dev/null || head -c 400 /tmp/list
 
-          echo ""
-          echo "== Per-meeting latest job (id / source / status / aiPackStatus -> job) =="
           for MID in $(jq -r '.[].id' /tmp/list 2>/dev/null); do
+            echo ""
+            echo "==================== meeting ${MID} ===================="
             curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}" -o /tmp/m || true
-            curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/job" -o /tmp/job || true
-            src="$(jq -r '.source' /tmp/m 2>/dev/null)"
-            st="$(jq -r '.status' /tmp/m 2>/dev/null)"
-            ai="$(jq -r '.aiPackStatus' /tmp/m 2>/dev/null)"
-            job="$(jq -c '{type,status,stage,progress,attempt,errorCode,errorMessage,provider,model}' /tmp/job 2>/dev/null || echo 'null')"
-            echo "  ${MID}  src=${src} status=${st} ai=${ai}"
-            echo "      job=${job}"
+            jq '{title,source,status,aiPackStatus,participantCount,durationSeconds}' /tmp/m 2>/dev/null
+
+            echo "-- transcript speakers + segment count --"
+            curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/transcript" -o /tmp/t || true
+            jq -r '"  speakers=\((.speakers//[])|length): " + ((.speakers//[])|map(.diarizationLabel + (if .displayName then " ("+.displayName+")" else "" end))|join(", ")) + "\n  segments=\((.segments//[])|length)  distinctSpeakerKeys=\([(.segments//[])[].speakerId]|unique|length)"' /tmp/t 2>/dev/null || echo "  (no transcript)"
+
+            echo "-- current AI Pack (section -> line count) --"
+            curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/aipack" -o /tmp/p || true
+            jq -r '(.source.sections // []) | if length==0 then "  <no pack>" else (map("  [\(.key)] lines=\((.lines//[])|length)")|join("\n")) end' /tmp/p 2>/dev/null || echo "  (no pack)"
+            echo "  sample lines:"
+            jq -r '[(.source.sections//[])[] | select(.key|test("purpose|explicitDecisions|numbersAndDates")) | (.lines//[])[] | (.text // .pt // .en)] | .[0:4] | map("     - "+.)|join("\n")' /tmp/p 2>/dev/null || true
+
+            echo "-- ai_pack job DTO --"
+            curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/ai-pack/status" -o /tmp/s || true
+            jq '{status,hasCurrent,version,provider,model,generatedAt}' /tmp/s 2>/dev/null || true
           done
