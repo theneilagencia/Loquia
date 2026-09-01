@@ -1,0 +1,73 @@
+name: Fix apex loquia.com.br
+
+# "loquia.com.br não funciona": the apex (naked) domain is separate from
+# www.loquia.com.br. This checks whether loquia.com.br is attached to loquia-web,
+# attaches it if missing, prints its verification status + the exact DNS record to
+# create at KingHost, and probes the apex over http/https to show the current
+# failure mode. Opt-in: dispatch or [apex]. Never prints secrets.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: render-apex-domain
+  cancel-in-progress: false
+
+jobs:
+  apex:
+    name: Attach + diagnose apex
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[apex]') }}
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      APEX: loquia.com.br
+    steps:
+      - name: Inspect + attach apex + print DNS + probe
+        run: |
+          set -uo pipefail
+          RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
+          API="https://api.render.com/v1"
+          auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json" -H "Content-Type: application/json")
+          svc="$(curl -fsS -m 30 "${auth[@]}" "${API}/services?limit=100" || echo '[]')"
+          web_id="$(jq -r '.[].service|select(.name=="loquia-web")|.id' <<<"$svc" | head -n1)"
+          echo "loquia-web id=${web_id}"
+
+          echo "== Current custom domains on loquia-web =="
+          curl -fsS "${auth[@]}" "${API}/services/${web_id}/custom-domains" \
+            | jq -r '.[]?|(.customDomain//.)|"  \(.name)  [\(.domainType)]  verify=\(.verificationStatus)"' || true
+
+          has_apex="$(curl -fsS "${auth[@]}" "${API}/services/${web_id}/custom-domains" \
+            | jq -r --arg a "$APEX" '[.[]?|(.customDomain//.)|select(.name==$a)]|length')"
+          if [ "${has_apex:-0}" = "0" ]; then
+            echo "== Attaching ${APEX} =="
+            code="$(curl -sS -o /tmp/d -w '%{http_code}' -X POST "${auth[@]}" "${API}/services/${web_id}/custom-domains" -d "$(jq -cn --arg n "$APEX" '{name:$n}')")"
+            case "$code" in 200|201) echo "  added ${APEX}";; 409) echo "  already attached";; *) echo "::warning::HTTP ${code}"; head -c 300 /tmp/d; echo;; esac
+          else
+            echo "  ${APEX} already attached."
+          fi
+
+          echo "== Apex domain detail (DNS target Render expects) =="
+          curl -fsS "${auth[@]}" "${API}/services/${web_id}/custom-domains" \
+            | jq -r --arg a "$APEX" '.[]?|(.customDomain//.)|select(.name==$a)|"  name=\(.name)\n  type=\(.domainType)\n  verify=\(.verificationStatus)\n  server=\(.server // "n/a")"' || true
+
+          echo ""
+          echo "== Probe apex (current failure mode) =="
+          for scheme in http https; do
+            m="$(curl -sS -o /dev/null -m 30 -w '%{http_code} redirect=%{redirect_url} total=%{time_total}s' "${scheme}://${APEX}/" 2>/tmp/e || echo "FAILED $(tr -d '\n' </tmp/e | head -c 120)")"
+            echo "  ${scheme}://${APEX}/  ->  ${m}"
+          done
+
+          echo ""
+          echo "== DNS the apex currently resolves to =="
+          getent hosts "$APEX" || nslookup "$APEX" 2>/dev/null | tail -n +3 || true
+
+          echo ""
+          echo "=================  DNS RECORD TO CREATE AT KINGHOST  ================="
+          echo "  Render serves apex domains via an A record to their anycast IP."
+          echo "  Host: @ (or loquia.com.br)   Type: A   Value: 216.24.57.1"
+          echo "  (Render will confirm the exact target under the domain in the"
+          echo "   dashboard once attached — use that if it differs.)"
+          echo "  After DNS propagates, Render issues TLS for loquia.com.br."
+          echo "===================================================================="
