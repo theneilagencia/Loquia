@@ -17,14 +17,9 @@ export class ApiHttpError extends Error {
 }
 
 export function apiBaseUrl(): string {
-  // In the browser, call the API same-origin ('' → /api/...). A Next.js rewrite
-  // (next.config.mjs) proxies /api/* to the real API, so the session cookie is
-  // FIRST-PARTY to the site. That's what makes login work on mobile Safari/iOS,
-  // which blocks third-party (cross-site) cookies — the earlier direct calls to
-  // loquia-api.onrender.com were cross-site and had their cookie dropped.
-  if (typeof window !== 'undefined') return '';
-  // Server-side rendering needs an absolute URL.
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  return (
+    (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) || 'http://localhost:4000'
+  );
 }
 
 export interface ApiClient {
