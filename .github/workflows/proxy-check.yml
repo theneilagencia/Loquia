@@ -1,0 +1,44 @@
+name: Same-origin proxy check
+
+# Verify the /api/* rewrite: a same-origin POST to www.loquia.com.br/api/auth/login
+# should proxy to the API and return 200 with a first-party Set-Cookie (the fix
+# for mobile Safari). Opt-in: dispatch or a [proxycheck] commit marker.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: proxy-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Verify same-origin proxy
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[proxycheck]') }}
+    env:
+      WWW: https://www.loquia.com.br
+      EMAIL: vinicius@apymine.com
+      PW: ${{ secrets.ADMIN_PASSWORD }}
+    steps:
+      - name: Same-origin login via the site
+        run: |
+          set -uo pipefail
+          PW="${PW:-password123}"
+          echo "== POST ${WWW}/api/auth/login (through the Next rewrite) =="
+          code="$(curl -sS -m 90 -o /tmp/b -D /tmp/h -w '%{http_code}' -X POST "${WWW}/api/auth/login" \
+            -H 'content-type: application/json' \
+            -d "{\"email\":\"${EMAIL}\",\"password\":\"${PW}\"}" || echo 000)"
+          echo "  HTTP ${code}"
+          echo "  set-cookie: $(grep -i '^set-cookie:' /tmp/h | sed -E 's/loquia_session=[^;]*/loquia_session=<redacted>/I; s/^set-cookie: *//I' || echo '(NONE — proxy not forwarding cookie!)')"
+          echo "  body: $(head -c 140 /tmp/b)"
+          if [ "$code" = "200" ] && grep -qi '^set-cookie:' /tmp/h; then
+            echo "  => PROXY OK: same-origin login returns 200 and a first-party Set-Cookie."
+            echo "     Mobile Safari/iOS will now store this cookie. Login should work on mobile."
+          elif [ "$code" = "404" ]; then
+            echo "::warning::404 — the web deploy with the /api rewrite may not be live yet; re-run in a minute."
+          else
+            echo "::warning::Unexpected (${code}). If the web just redeployed, wait and re-run."
+          fi
