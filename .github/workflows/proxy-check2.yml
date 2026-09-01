@@ -1,0 +1,63 @@
+name: Proxy session check
+
+# Two-step, same-origin: POST /api/auth/login (save cookie), then GET
+# /api/auth/session WITH that cookie — both through the Next rewrite. This proves
+# whether the proxy forwards the session cookie to the API on subsequent
+# requests (the thing that makes the app stay logged in). Opt-in: [proxycheck2].
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: proxy-check2
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: login then session through proxy
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[proxycheck2]') }}
+    env:
+      WWW: https://www.loquia.com.br
+      EMAIL: vinicius@apymine.com
+      PW: ${{ secrets.ADMIN_PASSWORD }}
+    steps:
+      - name: same-origin login -> session
+        run: |
+          set -uo pipefail
+          PW="${PW:-password123}"
+          jar="$(mktemp)"
+
+          echo "== 1) POST ${WWW}/api/auth/login (save cookie jar) =="
+          lc="$(curl -sS -m 90 -c "$jar" -o /tmp/lb -w '%{http_code}' -X POST "${WWW}/api/auth/login" \
+            -H 'content-type: application/json' -d "{\"email\":\"${EMAIL}\",\"password\":\"${PW}\"}" || echo 000)"
+          echo "  login HTTP ${lc}"
+          echo "  cookie stored: $(grep -c loquia_session "$jar" || echo 0) cookie(s)"
+
+          echo ""
+          echo "== 2) GET ${WWW}/api/auth/session (send cookie jar through proxy) =="
+          sc="$(curl -sS -m 90 -b "$jar" -o /tmp/sb -w '%{http_code}' "${WWW}/api/auth/session" || echo 000)"
+          echo "  session HTTP ${sc}"
+          echo "  session body: $(head -c 160 /tmp/sb)"
+
+          echo ""
+          echo "== 3) Same two steps DIRECT to the API (control) =="
+          jar2="$(mktemp)"
+          curl -sS -m 90 -c "$jar2" -o /dev/null -X POST "https://loquia-api.onrender.com/api/auth/login" \
+            -H 'content-type: application/json' -d "{\"email\":\"${EMAIL}\",\"password\":\"${PW}\"}" || true
+          dc="$(curl -sS -m 90 -b "$jar2" -o /tmp/db -w '%{http_code}' "https://loquia-api.onrender.com/api/auth/session" || echo 000)"
+          echo "  direct session HTTP ${dc}: $(head -c 120 /tmp/db)"
+
+          echo ""
+          echo "================  VERDICT  ================"
+          if [ "$sc" = "200" ] && grep -qi '"session"\|"user"' /tmp/sb; then
+            echo "  PROXY OK end-to-end: session persists through the proxy. Login should hold."
+          else
+            echo "::warning::Proxy login works ($lc) but session through proxy = ${sc}."
+            echo "  => The Next rewrite is NOT forwarding the session cookie to the API on"
+            echo "     follow-up requests. That breaks staying logged in (bounce to /login)."
+            echo "  (direct-to-API session was ${dc}, so the API itself is fine.)"
+          fi
+          echo "==========================================="
