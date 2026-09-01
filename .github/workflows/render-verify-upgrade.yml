@@ -1,0 +1,57 @@
+name: Verify paid upgrade (no spin-down)
+
+# After the dashboard upgrade to Starter, confirm loquia-web + loquia-api are on
+# a paid instance (no more free-tier spin-down) and that the site answers fast
+# without Render's "waking up" screen. Read-only. Opt-in: dispatch or [verifyup].
+# Never prints secrets.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: render-verify-upgrade
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Confirm instance types + latency
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[verifyup]') }}
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      WWW: https://www.loquia.com.br
+      API_HOST: https://api.loquia.com.br
+    steps:
+      - name: Instance types + cold-hit latency
+        run: |
+          set -uo pipefail
+          RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
+          API="https://api.render.com/v1"
+          auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json")
+          svc="$(curl -fsS -m 30 "${auth[@]}" "${API}/services?limit=100" || echo '[]')"
+
+          echo "== Instance types (plan) =="
+          allpaid=1
+          for name in loquia-web loquia-api; do
+            plan="$(jq -r --arg n "$name" '.[].service|select(.name==$n)|.serviceDetails.plan' <<<"$svc" | head -n1)"
+            susp="$(jq -r --arg n "$name" '.[].service|select(.name==$n)|.suspended' <<<"$svc" | head -n1)"
+            echo "  ${name}: plan=${plan:-?}  suspended=${susp:-?}"
+            case "$(printf '%s' "$plan" | tr '[:upper:]' '[:lower:]')" in
+              ""|free|null) allpaid=0 ;;
+            esac
+          done
+          if [ "$allpaid" = "1" ]; then
+            echo "  => Both on a PAID instance — no free-tier spin-down."
+          else
+            echo "::warning::At least one service still looks free — re-check the dashboard upgrade."
+          fi
+
+          echo ""
+          echo "== Latency (should be fast, no 'waking up' hop) =="
+          for u in "${WWW}/pt-BR/login" "${API_HOST}/health" "${WWW}/pt-BR/app"; do
+            read -r code ttfb total < <(curl -sS -o /dev/null -m 60 \
+              -w '%{http_code} %{time_starttransfer} %{time_total}' "$u" || echo '000 0 0')
+            echo "  ${u}  ->  HTTP ${code}  ttfb=${ttfb}s  total=${total}s"
+          done
