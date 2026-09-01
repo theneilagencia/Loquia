@@ -196,6 +196,21 @@ export interface ProcessAudioResult {
 }
 
 /**
+ * Text ingest (txt / docx / pasted notes / Plaud transcripts / a link). The
+ * content is already text, so it skips transcription and goes straight to AI
+ * Pack generation. Provide `text` (extracted client-side) OR `url` (the API
+ * fetches and extracts the page's readable text). `sourceLabel` is a filename or
+ * URL kept for display.
+ */
+export interface ProcessTextInput {
+  title?: string;
+  meetingLanguage: string;
+  text?: string;
+  url?: string;
+  sourceLabel?: string;
+}
+
+/**
  * Direct temporary audio processing (Milestone 5.2). There is NO object storage:
  * the browser sends the recording to the API, which transcribes it and discards
  * the media. Playback is local-first (LocalMediaStore), so there is no audio-URL.
@@ -204,6 +219,8 @@ export interface MediaService {
   processAudio(input: ProcessAudioInput): Promise<Result<ProcessAudioResult>>;
   /** Retry processing for an existing meeting from the on-device recording (§13/§39). */
   reprocessAudio(meetingId: Id, input: Omit<ProcessAudioInput, 'title' | 'source'>): Promise<Result<ProcessAudioResult>>;
+  /** Ingest text (txt/docx/notes/link) straight to AI Pack — no transcription. */
+  processText(input: ProcessTextInput): Promise<Result<ProcessAudioResult>>;
 }
 
 export type DeepPartial<T> = {

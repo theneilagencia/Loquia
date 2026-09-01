@@ -1,8 +1,8 @@
 import type { Id, ISODateString, LanguageTag } from './common';
 import type { AIPackStatus } from './ai-pack';
 
-/** Source of a meeting's audio. */
-export type MeetingSource = 'recording' | 'upload';
+/** Source of a meeting's content (audio recording/upload, or imported text). */
+export type MeetingSource = 'recording' | 'upload' | 'text';
 
 export type MeetingStatus =
   | 'draft'

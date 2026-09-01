@@ -148,3 +148,76 @@ export async function applyTranscriptionCallback(
   log('ai_pack_enqueued', { processingJobId, meetingId, aiPackJobId });
   return { status: 'completed' };
 }
+
+export interface IngestTextInput {
+  workspaceId: string;
+  ownerId: string;
+  title: string;
+  meetingLanguage: string;
+  /** Already-extracted plain text (txt/docx/notes/link). Non-empty. */
+  text: string;
+}
+
+/**
+ * Ingest already-extracted TEXT (txt/docx/pasted notes/Plaud transcript/a link).
+ * There is no transcription: the text IS the transcript, so we create the meeting
+ * in the same post-transcript state the audio path reaches (`status: 'ready'`,
+ * `aiPackStatus: 'queued'`), split the text into transcript segments, insert the
+ * `ai_pack` job, and enqueue it. The AI Pack runner reads the segments from the
+ * DB by meetingId and generates identically to the audio path.
+ */
+export async function ingestText(
+  db: Database,
+  enqueue: (processingJobId: string) => Promise<void>,
+  input: IngestTextInput,
+): Promise<{ meetingId: string; processingJobId: string }> {
+  // One transcript segment per paragraph (keeps AI Pack chunking natural),
+  // falling back to a single segment when there are no blank-line breaks.
+  const paragraphs = input.text
+    .replace(/\r\n?/g, '\n')
+    .split(/\n{2,}/)
+    .map((p) => p.replace(/[ \t]+/g, ' ').trim())
+    .filter((p) => p.length > 0);
+  const chunks = paragraphs.length > 0 ? paragraphs : [input.text.trim()];
+
+  const created = await db.transaction(async (tx) => {
+    const [meeting] = await tx
+      .insert(meetings)
+      .values({
+        workspaceId: input.workspaceId,
+        ownerId: input.ownerId,
+        title: input.title,
+        source: 'text',
+        status: 'ready',
+        meetingLanguage: input.meetingLanguage,
+        durationSeconds: 0,
+        participantCount: 1,
+        aiPackStatus: 'queued',
+      })
+      .returning();
+
+    await tx.insert(transcriptSegments).values(
+      chunks.map((text, i) => ({
+        workspaceId: input.workspaceId,
+        meetingId: meeting!.id,
+        speakerKey: 'speaker_0',
+        orderIndex: i,
+        sequence: i,
+        startSeconds: 0,
+        endSeconds: 0,
+        text,
+        language: input.meetingLanguage,
+      })),
+    );
+
+    const [aiJob] = await tx
+      .insert(processingJobs)
+      .values({ workspaceId: input.workspaceId, meetingId: meeting!.id, type: 'ai_pack', status: 'queued', stage: 'ready_for_ai_pack', progress: 0 })
+      .returning();
+
+    return { meetingId: meeting!.id, processingJobId: aiJob!.id };
+  });
+
+  await enqueue(created.processingJobId);
+  return created;
+}

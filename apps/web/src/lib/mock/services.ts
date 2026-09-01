@@ -787,6 +787,20 @@ export function createMockServices(deps: MockDeps): Services {
         const job = db.jobs.filter((j) => j.meetingId === meetingId).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
         return ok({ meetingId, processingJobId: job?.id ?? meetingId });
       },
+      async processText(input) {
+        const db = store.read();
+        const user = db.users.find((u) => u.id === db.session?.userId);
+        const meeting = this_meetingsCreate(store, {
+          workspaceId: user?.workspaceId ?? 'w1',
+          ownerId: user?.id ?? 'u1',
+          title: input.title || input.sourceLabel || 'Documento importado',
+          source: 'text',
+          meetingLanguage: input.meetingLanguage,
+          durationSeconds: 0,
+        });
+        const job = store.read().jobs.filter((j) => j.meetingId === meeting.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+        return ok({ meetingId: meeting.id, processingJobId: job?.id ?? meeting.id });
+      },
     },
 
     // ------------------------------------------------------------- Storage

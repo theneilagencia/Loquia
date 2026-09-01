@@ -466,6 +466,21 @@ export function createApiServices(deps: ApiDeps): Services {
           durationSeconds: input.durationSeconds != null ? String(input.durationSeconds) : '',
         });
       },
+      async processText(input) {
+        try {
+          const res = await api.post<ProcessAudioResult>('/api/meetings/process-text', {
+            title: input.title,
+            meetingLanguage: input.meetingLanguage,
+            text: input.text,
+            url: input.url,
+            sourceLabel: input.sourceLabel,
+          });
+          return ok(res);
+        } catch (e) {
+          if (e instanceof ApiHttpError) return err({ code: e.code, message: e.message });
+          throw e;
+        }
+      },
     },
 
     storage: {
