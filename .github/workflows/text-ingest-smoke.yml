@@ -1,0 +1,79 @@
+name: Text-ingest live smoke
+
+# Confirm the txt/docx/link ingest is actually IN PRODUCTION: report the deployed
+# commit of loquia-web + loquia-api (vs the feature commit d76086c), check the
+# web upload page ships the new modes, and exercise the live endpoint end-to-end
+# (login -> POST /api/meetings/process-text -> meeting created). Opt-in: dispatch
+# or [textsmoke]. Never prints secrets.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: text-ingest-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: Verify text ingest live
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[textsmoke]') }}
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      API_HOST: https://api.loquia.com.br
+      WWW: https://www.loquia.com.br
+      EMAIL: vinicius@apymine.com
+      PW: ${{ secrets.ADMIN_PASSWORD }}
+    steps:
+      - name: Deployed commits + wait for settle
+        run: |
+          set -uo pipefail
+          RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
+          API="https://api.render.com/v1"
+          auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json")
+          svc="$(curl -fsS -m 30 "${auth[@]}" "${API}/services?limit=100" || echo '[]')"
+          for name in loquia-web loquia-api; do
+            id="$(jq -r --arg n "$name" '.[].service|select(.name==$n)|.id' <<<"$svc" | head -n1)"
+            for i in $(seq 1 40); do
+              d="$(curl -fsS -m 30 "${auth[@]}" "${API}/services/${id}/deploys?limit=1" | jq -r '.[0].deploy | "\(.status) \(.commit.id[0:8])"')"
+              echo "  ${name}: ${d} (poll ${i})"
+              case "$d" in live*) break;; build_failed*|update_failed*|canceled*) echo "::warning::${name} ${d}"; break;; esac
+              sleep 15
+            done
+          done
+
+      - name: Web upload page ships the new modes?
+        run: |
+          set -uo pipefail
+          # The built page bundles the mode labels; check the app upload route HTML/JS.
+          html="$(curl -sS -m 40 "${WWW}/pt-BR/app/upload" || true)"
+          if printf '%s' "$html" | grep -qiE 'Documento|process-text|modeDoc'; then
+            echo "  web upload page references the new text modes (in HTML)."
+          else
+            echo "  (modes not visible in server HTML — they're client-rendered; the endpoint test below is authoritative.)"
+          fi
+
+      - name: Live endpoint — login then process-text
+        run: |
+          set -uo pipefail
+          PW="${PW:-password123}"
+          jar="$(mktemp)"
+          echo "== login =="
+          lc="$(curl -sS -m 60 -c "$jar" -o /dev/null -w '%{http_code}' -X POST "${API_HOST}/api/auth/login" \
+            -H 'content-type: application/json' -H "Origin: ${WWW}" \
+            -d "{\"email\":\"${EMAIL}\",\"password\":\"${PW}\"}" || echo 000)"
+          echo "  login=${lc}"; [ "$lc" = "200" ] || { echo "::error::login failed"; exit 1; }
+
+          echo "== POST /api/meetings/process-text =="
+          body='{"title":"Smoke: text ingest","meetingLanguage":"pt-BR","text":"Reuniao de teste do ingest de texto. Decidimos validar txt, docx e links. Proximo passo: confirmar em producao que o AI Pack e gerado a partir de texto colado."}'
+          code="$(curl -sS -m 60 -b "$jar" -o /tmp/t -w '%{http_code}' -X POST "${API_HOST}/api/meetings/process-text" \
+            -H 'content-type: application/json' -H "Origin: ${WWW}" -d "$body" || echo 000)"
+          echo "  process-text=${code}  body=$(head -c 200 /tmp/t)"
+          case "$code" in
+            202) echo "  VERDICT: text ingest is LIVE (endpoint created a meeting)." ;;
+            404) echo "::error::VERDICT: /api/meetings/process-text is 404 — the API deploy with this feature is NOT live yet." ;;
+            401|403) echo "::warning::VERDICT: auth issue (${code})." ;;
+            *) echo "::warning::VERDICT: unexpected ${code} — see body above." ;;
+          esac
