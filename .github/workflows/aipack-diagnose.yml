@@ -1,10 +1,10 @@
-name: Diagnose stuck AI Pack
+name: Diagnose AI Pack state
 
-# A meeting is stuck at "Pronto para AI Pack". Fetch the live processing-job
-# status for it (queued? generating? failed + errorCode/errorMessage) and print
-# the AI Pack config on loquia-api (ANTHROPIC_API_KEY presence — never the value,
-# AI_PACK_PROVIDER/MODEL which are not secret). Opt-in: dispatch or [aipack].
-# Never prints secrets.
+# Read-only production diagnosis. Logs in as the account owner, lists ALL of
+# their meetings, and for each prints source/status/aiPackStatus plus the latest
+# processing job (type/status/stage/errorCode/errorMessage). This reveals exactly
+# which meetings are stuck and on which path (audio vs text; media_processing vs
+# ai_pack). Never prints secrets. Opt-in: dispatch or [aipack].
 
 on:
   workflow_dispatch:
@@ -17,33 +17,26 @@ concurrency:
 
 jobs:
   diag:
-    name: Diagnose AI Pack
+    name: Enumerate meetings + AI Pack state
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[aipack]') }}
     env:
-      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
       API_HOST: https://api.loquia.com.br
       WWW: https://www.loquia.com.br
       EMAIL: vinicius@apymine.com
       PW: ${{ secrets.ADMIN_PASSWORD }}
-      MEETING_ID: e96932fa-55ba-4440-9cd1-afb105aa503f
     steps:
-      - name: AI Pack env on loquia-api
+      - name: Wait for a healthy API
         run: |
           set -uo pipefail
-          RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
-          API="https://api.render.com/v1"
-          auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json")
-          svc="$(curl -fsS -m 30 "${auth[@]}" "${API}/services?limit=100" || echo '[]')"
-          api_id="$(jq -r '.[].service|select(.name=="loquia-api")|.id' <<<"$svc" | head -n1)"
-          ev="$(curl -fsS -m 30 "${auth[@]}" "${API}/services/${api_id}/env-vars?limit=100" || echo '[]')"
-          for K in AI_PACK_PROVIDER AI_PACK_MODEL AI_PACK_MAX_RETRIES; do
-            echo "  ${K}=$(jq -r --arg k "$K" '.[].envVar|select(.key==$k)|.value' <<<"$ev" | head -n1)"
+          for k in $(seq 1 40); do
+            c="$(curl -sS -o /dev/null -m 30 -w '%{http_code}' "${API_HOST}/health" || echo 000)"
+            echo "  health -> $c (try $k)"
+            [ "$c" = "200" ] && break
+            sleep 10
           done
-          akey="$(jq -r '.[].envVar|select(.key=="ANTHROPIC_API_KEY")|.value' <<<"$ev" | head -n1)"
-          if [ -n "$akey" ] && [ "$akey" != "null" ]; then echo "  ANTHROPIC_API_KEY: SET (len=$(printf '%s' "$akey" | wc -c))"; else echo "  ANTHROPIC_API_KEY: <NOT SET>"; fi
 
-      - name: Live job status for the stuck meeting
+      - name: List meetings + per-meeting AI Pack state
         run: |
           set -uo pipefail
           PW="${PW:-password123}"
@@ -53,10 +46,22 @@ jobs:
             -d "{\"email\":\"${EMAIL}\",\"password\":\"${PW}\"}" || echo 000)"
           echo "login=${lc}"; [ "$lc" = "200" ] || { echo "::error::login failed"; exit 1; }
 
-          echo "== GET /api/meetings/${MEETING_ID}/job =="
-          curl -sS -m 60 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MEETING_ID}/job" -o /tmp/job || true
-          jq '{type,status,stage,progress,attempt,maxAttempts,errorCode,errorMessage,provider,model,createdAt,updatedAt}' /tmp/job 2>/dev/null || { echo "raw:"; head -c 400 /tmp/job; }
+          echo "== GET /api/meetings (including archived) =="
+          curl -sS -m 60 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings?includeArchived=true" -o /tmp/list || true
+          n="$(jq 'length' /tmp/list 2>/dev/null || echo '?')"
+          echo "  meetings=${n}"
+          echo "  ---- summary ----"
+          jq -r '.[] | "\(.id)\t\(.source)\t\(.status)\tai=\(.aiPackStatus)\t\(.title)"' /tmp/list 2>/dev/null || head -c 400 /tmp/list
 
-          echo "== GET /api/meetings/${MEETING_ID} (aiPackStatus) =="
-          curl -sS -m 60 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MEETING_ID}" -o /tmp/m || true
-          jq '{id,title,source,status,aiPackStatus,participantCount,durationSeconds}' /tmp/m 2>/dev/null || { echo "raw:"; head -c 400 /tmp/m; }
+          echo ""
+          echo "== Per-meeting latest job (id / source / status / aiPackStatus -> job) =="
+          for MID in $(jq -r '.[].id' /tmp/list 2>/dev/null); do
+            curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}" -o /tmp/m || true
+            curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/job" -o /tmp/job || true
+            src="$(jq -r '.source' /tmp/m 2>/dev/null)"
+            st="$(jq -r '.status' /tmp/m 2>/dev/null)"
+            ai="$(jq -r '.aiPackStatus' /tmp/m 2>/dev/null)"
+            job="$(jq -c '{type,status,stage,progress,attempt,errorCode,errorMessage,provider,model}' /tmp/job 2>/dev/null || echo 'null')"
+            echo "  ${MID}  src=${src} status=${st} ai=${ai}"
+            echo "      job=${job}"
+          done
