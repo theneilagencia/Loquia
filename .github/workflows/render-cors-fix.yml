@@ -1,14 +1,13 @@
-name: Fix CORS + verify browser login
+name: Browser login diagnostic (www)
 
-# "Não loga": after pointing the web at api.loquia.com.br, the browser makes a
-# cross-origin (same-site) request www -> api. The API only allows origins in
-# CORS_ORIGINS/APP_URL. If those still point at the old onrender web URL, the
-# browser preflight from https://www.loquia.com.br is rejected and login fails
-# (curl succeeds because curl ignores CORS — that's why the earlier check lied).
-# This workflow: prints the current CORS/APP_URL, sets CORS_ORIGINS + APP_URL to
-# include the custom domains, redeploys loquia-api, then drives a REAL browser
-# through www.loquia.com.br/login to confirm. Opt-in: dispatch or [corsfix].
-# Never prints secrets (only public origins + status codes).
+# "Não loga": CORS/APP_URL on loquia-api are already correct
+# (APP_URL=www.loquia.com.br, CORS includes it, NODE_ENV=production so the
+# cookie is SameSite=None; Secure). So the failure is browser-side. This drives
+# a REAL browser (desktop + mobile-emulated iPhone Safari) through
+# https://www.loquia.com.br/login and reports: which API host the login request
+# hits, the HTTP status, the CORS ACAO header, Set-Cookie flags, whether the
+# session persists across a reload, and any console/network errors. It does NOT
+# change anything on Render. Opt-in: dispatch or [corsfix]. Never prints secrets.
 
 on:
   workflow_dispatch:
@@ -20,121 +19,123 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  fix:
-    name: Fix CORS on loquia-api + browser-verify
+  diag:
+    name: Browser login diagnostic
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[corsfix]') }}
     env:
       RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
       API_HOST: https://api.loquia.com.br
       WWW: https://www.loquia.com.br
-      APEX: https://loquia.com.br
       EMAIL: vinicius@apymine.com
       PW: ${{ secrets.ADMIN_PASSWORD }}
     steps:
-      - name: Inspect + set CORS_ORIGINS/APP_URL + redeploy loquia-api
+      - name: Show current origin env + what the web build points at
+        continue-on-error: true
         run: |
           set -uo pipefail
           RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
           API="https://api.render.com/v1"
           auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json" -H "Content-Type: application/json")
-
-          svc="$(curl -fsS -m 30 "${auth[@]}" "${API}/services?limit=100")"
+          svc="$(curl -fsS -m 30 "${auth[@]}" "${API}/services?limit=100" || echo '[]')"
           api_id="$(jq -r '.[].service|select(.name=="loquia-api")|.id' <<<"$svc" | head -n1)"
-          echo "loquia-api id=${api_id}"
-          [ -n "$api_id" ] || { echo "::error::loquia-api not found"; exit 1; }
-
-          echo "== Current origin-related env (public values, safe to show) =="
-          ev="$(curl -fsS -m 30 "${auth[@]}" "${API}/services/${api_id}/env-vars?limit=100")"
+          web_id="$(jq -r '.[].service|select(.name=="loquia-web")|.id' <<<"$svc" | head -n1)"
+          echo "loquia-api=${api_id}  loquia-web=${web_id}"
+          echo "== loquia-api origin env =="
+          ev="$(curl -fsS -m 30 "${auth[@]}" "${API}/services/${api_id}/env-vars?limit=100" || echo '[]')"
           for K in APP_URL CORS_ORIGINS COOKIE_SAMESITE COOKIE_DOMAIN NODE_ENV; do
-            v="$(jq -r --arg k "$K" '.[].envVar|select(.key==$k)|.value' <<<"$ev" | head -n1)"
-            echo "  ${K}=${v:-<unset>}"
+            echo "  ${K}=$(jq -r --arg k "$K" '.[].envVar|select(.key==$k)|.value' <<<"$ev" | head -n1)"
           done
+          echo "== loquia-web build points the browser at (NEXT_PUBLIC_API_URL) =="
+          evw="$(curl -fsS -m 30 "${auth[@]}" "${API}/services/${web_id}/env-vars?limit=100" || echo '[]')"
+          echo "  NEXT_PUBLIC_API_URL=$(jq -r '.[].envVar|select(.key=="NEXT_PUBLIC_API_URL")|.value' <<<"$evw" | head -n1)"
 
-          # Allowlist: both custom domains (www + apex + api) AND the onrender web
-          # host, so login keeps working from every URL the app can be reached at.
-          NEWCORS="${WWW},${APEX},${API_HOST},https://loquia-web.onrender.com"
-          echo "== Setting CORS_ORIGINS + APP_URL =="
-          curl -fsS -X PUT "${auth[@]}" "${API}/services/${api_id}/env-vars/CORS_ORIGINS" \
-            -d "$(jq -cn --arg v "$NEWCORS" '{value:$v}')" >/dev/null && echo "  CORS_ORIGINS set -> ${NEWCORS}"
-          curl -fsS -X PUT "${auth[@]}" "${API}/services/${api_id}/env-vars/APP_URL" \
-            -d "$(jq -cn --arg v "$WWW" '{value:$v}')" >/dev/null && echo "  APP_URL set -> ${WWW}"
-
-          echo "== Redeploy loquia-api =="
-          dep="$(curl -fsS -X POST "${auth[@]}" "${API}/services/${api_id}/deploys" -d '{"clearCache":"do_not_clear"}' | jq -r '.id')"
-          for i in $(seq 1 60); do
-            st="$(curl -fsS "${auth[@]}" "${API}/services/${api_id}/deploys/${dep}" | jq -r '.status')"
-            echo "  api deploy ${dep}: ${st}"
-            case "$st" in live|deactivated) break;; build_failed|update_failed|canceled) echo "::error::api deploy ${st}"; exit 1;; esac
-            sleep 15
-          done
-
-          echo "== CORS preflight from ${WWW} (after redeploy) =="
-          for i in $(seq 1 8); do
-            curl -sS -m 30 -o /dev/null -D /tmp/cors -X OPTIONS "${API_HOST}/api/auth/login" \
-              -H "Origin: ${WWW}" -H 'Access-Control-Request-Method: POST' \
-              -H 'Access-Control-Request-Headers: content-type' || true
-            acao="$(grep -i 'access-control-allow-origin' /tmp/cors | tr -d '\r' || true)"
-            echo "  try ${i}: ${acao:-<no ACAO>}"
-            [ -n "$acao" ] && break
-            sleep 10
-          done
-          echo "  ACAC: $(grep -i 'access-control-allow-credentials' /tmp/cors | tr -d '\r' || echo '(missing)')"
+      - name: Raw preflight + login from the runner (curl, ignores CORS)
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          PW="${PW:-password123}"
+          echo "== OPTIONS preflight (Origin: ${WWW}) =="
+          curl -sS -m 30 -o /dev/null -D /tmp/pf -X OPTIONS "${API_HOST}/api/auth/login" \
+            -H "Origin: ${WWW}" -H 'Access-Control-Request-Method: POST' \
+            -H 'Access-Control-Request-Headers: content-type' || true
+          echo "  status: $(head -n1 /tmp/pf | tr -d '\r')"
+          echo "  ACAO: $(grep -i 'access-control-allow-origin' /tmp/pf | tr -d '\r' || echo '(missing!)')"
+          echo "  ACAC: $(grep -i 'access-control-allow-credentials' /tmp/pf | tr -d '\r' || echo '(missing!)')"
+          echo "== POST login (Origin: ${WWW}) =="
+          code="$(curl -sS -m 60 -o /tmp/lb -D /tmp/lh -w '%{http_code}' -X POST "${API_HOST}/api/auth/login" \
+            -H 'content-type: application/json' -H "Origin: ${WWW}" \
+            -d "{\"email\":\"${EMAIL}\",\"password\":\"${PW}\"}" || echo 000)"
+          echo "  HTTP ${code}"
+          echo "  ACAO: $(grep -i 'access-control-allow-origin' /tmp/lh | tr -d '\r' || echo '(missing!)')"
+          echo "  Set-Cookie flags: $(grep -i '^set-cookie:' /tmp/lh | sed -E 's/loquia_session=[^;]*/loquia_session=<redacted>/I' | sed -E 's/^set-cookie: *//I' | tr -d '\r' || echo '(none)')"
+          echo "  body(120): $(head -c 120 /tmp/lb)"
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: npm init -y >/dev/null 2>&1 && npm i playwright@1.49.1 >/dev/null 2>&1 && npx playwright install --with-deps chromium
-      - name: Real browser login at www.loquia.com.br
+      - name: Real browser login — desktop + iPhone Safari
+        continue-on-error: true
         env:
           PW: ${{ secrets.ADMIN_PASSWORD }}
         run: |
           cat > d.cjs <<'EOF'
-          (async () => {
-            const { chromium } = require('playwright');
-            const WEB = 'https://www.loquia.com.br';
-            const email = 'vinicius@apymine.com';
-            const password = process.env.PW || 'password123';
+          const { chromium, devices } = require('playwright');
+          const WEB = 'https://www.loquia.com.br';
+          const email = 'vinicius@apymine.com';
+          const password = process.env.PW || 'password123';
+
+          async function run(label, contextOpts, shot) {
             const b = await chromium.launch();
-            const p = await b.newPage();
+            const ctx = await b.newContext(contextOpts);
+            const p = await ctx.newPage();
             const failed = [], cerr = [];
-            let loginStatus = 'none', apiHost = '', acao = '(none)';
+            let status = 'none', host = '', acao = '(none)', setCookie = '(none)';
             p.on('requestfailed', r => failed.push(r.method()+' '+r.url()+' :: '+((r.failure()||{}).errorText||'')));
             p.on('console', m => { if (m.type()==='error') cerr.push(m.text().slice(0,180)); });
-            p.on('response', r => {
+            p.on('response', async r => {
               if (r.url().includes('/api/auth/login')) {
-                loginStatus = r.status();
-                try { apiHost = new URL(r.url()).host; } catch {}
-                const h = r.headers(); acao = h['access-control-allow-origin'] || '(none)';
+                status = r.status();
+                try { host = new URL(r.url()).host; } catch {}
+                const h = r.headers();
+                acao = h['access-control-allow-origin'] || '(none)';
+                setCookie = h['set-cookie'] ? h['set-cookie'].replace(/loquia_session=[^;]*/i,'loquia_session=<redacted>') : '(none)';
               }
             });
-            await p.goto(`${WEB}/pt-BR/login`, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(e=>console.log('goto err:', e.message));
+            await p.goto(`${WEB}/pt-BR/login`, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(e=>console.log(`[${label}] goto err:`, e.message));
             await p.getByLabel('E-mail').fill(email).catch(()=>{});
             await p.getByLabel('Senha', { exact: true }).fill(password).catch(()=>{});
             await p.getByRole('button', { name: 'Entrar' }).click().catch(()=>{});
             await p.waitForTimeout(7000);
-            const urlAfter = p.url();
+            const afterSubmit = p.url();
             await p.goto(`${WEB}/pt-BR/app`, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(()=>{});
             await p.waitForTimeout(3000);
-            const urlReload = p.url();
-            await p.screenshot({ path: 'cors-login.png', fullPage: true }).catch(()=>{});
-            console.log('login API host  :', apiHost || '(request never fired)');
-            console.log('login API status:', loginStatus);
-            console.log('login ACAO      :', acao);
-            console.log('URL after submit:', urlAfter);
-            console.log('URL after /app  :', urlReload);
-            const ok = /\/pt-BR\/app(\b|\/|\?|$)/.test(urlReload) && !/\/login/.test(urlReload);
-            console.log(ok ? 'RESULT: LOGIN OK — session persists in a real browser.'
-                           : 'RESULT: LOGIN FAILED — still bounced to /login.');
-            if (failed.length) console.log('FAILED reqs:\n  ' + failed.slice(0,10).join('\n  '));
-            if (cerr.length) console.log('CONSOLE err:\n  ' + cerr.slice(0,10).join('\n  '));
+            const afterReload = p.url();
+            await p.screenshot({ path: shot, fullPage: true }).catch(()=>{});
+            const ok = /\/pt-BR\/app(\b|\/|\?|$)/.test(afterReload) && !/\/login/.test(afterReload);
+            console.log(`\n===== ${label} =====`);
+            console.log('  login host   :', host || '(request never fired!)');
+            console.log('  login status :', status);
+            console.log('  login ACAO   :', acao);
+            console.log('  Set-Cookie   :', setCookie);
+            console.log('  after submit :', afterSubmit);
+            console.log('  after /app   :', afterReload);
+            console.log('  RESULT       :', ok ? 'LOGIN OK (session persists)' : 'LOGIN FAILED (bounced to /login)');
+            if (failed.length) console.log('  FAILED reqs  :\n    ' + failed.slice(0,8).join('\n    '));
+            if (cerr.length) console.log('  CONSOLE err  :\n    ' + cerr.slice(0,8).join('\n    '));
             await b.close();
+          }
+
+          (async () => {
+            await run('DESKTOP Chrome', {}, 'login-desktop.png');
+            await run('iPhone Safari', devices['iPhone 13'], 'login-iphone.png');
           })().catch(e => { console.error(e.message); process.exit(1); });
           EOF
           node d.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: cors-login-screenshot
-          path: cors-login.png
+          name: cors-login-screenshots
+          path: login-*.png
           if-no-files-found: ignore
