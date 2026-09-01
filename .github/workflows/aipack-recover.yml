@@ -1,12 +1,10 @@
 name: Recover stuck AI Pack
 
-# The stuck meeting's ai_pack job was orphaned at status=running by repeated API
-# redeploys (each push redeploys loquia-api, killing generate() mid-flight). The
-# runner self-heals stale running jobs after 5 min, but the churn kept resetting
-# it. This waits for the API deploy triggered by THIS push to settle, then
-# regenerates the AI Pack (always a fresh job) and polls until ready/failed —
-# proving generate() completes with the configured model/key. Opt-in: dispatch
-# or [aipackfix]. Never prints secrets.
+# Wait for THIS push's loquia-api deploy to be fully live AND stable (no other
+# deploy rolling), then regenerate the stuck meeting's AI Pack and poll to a
+# definitive ready/failed — printing the error if it fails (reveals a bad model).
+# This is the last push, so the instance stays stable through the whole poll.
+# Opt-in: dispatch or [aipackfix]. Never prints secrets.
 
 on:
   workflow_dispatch:
@@ -30,7 +28,7 @@ jobs:
       PW: ${{ secrets.ADMIN_PASSWORD }}
       MEETING_ID: e96932fa-55ba-4440-9cd1-afb105aa503f
     steps:
-      - name: Wait for loquia-api deploy to settle
+      - name: Wait for a fully-settled, stable loquia-api
         run: |
           set -uo pipefail
           RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
@@ -38,16 +36,24 @@ jobs:
           auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json")
           svc="$(curl -fsS -m 30 "${auth[@]}" "${API}/services?limit=100" || echo '[]')"
           api_id="$(jq -r '.[].service|select(.name=="loquia-api")|.id' <<<"$svc" | head -n1)"
-          for i in $(seq 1 40); do
+          # Require the newest deploy to be 'live' on TWO consecutive checks (no
+          # other deploy rolling underneath), then a health warmup.
+          stable=0
+          for i in $(seq 1 60); do
             st="$(curl -fsS -m 30 "${auth[@]}" "${API}/services/${api_id}/deploys?limit=1" | jq -r '.[0].deploy.status')"
-            echo "  loquia-api deploy: ${st} (poll ${i})"
-            case "$st" in live) break;; build_failed|update_failed|canceled) echo "::warning::${st}"; break;; esac
+            echo "  deploy: ${st} (poll ${i}, stable=${stable})"
+            if [ "$st" = "live" ]; then stable=$((stable+1)); else stable=0; fi
+            [ "$stable" -ge 2 ] && break
+            case "$st" in build_failed|update_failed|canceled) echo "::warning::${st}"; break;; esac
             sleep 15
           done
-          # A little extra settle time so the runner has booted.
-          sleep 10
+          for k in 1 2 3 4 5; do
+            c="$(curl -sS -o /dev/null -m 30 -w '%{http_code}' "${API_HOST}/health" || echo 000)"
+            echo "  health -> $c"; [ "$c" = "200" ] && break; sleep 5
+          done
+          sleep 20
 
-      - name: Regenerate AI Pack + poll until ready
+      - name: Regenerate + poll to a definitive state
         run: |
           set -uo pipefail
           PW="${PW:-password123}"
@@ -57,26 +63,24 @@ jobs:
             -d "{\"email\":\"${EMAIL}\",\"password\":\"${PW}\"}" || echo 000)"
           echo "login=${lc}"; [ "$lc" = "200" ] || { echo "::error::login failed"; exit 1; }
 
-          echo "== POST regenerate =="
           rc="$(curl -sS -m 60 -b "$jar" -o /tmp/r -w '%{http_code}' -X POST "${API_HOST}/api/meetings/${MEETING_ID}/ai-pack/regenerate" -H "Origin: ${WWW}" || echo 000)"
-          echo "  regenerate=${rc}  $(head -c 160 /tmp/r)"
+          echo "regenerate=${rc}  $(head -c 160 /tmp/r)"
 
-          echo "== Poll aiPackStatus (up to ~4 min) =="
           final=""
-          for i in $(seq 1 16); do
-            curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MEETING_ID}" -o /tmp/m || true
-            st="$(jq -r '.aiPackStatus' /tmp/m 2>/dev/null || echo '?')"
-            echo "  poll ${i}: aiPackStatus=${st}"
+          for i in $(seq 1 32); do
+            code="$(curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" -o /tmp/m -w '%{http_code}' "${API_HOST}/api/meetings/${MEETING_ID}" || echo 000)"
+            st="$(jq -r '.aiPackStatus // "?"' /tmp/m 2>/dev/null || echo '?')"
+            echo "  poll ${i}: http=${code} aiPackStatus=${st}"
             case "$st" in ready|failed) final="$st"; break;; esac
             sleep 15
           done
 
           echo "== Latest job =="
           curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MEETING_ID}/job" -o /tmp/job || true
-          jq '{type,status,progress,errorCode,errorMessage,provider,model}' /tmp/job 2>/dev/null || head -c 300 /tmp/job
+          jq '{type,status,progress,errorCode,errorMessage,provider,model}' /tmp/job 2>/dev/null || head -c 400 /tmp/job
 
           case "$final" in
-            ready) echo "VERDICT: AI Pack generated successfully — the meeting is fixed." ;;
-            failed) echo "::error::VERDICT: AI Pack FAILED — see errorCode/errorMessage above (likely model/provider)." ;;
-            *) echo "::warning::VERDICT: still generating after the poll window — it should finish shortly now that the instance is stable." ;;
+            ready) echo "RESULT: AI Pack READY — fixed, and the model generates correctly." ;;
+            failed) echo "::error::RESULT: AI Pack FAILED — see errorCode/errorMessage above." ;;
+            *) echo "::warning::RESULT: still generating after ~8 min — unusual; check the job error above." ;;
           esac
