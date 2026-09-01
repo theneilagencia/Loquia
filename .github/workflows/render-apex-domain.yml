@@ -60,6 +60,19 @@ jobs:
           done
 
           echo ""
+          echo "== Full redirect chain (where does each host really land?) =="
+          for start in "https://loquia.com.br/" "https://www.loquia.com.br/" "https://loquia.com.br/pt-BR"; do
+            echo "  START ${start}"
+            curl -sS -m 40 -o /dev/null -w '%{http_code} -> %{redirect_url}\n' "$start" 2>/dev/null | sed 's/^/    hop: /'
+            eff="$(curl -sSL -m 60 -o /dev/null -w '%{url_effective} (final %{http_code})' "$start" 2>/dev/null || echo FAILED)"
+            echo "    FINAL: ${eff}"
+          done
+          echo ""
+          echo "== Does www itself ever 301 to onrender? =="
+          curl -sS -m 40 -o /dev/null -D /tmp/wh "https://www.loquia.com.br/" 2>/dev/null || true
+          grep -iE '^(location|server|x-render)' /tmp/wh | sed 's/^/    /' || echo "    (no location/server headers)"
+
+          echo ""
           echo "== All A records for apex + www (detect stray/conflicting IPs) =="
           command -v dig >/dev/null || sudo apt-get -qq install -y dnsutils >/dev/null 2>&1 || true
           for host in "$APEX" "www.$APEX"; do
