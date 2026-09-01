@@ -54,20 +54,37 @@ export function AppShell({
 
   useEffect(() => {
     let active = true;
-    services.auth.getSession().then((s) => {
-      if (!active) return;
-      if (!s) {
-        // Not signed in — the whole app section is gated behind login.
-        router.replace('/login');
-        return;
-      }
-      if (requireAdmin && !s.isAdmin) {
-        // Signed in but lacks admin rights — send back to the app home.
-        router.replace('/app');
-        return;
-      }
-      setSession(s);
-    });
+    let attempts = 0;
+
+    const resolve = () => {
+      services.auth.getSession().then(
+        (s) => {
+          if (!active) return;
+          if (!s) {
+            // Definitive "not signed in" (API answered) — gate behind login.
+            router.replace('/login');
+            return;
+          }
+          if (requireAdmin && !s.isAdmin) {
+            router.replace('/app');
+            return;
+          }
+          setSession(s);
+        },
+        () => {
+          // Transient failure reaching the API (free-tier cold start, 429, 5xx).
+          // Do NOT log the user out — keep the loader and retry with backoff.
+          if (!active) return;
+          attempts += 1;
+          const delay = Math.min(1500 * attempts, 8000);
+          setTimeout(() => {
+            if (active) resolve();
+          }, delay);
+        },
+      );
+    };
+
+    resolve();
     return () => {
       active = false;
     };

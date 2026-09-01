@@ -3,7 +3,8 @@ import { test, expect } from '@playwright/test';
 test('login lands in the app', async ({ page }) => {
   await page.goto('/pt-BR/login');
   await page.getByLabel('E-mail').fill('vinicius@apymine.com');
-  await page.getByLabel('Senha').fill('any-password');
+  // exact:true so it doesn't also match the "Mostrar senha" toggle button.
+  await page.getByLabel('Senha', { exact: true }).fill('any-password');
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page).toHaveURL(/\/pt-BR\/app$/);
 });
@@ -35,7 +36,8 @@ test('theme preference persists across reload', async ({ page }) => {
 
 test('locale switch updates the URL and nav language', async ({ page }) => {
   await page.goto('/pt-BR');
-  await page.getByRole('button', { name: 'EN-US' }).click();
+  // The locale switch is a segmented radiogroup (not plain buttons).
+  await page.getByRole('radio', { name: 'EN-US' }).first().click();
   await expect(page).toHaveURL(/\/en-US/);
   await expect(page.getByRole('link', { name: 'Product' }).first()).toBeVisible();
 });

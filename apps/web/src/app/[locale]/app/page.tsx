@@ -17,7 +17,7 @@ export default function AppHomePage() {
   const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
-    services.auth.getSession().then(setSession);
+    services.auth.getSession().then(setSession).catch(() => {});
   }, [services]);
 
   const { data: meetings, isLoading } = useQuery({

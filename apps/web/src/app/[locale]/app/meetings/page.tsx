@@ -17,7 +17,7 @@ export default function MeetingsPage() {
   const [showArchived, setShowArchived] = useState(false);
 
   useEffect(() => {
-    services.auth.getSession().then(setSession);
+    services.auth.getSession().then(setSession).catch(() => {});
   }, [services]);
 
   const { data: meetings, isLoading } = useQuery({

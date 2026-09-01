@@ -115,8 +115,23 @@ export function createApiServices(deps: ApiDeps): Services {
   return {
     auth: {
       async getSession() {
-        const res = await api.get<{ session: Session | null }>('/api/auth/session').catch(() => ({ session: null }));
-        return res.session;
+        // A 200 with session:null is a DEFINITIVE "not logged in". But a transport
+        // failure (free-tier cold start, 429, 5xx, network blip) must NOT be
+        // mistaken for that — otherwise a hiccup logs the user out. Retry a few
+        // times; if the API stays unreachable, throw so the caller keeps the
+        // session instead of bouncing to /login.
+        let lastErr: unknown;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const res = await api.get<{ session: Session | null }>('/api/auth/session');
+            return res.session;
+          } catch (e) {
+            lastErr = e;
+            if (e instanceof ApiHttpError && e.status === 401) return null;
+            await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+          }
+        }
+        throw lastErr;
       },
       async login(input) {
         try {
