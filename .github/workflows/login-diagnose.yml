@@ -1,0 +1,112 @@
+name: Login diagnose
+
+# Diagnose why login fails: (1) wake + hit the API directly (health + POST
+# /api/auth/login) to see if the backend accepts the credentials; (2) check the
+# CORS preflight for the custom-domain origin; (3) drive a real browser through
+# https://www.loquia.com.br/pt-BR/login and capture the login response, cookie
+# flags, console/network errors and a screenshot. Never prints the cookie token
+# or the password. Opt-in: dispatch or a [logindiag] commit marker.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: login-diagnose
+  cancel-in-progress: false
+
+jobs:
+  diag:
+    name: Diagnose login
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[logindiag]') }}
+    env:
+      API: https://loquia-api.onrender.com
+      WEB: https://www.loquia.com.br
+      EMAIL: vinicius@apymine.com
+      PW: ${{ secrets.ADMIN_PASSWORD }}
+    steps:
+      - name: Probe API directly
+        run: |
+          set -euo pipefail
+          PW="${PW:-password123}"
+          echo "== 1) Waking + API health =="
+          for i in $(seq 1 10); do
+            c="$(curl -sS -o /dev/null -m 60 -w '%{http_code}' "${API}/health" || echo 000)"
+            echo "  GET ${API}/health -> ${c} (try ${i})"
+            [ "$c" = "200" ] && break; sleep 10
+          done
+
+          echo ""
+          echo "== 2) Direct API login (POST /api/auth/login) =="
+          # Capture status + headers to a file; never echo the raw Set-Cookie (token).
+          code="$(curl -sS -m 60 -o /tmp/lbody -D /tmp/lhead -w '%{http_code}' \
+            -X POST "${API}/api/auth/login" \
+            -H 'content-type: application/json' \
+            -d "{\"email\":\"${EMAIL}\",\"password\":\"${PW}\"}" || echo 000)"
+          echo "  HTTP ${code}"
+          echo "  Set-Cookie flags: $(grep -i '^set-cookie:' /tmp/lhead | sed -E 's/loquia_session=[^;]*/loquia_session=<redacted>/I' | sed -E 's/^set-cookie: *//I' || echo '(none)')"
+          echo "  Body (first 200): $(head -c 200 /tmp/lbody)"
+          case "$code" in
+            200) echo "  => Backend ACCEPTS the credentials. Problem is browser/CORS/cookie/domain." ;;
+            401|400) echo "  => Backend REJECTS the credentials (bad password or user missing/reset)." ;;
+            000|5*) echo "  => API unreachable / cold-start timeout / server error." ;;
+          esac
+
+          echo ""
+          echo "== 3) CORS preflight from the custom-domain origin =="
+          curl -sS -m 30 -o /dev/null -D /tmp/cors -X OPTIONS "${API}/api/auth/login" \
+            -H "Origin: ${WEB}" -H 'Access-Control-Request-Method: POST' \
+            -H 'Access-Control-Request-Headers: content-type' || true
+          echo "  ACAO: $(grep -i 'access-control-allow-origin' /tmp/cors || echo '(missing!)')"
+          echo "  ACAC: $(grep -i 'access-control-allow-credentials' /tmp/cors || echo '(missing!)')"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm init -y >/dev/null 2>&1 && npm i playwright@1.49.1 >/dev/null 2>&1 && npx playwright install --with-deps chromium
+      - name: Browser login at the custom domain
+        env:
+          PW: ${{ secrets.ADMIN_PASSWORD }}
+        run: |
+          cat > d.cjs <<'EOF'
+          (async () => {
+            const { chromium } = require('playwright');
+            const WEB = 'https://www.loquia.com.br';
+            const email = 'vinicius@apymine.com';
+            const password = process.env.PW || 'password123';
+            const b = await chromium.launch();
+            const p = await b.newPage();
+            const failed = [], cerr = [];
+            let loginStatus = 'none', apiHost = '';
+            p.on('requestfailed', r => failed.push(r.method()+' '+r.url()+' :: '+((r.failure()||{}).errorText||'')));
+            p.on('console', m => { if (m.type()==='error') cerr.push(m.text().slice(0,180)); });
+            p.on('response', r => { if (r.url().includes('/api/auth/login')) { loginStatus = r.status(); try { apiHost = new URL(r.url()).host; } catch {} } });
+            await p.goto(`${WEB}/pt-BR/login`, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(e=>console.log('goto login err:', e.message));
+            await p.getByLabel('E-mail').fill(email).catch(()=>{});
+            await p.getByLabel('Senha').fill(password).catch(()=>{});
+            await p.getByRole('button', { name: 'Entrar' }).click().catch(()=>{});
+            await p.waitForTimeout(6000);
+            const urlAfter = p.url();
+            await p.goto(`${WEB}/pt-BR/app`, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(()=>{});
+            await p.waitForTimeout(3000);
+            const urlAfterReload = p.url();
+            await p.screenshot({ path: 'login-diag.png', fullPage: true }).catch(()=>{});
+            console.log('login API host:', apiHost || '(none — request never fired?)');
+            console.log('login API status:', loginStatus);
+            console.log('URL after submit:', urlAfter);
+            console.log('URL after reload /app:', urlAfterReload);
+            console.log('stayed authenticated:', /\/pt-BR\/app(\b|\/|\?|$)/.test(urlAfterReload) && !/\/login/.test(urlAfterReload));
+            if (failed.length) console.log('FAILED requests:\n  ' + failed.slice(0,10).join('\n  '));
+            if (cerr.length) console.log('CONSOLE errors:\n  ' + cerr.slice(0,10).join('\n  '));
+            await b.close();
+          })().catch(e => { console.error(e.message); process.exit(1); });
+          EOF
+          node d.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: login-diag-screenshot
+          path: login-diag.png
+          if-no-files-found: ignore
