@@ -60,8 +60,17 @@ jobs:
           done
 
           echo ""
-          echo "== DNS the apex currently resolves to =="
-          getent hosts "$APEX" || nslookup "$APEX" 2>/dev/null | tail -n +3 || true
+          echo "== All A records for apex + www (detect stray/conflicting IPs) =="
+          command -v dig >/dev/null || sudo apt-get -qq install -y dnsutils >/dev/null 2>&1 || true
+          for host in "$APEX" "www.$APEX"; do
+            for res in 8.8.8.8 1.1.1.1; do
+              a="$(dig +short A "$host" @"$res" 2>/dev/null | paste -sd', ' -)"
+              echo "  ${host} @${res}: ${a:-<none>}"
+            done
+          done
+          echo "  (Render IP is 216.24.57.1. For the apex, that should be the ONLY A"
+          echo "   record; www should be a CNAME to loquia-web.onrender.com. Any other"
+          echo "   IP mixed in = a leftover KingHost record → intermittent failures.)"
 
           echo ""
           echo "=================  DNS RECORD TO CREATE AT KINGHOST  ================="
