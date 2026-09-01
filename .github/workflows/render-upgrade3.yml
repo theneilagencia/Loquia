@@ -1,0 +1,77 @@
+name: Render upgrade v3 (full serviceDetails)
+
+# Last-resort attempt to move loquia-web + loquia-api from free to Starter via
+# the API: read each service's full serviceDetails, set plan=starter, PATCH the
+# whole object (dropping read-only url), then POLL the plan until it actually
+# reflects 'starter' (never trust the 200 alone). If the plan does not change,
+# report definitively that the API cannot do free->paid. Opt-in: dispatch or an
+# [upgrade3] commit marker. Never prints secrets.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: render-upgrade3
+  cancel-in-progress: false
+
+jobs:
+  upgrade:
+    name: Full serviceDetails plan change
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[upgrade3]') }}
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      PLAN: starter
+    steps:
+      - name: Attempt + verify
+        run: |
+          set -euo pipefail
+          RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
+          API="https://api.render.com/v1"
+          auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json" -H "Content-Type: application/json")
+
+          list="$(curl -fsS -m 30 "${auth[@]}" "${API}/services?limit=100")"
+          web_id="$(jq -r '.[].service|select(.name=="loquia-web")|.id' <<<"$list" | head -n1)"
+          api_id="$(jq -r '.[].service|select(.name=="loquia-api")|.id' <<<"$list" | head -n1)"
+
+          plan_of () { curl -fsS "${auth[@]}" "${API}/services/$1" | jq -r '.serviceDetails.plan // .service.serviceDetails.plan // "?"'; }
+
+          upgrade_one () { # $1=id $2=name -> prints FINAL plan
+            local id="$1" name="$2" sd code
+            echo "== ${name} (${id}) =="
+            curl -fsS "${auth[@]}" "${API}/services/${id}" > /tmp/svc
+            # Full serviceDetails with read-only bits removed + plan set.
+            sd="$(jq -c '(.serviceDetails // .service.serviceDetails) | del(.url, .buildPlan, .openPorts, .parentServer) | .plan=env.PLAN' /tmp/svc)"
+            echo "  PATCH full serviceDetails (plan -> ${PLAN})"
+            code="$(curl -sS -o /tmp/r -w '%{http_code}' -X PATCH "${auth[@]}" "${API}/services/${id}" -d "{\"serviceDetails\": ${sd}}")"
+            echo "   HTTP ${code}"; [ "$code" = "200" ] || { echo "   body:"; head -c 400 /tmp/r; echo; }
+            # Poll the ACTUAL plan (change may be async / restart).
+            local p
+            for i in $(seq 1 10); do
+              p="$(plan_of "$id")"; echo "   plan now: ${p} (check ${i})"
+              [ "$p" = "$PLAN" ] && break
+              sleep 15
+            done
+            echo "$p" > "/tmp/final_${name}"
+          }
+
+          upgrade_one "$web_id" loquia-web || true
+          upgrade_one "$api_id" loquia-api || true
+
+          wf="$(cat /tmp/final_loquia-web 2>/dev/null || echo '?')"
+          af="$(cat /tmp/final_loquia-api 2>/dev/null || echo '?')"
+          echo ""
+          echo "================  FINAL  ================"
+          echo "  loquia-web plan: ${wf}"
+          echo "  loquia-api plan: ${af}"
+          if [ "$wf" = "$PLAN" ] && [ "$af" = "$PLAN" ]; then
+            echo "  SUCCESS: both on ${PLAN} — always-on, no more spin-down."
+          else
+            echo "::warning::The Render API did NOT apply the plan change (still free)."
+            echo "  This confirms free->paid is dashboard-only. Steps (billing already active):"
+            echo "  dashboard.render.com > loquia-web > Settings > Instance Type > Starter > Save;"
+            echo "  repeat for loquia-api."
+          fi
+          echo "========================================"
