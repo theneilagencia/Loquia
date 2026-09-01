@@ -1,0 +1,59 @@
+name: Render add api subdomain
+
+# Attach api.loquia.com.br to the loquia-api service so the API can live on the
+# same site as the web (www.loquia.com.br). Same-site => the session cookie is
+# first-party => mobile Safari/iOS accepts it. Only registers the domain on
+# Render and prints the DNS record; it does NOT flip the app over (that happens
+# after DNS + TLS are live). Opt-in: dispatch or [apidomain]. Never prints secrets.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: render-add-api-domain
+  cancel-in-progress: false
+
+jobs:
+  add:
+    name: Attach api.loquia.com.br to loquia-api
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[apidomain]') }}
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      API_NAME: loquia-api
+      API_HOST: api.loquia.com.br
+    steps:
+      - name: Attach + print DNS
+        run: |
+          set -euo pipefail
+          RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
+          API="https://api.render.com/v1"
+          auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json" -H "Content-Type: application/json")
+
+          svc="$(curl -fsS -m 30 "${auth[@]}" "${API}/services?limit=100")"
+          api_id="$(jq -r --arg n "$API_NAME" '.[].service|select(.name==$n)|.id' <<<"$svc" | head -n1)"
+          api_onr="$(jq -r --arg n "$API_NAME" '.[].service|select(.name==$n)|.serviceDetails.url' <<<"$svc" | head -n1 | sed 's#https\?://##')"
+          echo "api_id=${api_id}  onrender host=${api_onr}"
+          [ -n "$api_id" ] || { echo "::error::loquia-api not found"; exit 1; }
+
+          echo "== Attaching ${API_HOST} to ${API_NAME} =="
+          code="$(curl -sS -o /tmp/d -w '%{http_code}' -X POST "${auth[@]}" "${API}/services/${api_id}/custom-domains" -d "$(jq -cn --arg n "$API_HOST" '{name:$n}')")"
+          case "$code" in
+            200|201) echo "  added ${API_HOST}" ;;
+            409) echo "  already attached" ;;
+            *) echo "::warning::HTTP ${code}"; head -c 300 /tmp/d; echo ;;
+          esac
+
+          echo "== Custom domains on ${API_NAME} =="
+          curl -fsS "${auth[@]}" "${API}/services/${api_id}/custom-domains" \
+            | jq -r '.[]?|(.customDomain//.)|"  \(.name)  [\(.domainType)]  \(.verificationStatus)"' || true
+
+          echo ""
+          echo "=================  DNS RECORD TO CREATE AT KINGHOST  ================="
+          echo "  Host: api          Type: CNAME   Value: ${api_onr}"
+          echo "  After it propagates, Render issues TLS for api.loquia.com.br, and"
+          echo "  then the app is pointed at it (NEXT_PUBLIC_API_URL) so the cookie is"
+          echo "  first-party and mobile login works."
+          echo "===================================================================="
