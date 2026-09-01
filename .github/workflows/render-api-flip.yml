@@ -1,0 +1,79 @@
+name: Point web at api.loquia.com.br
+
+# Once api.loquia.com.br is live (DNS + TLS), point the web at it
+# (NEXT_PUBLIC_API_URL) and redeploy so the session cookie is first-party
+# (same-site) and mobile login works. GATED: it only flips if api.loquia.com.br
+# answers 200 — otherwise it reports "not ready" and changes nothing. Then it
+# verifies login+session persist. Opt-in: dispatch or [apiflip]. Never prints
+# secrets.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: render-api-flip
+  cancel-in-progress: false
+
+jobs:
+  flip:
+    name: Flip web to api.loquia.com.br
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[apiflip]') }}
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      API_HOST: https://api.loquia.com.br
+      WWW: https://www.loquia.com.br
+      EMAIL: vinicius@apymine.com
+      PW: ${{ secrets.ADMIN_PASSWORD }}
+    steps:
+      - name: Gate on api.loquia.com.br readiness, then flip + verify
+        run: |
+          set -uo pipefail
+          PW="${PW:-password123}"
+          RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
+          API="https://api.render.com/v1"
+          auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json" -H "Content-Type: application/json")
+
+          echo "== Is ${API_HOST} live (DNS + TLS)? =="
+          ready=0
+          for i in $(seq 1 8); do
+            c="$(curl -sS -o /dev/null -m 30 -w '%{http_code}' "${API_HOST}/health" || echo 000)"
+            echo "  GET ${API_HOST}/health -> ${c} (try ${i})"
+            [ "$c" = "200" ] && { ready=1; break; }
+            sleep 15
+          done
+          if [ "$ready" != "1" ]; then
+            echo "::warning::${API_HOST} is not answering 200 yet (DNS still propagating or TLS not issued)."
+            echo "Nothing changed. Re-run this workflow ([apiflip]) in a few minutes."
+            exit 0
+          fi
+          echo "  api.loquia.com.br is LIVE."
+
+          svc="$(curl -fsS -m 30 "${auth[@]}" "${API}/services?limit=100")"
+          web_id="$(jq -r '.[].service|select(.name=="loquia-web")|.id' <<<"$svc" | head -n1)"
+          echo "== Set NEXT_PUBLIC_API_URL=${API_HOST} on loquia-web + redeploy =="
+          curl -fsS -X PUT "${auth[@]}" "${API}/services/${web_id}/env-vars/NEXT_PUBLIC_API_URL" \
+            -d "$(jq -cn --arg v "$API_HOST" '{value:$v}')" >/dev/null && echo "  env set"
+          dep="$(curl -fsS -X POST "${auth[@]}" "${API}/services/${web_id}/deploys" -d '{"clearCache":"do_not_clear"}' | jq -r '.id')"
+          for i in $(seq 1 60); do
+            st="$(curl -fsS "${auth[@]}" "${API}/services/${web_id}/deploys/${dep}" | jq -r '.status')"
+            echo "  web deploy ${dep}: ${st}"
+            case "$st" in live|deactivated) break;; build_failed|update_failed|canceled) echo "::error::deploy ${st}"; exit 1;; esac
+            sleep 15
+          done
+
+          echo "== Verify login + session (should be first-party now) =="
+          jar="$(mktemp)"
+          lc="$(curl -sS -m 60 -c "$jar" -o /dev/null -w '%{http_code}' -X POST "${API_HOST}/api/auth/login" \
+            -H 'content-type: application/json' -H "Origin: ${WWW}" \
+            -d "{\"email\":\"${EMAIL}\",\"password\":\"${PW}\"}" || echo 000)"
+          sc="$(curl -sS -m 60 -b "$jar" -o /tmp/s -w '%{http_code}' -H "Origin: ${WWW}" "${API_HOST}/api/auth/session" || echo 000)"
+          echo "  login=${lc}  session=${sc}  cookie=$(grep -c loquia_session "$jar" || echo 0)"
+          echo "  session body: $(head -c 120 /tmp/s)"
+          if [ "$lc" = "200" ] && [ "$sc" = "200" ]; then
+            echo "  DONE: same-site login+session works. Mobile Safari will hold the login now."
+          else
+            echo "::warning::login=${lc} session=${sc} — investigate (CORS_ORIGINS should include ${WWW})."
+          fi
