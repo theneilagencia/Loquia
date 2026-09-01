@@ -15,19 +15,32 @@ const DOC_MAX_BYTES = 25 * 1024 * 1024;
 type Mode = 'audio' | 'doc' | 'link';
 type Phase = 'idle' | 'uploading' | 'processing' | 'error';
 
-/** Minimal RTF → plain text (control words/groups stripped; enough for notes). */
+/**
+ * RTF → plain text good enough for meeting transcripts (Plaud/Otter exports).
+ * Critically it removes the header destination groups (font/color tables) and
+ * the trailing "\" line-continuations RTF puts at each line end — leaving them
+ * in mangles the text into one junk blob and breaks speaker detection.
+ */
 function rtfToText(rtf: string): string {
-  return rtf
-    .replace(/\\'([0-9a-fA-F]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
-    .replace(/\\par[d]?\b/g, '\n')
-    .replace(/\\line\b/g, '\n')
-    .replace(/\\tab\b/g, '\t')
-    .replace(/\{\\\*[^{}]*\}/g, '')
-    .replace(/\\[a-zA-Z]+-?\d* ?/g, '')
+  let s = rtf;
+  // Drop header destination groups (font/color/stylesheet/info), incl. one nesting level.
+  s = s.replace(/\{\\(?:fonttbl|colortbl|stylesheet|listtable|info|\*\\expandedcolortbl|\*\\[a-zA-Z]+)(?:[^{}]|\{[^{}]*\})*\}/g, '');
+  // Hex escapes \'xx (Latin text).
+  s = s.replace(/\\'([0-9a-fA-F]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+  // Paragraph / line / tab controls → whitespace.
+  s = s.replace(/\\par[d]?\b/g, '\n').replace(/\\line\b/g, '\n').replace(/\\tab\b/g, '\t');
+  // Remaining control words (\word + optional signed number + optional trailing space).
+  s = s.replace(/\\[a-zA-Z]+-?\d* ?/g, '');
+  // Control symbols and any stray backslashes (incl. the trailing "\" continuations).
+  s = s.replace(/\\[^a-zA-Z]/g, '').replace(/\\/g, '');
+  // Braces, then normalize whitespace/newlines.
+  s = s
     .replace(/[{}]/g, '')
     .replace(/\r\n?/g, '\n')
     .replace(/[ \t]+\n/g, '\n')
-    .trim();
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/\n{3,}/g, '\n\n');
+  return s.trim();
 }
 
 /** Extract text from a PDF in the browser via pdf.js. */

@@ -199,7 +199,13 @@ const INLINE_NAME_RE = /^(\p{Lu}[\p{Ll}'-]{1,19})\s*:\s+/u;
 export function parseSpeakerTranscript(
   raw: string,
 ): { segments: ParsedSegment[]; aliases: Record<string, string>; speakerCount: number } | null {
-  const lines = raw.replace(/\r\n?/g, '\n').split('\n').map((l) => l.trim());
+  // Normalize each line, and strip trailing backslashes — RTF exports converted
+  // client-side can leave a "\" line-continuation at each line end, which would
+  // otherwise stop "Speaker N" / timestamp lines from matching.
+  const lines = raw
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((l) => l.replace(/\\+\s*$/, '').trim());
   const labelToKey = new Map<string, string>();
   const aliases: Record<string, string> = {};
   const keyFor = (label: string): string => {

@@ -61,6 +61,17 @@ describe('parseSpeakerTranscript', () => {
     expect(parsed!.segments[0]!.text).toContain('Ficou decidido entao:');
   });
 
+  it('tolerates trailing backslashes on lines (RTF line-continuations)', () => {
+    // Regression: converted RTF leaves a "\" at each line end; the parser must
+    // still recognize the timestamp/Speaker lines instead of seeing one blob.
+    const raw = ['00:00:00\\', 'Speaker 1\\', 'Primeira fala aqui.\\', '', '00:00:20\\', 'Speaker 2\\', 'Segunda fala aqui.\\'].join('\n');
+    const parsed = parseSpeakerTranscript(raw);
+    expect(parsed).not.toBeNull();
+    expect(parsed!.speakerCount).toBe(2);
+    expect(parsed!.segments).toHaveLength(2);
+    expect(parsed!.segments[0]!.text).toBe('Primeira fala aqui.');
+  });
+
   it('returns null for plain prose (falls back to paragraph splitting)', () => {
     expect(parseSpeakerTranscript('Este é um texto simples sem falantes.\n\nApenas parágrafos.')).toBeNull();
   });
