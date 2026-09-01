@@ -47,8 +47,8 @@ jobs:
           echo "HTTP ${code}"
           if [ "$code" = "200" ]; then
             jq -r '(.logs // .events // [])[] | "\(.timestamp // "") \(.message // .text // .)"' /tmp/logs1 > /tmp/lines 2>/dev/null || cp /tmp/logs1 /tmp/lines
-            echo "---- lines mentioning error / 500 / admin/users / create ----"
-            grep -iE 'error|internal|500|admin/users|createUser|user_created|invitation|null value|violates|column|relation|does not exist' /tmp/lines | tail -n 60 || echo "(no matching lines)"
+            echo "---- lines mentioning error / crash / ai_pack ----"
+            grep -iE 'error|internal|500|ai_pack|aiPack|generat|out of memory|heap|killed|SIGKILL|SIGTERM|oom|Ran out|fatal|unhandled|exit code|Restarting|Deploying|Booting|null value|violates|relation|does not exist' /tmp/lines | tail -n 70 || echo "(no matching lines)"
             echo "---- last 40 lines (context) ----"
             tail -n 40 /tmp/lines
           else
