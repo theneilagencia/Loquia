@@ -51,7 +51,7 @@ jobs:
           echo ""
           echo "== Latency (should be fast, no 'waking up' hop) =="
           for u in "${WWW}/pt-BR/login" "${API_HOST}/health" "${WWW}/pt-BR/app"; do
-            read -r code ttfb total < <(curl -sS -o /dev/null -m 60 \
-              -w '%{http_code} %{time_starttransfer} %{time_total}' "$u" || echo '000 0 0')
-            echo "  ${u}  ->  HTTP ${code}  ttfb=${ttfb}s  total=${total}s"
+            m="$(curl -sS -o /dev/null -m 60 \
+              -w '%{http_code} ttfb=%{time_starttransfer}s total=%{time_total}s' "$u" 2>/dev/null || echo '000 (unreachable)')"
+            echo "  ${u}  ->  ${m}"
           done
