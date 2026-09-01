@@ -54,7 +54,19 @@ jobs:
           for k in 1 2 3 4 5; do c="$(curl -sS -o /dev/null -m 30 -w '%{http_code}' "${API_HOST}/health" || echo 000)"; echo "  health -> $c"; [ "$c" = "200" ] && break; sleep 5; done
           sleep 10
 
-      - name: Create small text meeting + poll to ready/failed
+      - name: Check loquia-web deploy (the RTF fix ships here)
+        run: |
+          set -uo pipefail
+          RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
+          API="https://api.render.com/v1"
+          auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json")
+          svc="$(curl -fsS -m 30 "${auth[@]}" "${API}/services?limit=100" || echo '[]')"
+          web_id="$(jq -r '.[].service|select(.name=="loquia-web")|.id' <<<"$svc" | head -n1)"
+          echo "  loquia-web=${web_id}"
+          curl -fsS -m 30 "${auth[@]}" "${API}/services/${web_id}/deploys?limit=3" \
+            | jq -r '.[] | "  web deploy: status=\(.deploy.status) commit=\(.deploy.commit.id[0:8]) at=\(.deploy.finishedAt // .deploy.createdAt)"' || true
+
+      - name: Create LONG multi-speaker meeting (forces chunking) + poll
         run: |
           set -uo pipefail
           PW="${PW:-password123}"
@@ -64,10 +76,26 @@ jobs:
             -d "{\"email\":\"${EMAIL}\",\"password\":\"${PW}\"}" || echo 000)"
           echo "login=${lc}"; [ "$lc" = "200" ] || { echo "::error::login failed"; exit 1; }
 
-          echo "== Create text meeting (Plaud-style, speaker-labeled) =="
-          # Block form: timestamp / Speaker N / utterance — exercises speaker parsing.
-          TX=$'00:00:00\nSpeaker 1\nBom dia a todos. Vamos comecar a reuniao comercial. O Paulo vai abrir.\n\n00:00:12\nSpeaker 2\nObrigado. Estou abrindo a reuniao como acionista e conselho. O objetivo hoje e decidir o preco do plano Pro e alinhar o cronograma.\n\n00:00:35\nSpeaker 1\nProponho R$ 99 por mes, com base na pesquisa com 40 clientes.\n\n00:00:52\nSpeaker 2\nConcordo com R$ 99. Vamos oferecer tambem um plano anual com 2 meses gratis e revisar os numeros em 30 dias.\n\n00:01:20\nSpeaker 1\nFicou decidido entao: lancar o Pro a R$ 99 por mes, plano anual com 2 meses gratis, e eu preparo a pagina de precos ate sexta.'
-          body="$(jq -n --arg t "AIPack livetest" --arg l "pt-BR" --arg x "$TX" '{title:$t,meetingLanguage:$l,text:$x}')"
+          echo "== Build a LONG synthetic transcript (~90 turns, 4 speakers) =="
+          : > /tmp/tx.txt
+          topics=("o preco do plano Pro" "o cronograma de lancamento" "a meta de churn abaixo de 4%" "o gateway de pagamento" "a pagina de precos" "a pesquisa com 40 clientes" "o plano anual com 2 meses gratis" "o orcamento de R$ 120 mil" "a contratacao de marketing" "a revisao em 30 dias" "o risco da concorrencia" "a integracao com o CRM")
+          decis=("Ficou decidido lancar a R$ 99 por mes." "Ficou decidido revisar os numeros em 30 dias." "Ficou decidido que o Paulo prepara a pagina de precos ate sexta." "Ficou decidido oferecer 2 meses gratis no plano anual.")
+          t=0
+          for n in $(seq 0 89); do
+            sp=$(( (n % 4) + 1 ))
+            mm=$(printf '%02d' $(( t / 60 ))); ss=$(printf '%02d' $(( t % 60 )))
+            tp="${topics[$(( n % ${#topics[@]} ))]}"
+            printf '00:%s:%s\nSpeaker %d\n' "$mm" "$ss" "$sp" >> /tmp/tx.txt
+            if [ $(( n % 7 )) -eq 6 ]; then
+              printf '%s Isso e um ponto importante para %s.\n\n' "${decis[$(( n % ${#decis[@]} ))]}" "$tp" >> /tmp/tx.txt
+            else
+              printf 'Sobre %s, eu acho que precisamos alinhar melhor e trazer numeros concretos antes de decidir. O que voces acham?\n\n' "$tp" >> /tmp/tx.txt
+            fi
+            t=$(( t + 18 ))
+          done
+          echo "  transcript chars=$(wc -c </tmp/tx.txt) lines=$(wc -l </tmp/tx.txt)"
+
+          body="$(jq -n --arg t "AIPack livetest" --arg l "pt-BR" --rawfile x /tmp/tx.txt '{title:$t,meetingLanguage:$l,text:$x}')"
           cc="$(curl -sS -m 60 -b "$jar" -o /tmp/c -w '%{http_code}' -X POST "${API_HOST}/api/meetings/process-text" \
             -H 'content-type: application/json' -H "Origin: ${WWW}" -d "$body" || echo 000)"
           echo "  create=${cc}  $(head -c 160 /tmp/c)"
@@ -75,15 +103,16 @@ jobs:
           [ -n "$MID" ] || { echo "::error::create failed"; exit 1; }
           echo "  meetingId=${MID}"
 
-          echo "== Poll aiPackStatus (up to ~5 min) =="
-          final=""
-          for i in $(seq 1 20); do
+          echo "== Poll aiPackStatus (up to ~10 min for a long transcript) =="
+          started=$(date +%s); final=""
+          for i in $(seq 1 40); do
             code="$(curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" -o /tmp/m -w '%{http_code}' "${API_HOST}/api/meetings/${MID}" || echo 000)"
             st="$(jq -r '.aiPackStatus // "?"' /tmp/m 2>/dev/null || echo '?')"
-            echo "  poll ${i}: http=${code} aiPackStatus=${st}"
+            echo "  poll ${i} (+$(( $(date +%s) - started ))s): http=${code} aiPackStatus=${st}"
             case "$st" in ready|failed) final="$st"; break;; esac
             sleep 15
           done
+          echo "  elapsed=$(( $(date +%s) - started ))s"
 
           echo "== Latest job (error detail) =="
           curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/job" -o /tmp/job || true
@@ -94,14 +123,16 @@ jobs:
 
           echo "== Generated AI Pack CONTENT (quality check) =="
           curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/aipack" -o /tmp/pack || true
-          # The persisted pack stores each section's content in `.lines` (text or
-          # pt/en synthesized), NOT `.facts`. Show line count + the text per line.
-          jq -r '(.source.sections // []) | if length==0 then "  <no sections>" else .[] | "  [\(.key)] lines=\((.lines//[])|length)\n" + ((.lines//[])|map("     - \(.classification // "-") \((.text // .pt // .en) // "")  @\(.atSeconds // "-") ev=\((.segmentIds//[])|join(","))")|join("\n")) end' /tmp/pack 2>/dev/null || { echo "  raw:"; head -c 1200 /tmp/pack; }
+          # Section -> line counts (persisted content lives in `.lines`).
+          jq -r '(.source.sections // []) | if length==0 then "  <no sections>" else (map("  [\(.key)] lines=\((.lines//[])|length)")|join("\n")) end' /tmp/pack 2>/dev/null || { echo "  raw:"; head -c 800 /tmp/pack; }
+          echo "  -- sample decisions / numbers (first 3 each) --"
+          jq -r '[(.source.sections//[])[] | select(.key=="explicitDecisions") | (.lines//[])[] | (.text // .pt // .en)] | .[0:3] | map("     dec: "+.)|join("\n")' /tmp/pack 2>/dev/null || true
+          jq -r '[(.source.sections//[])[] | select(.key=="numbersAndDates") | (.lines//[])[] | (.text // .pt // .en)] | .[0:3] | map("     num: "+.)|join("\n")' /tmp/pack 2>/dev/null || true
 
           case "$final" in
-            ready) echo "RESULT: AI Pack generation WORKS in production. Inspect the CONTENT above for coherence." ;;
-            failed) echo "::error::RESULT: AI Pack FAILED — errorCode/errorMessage above pinpoints the fix." ;;
-            *) echo "::warning::RESULT: still generating after 5 min for a tiny input — the generation path is stuck; see the job above." ;;
+            ready) echo "RESULT: LONG-transcript AI Pack generation WORKS in production." ;;
+            failed) echo "::error::RESULT: AI Pack FAILED on a long transcript — see errorCode/errorMessage above." ;;
+            *) echo "::warning::RESULT: still generating after ~10 min — long-transcript path is too slow or stuck; see the job above." ;;
           esac
 
           echo "== Cleanup: delete ALL 'AIPack livetest' meetings (keep the account tidy) =="
