@@ -92,6 +92,39 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
     );
   }
 
+  /** Map a getUserMedia rejection to a permission state. */
+  function mapPermissionError(error: unknown): void {
+    const name = (error as { name?: string })?.name;
+    if (name === 'NotAllowedError' || name === 'SecurityError') permission = 'permission_denied';
+    else if (name === 'NotFoundError' || name === 'OverconstrainedError') permission = 'device_missing';
+    else permission = 'error';
+  }
+
+  /** True when we hold a stream with a live (not ended) audio track. */
+  function hasLiveStream(): boolean {
+    return !!stream && stream.getAudioTracks().some((t) => t.readyState === 'live');
+  }
+
+  /**
+   * Guarantee a live mic stream before recording. Re-acquires via getUserMedia
+   * when the previous stream was torn down by stop() (or its track ended, e.g. the
+   * device changed), so every recording — not just the first — captures real audio.
+   */
+  async function ensureLiveStream(): Promise<void> {
+    if (hasLiveStream()) return;
+    if (!supported()) {
+      permission = 'unsupported';
+      return;
+    }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      permission = 'permission_granted';
+    } catch (error) {
+      stream = null;
+      mapPermissionError(error);
+    }
+  }
+
   function synthAmplitude(t: number): number {
     const a = Math.sin(t / 260) * 0.5 + 0.5;
     const b = Math.sin(t / 90 + 1.3) * 0.3 + 0.3;
@@ -141,25 +174,29 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         permission = 'permission_granted';
       } catch (error) {
-        const name = (error as { name?: string })?.name;
-        if (name === 'NotAllowedError' || name === 'SecurityError') {
-          permission = 'permission_denied';
-        } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
-          permission = 'device_missing';
-        } else {
-          permission = 'error';
-        }
+        stream = null;
+        mapPermissionError(error);
       }
       return permission;
     },
 
     async start(onTick: (tick: RecorderTick) => void) {
       running = true;
+      peaks.length = 0;
+      chunks = [];
+
+      // Ensure a FRESH, LIVE mic stream for THIS recording. A previous stop() stops
+      // the tracks and nulls `stream`, but the granted-permission state persists —
+      // so without this, the 2nd recording (and every retry) would find no stream,
+      // create no MediaRecorder, and submit the silent fallback → "no speech" on a
+      // loop. Re-acquire whenever the current stream is missing or its track ended.
+      await ensureLiveStream();
+
+      // Start the clock now that the mic is ready, so a permission prompt or the
+      // getUserMedia latency isn't counted as recorded time.
       elapsedMs = 0;
       accumulatedMs = 0;
       runStartedAt = now();
-      peaks.length = 0;
-      chunks = [];
 
       // Real capture when a live stream + MediaRecorder exist.
       if (stream && typeof window !== 'undefined' && typeof window.MediaRecorder !== 'undefined') {
