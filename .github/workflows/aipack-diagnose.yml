@@ -72,12 +72,22 @@ jobs:
             echo "  transcript segments containing '${TK}': ${tcount}"
             jq -r --arg tk "$TK" '(.segments//[])[]|select((.text//""|ascii_downcase)|contains($tk))|"  [\(.startSeconds|floor)s \(.speakerLabel // .speaker // "?")] \(.text)"' /tmp/t 2>/dev/null | head -20 || true
 
-            echo "-- PACK matches for '${TK}' (origin = model if here but NOT in transcript) --"
+            echo "-- PACK matches for '${TK}' across text+pt+en+quote (origin = model if here but NOT in transcript) --"
             curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/aipack" -o /tmp/p || true
-            pcount="$(jq --arg tk "$TK" '[(.source.sections//[])[]|.lines[]?|select((.text//""|ascii_downcase)|contains($tk))]|length' /tmp/p 2>/dev/null || echo '?')"
-            echo "  pack lines containing '${TK}': ${pcount}"
-            jq -r --arg tk "$TK" '(.source.sections//[])[]|.key as $k|.lines[]?|select((.text//""|ascii_downcase)|contains($tk))|"  [\($k)] \(.text)"' /tmp/p 2>/dev/null | head -20 || true
+            # Synthesized text lives in .pt/.en; verbatim in .text; grounding excerpt in .quote.
+            pcount="$(jq --arg tk "$TK" '[(.source.sections//[])[]|.lines[]?|select((((.text//"")+" "+(.pt//"")+" "+(.en//"")+" "+(.quote//""))|ascii_downcase)|contains($tk))]|length' /tmp/p 2>/dev/null || echo '?')"
+            echo "  pack lines mentioning '${TK}' (incl. quote): ${pcount}"
+            jq -r --arg tk "$TK" '(.source.sections//[])[]|.key as $k|.lines[]?|select((((.text//"")+" "+(.pt//"")+" "+(.en//"")+" "+(.quote//""))|ascii_downcase)|contains($tk))|"  [\($k)] text=\(.text//.pt//.en) | quote=\(.quote//"-")"' /tmp/p 2>/dev/null | head -20 || true
 
             echo "-- pack section sizes (bloat check) --"
             jq -r '(.source.sections // []) | if length==0 then "  <no pack>" else (map("[\(.key)]\((.lines//[])|length)")|join(" ")) end' /tmp/p 2>/dev/null || echo "  (no pack)"
+
+            echo "-- EXECUTIVE SUMMARY --"
+            jq -r '[(.source.sections//[])[]|select(.key=="summary")|.lines[]?|(.text//.pt//.en)]|map("  "+.)|join("\n")' /tmp/p 2>/dev/null || true
+            echo "-- TOPICS (coherence eyeball) --"
+            jq -r '[(.source.sections//[])[]|select(.key=="topics")|.lines[]?|(.text//.pt//.en)]|map("  • "+.)|join("\n")' /tmp/p 2>/dev/null || true
+            echo "-- ACTION ITEMS --"
+            jq -r '[(.source.sections//[])[]|select(.key=="actionItems")|.lines[]?|(.text//.pt//.en)]|map("  → "+.)|join("\n")' /tmp/p 2>/dev/null || true
+            echo "-- EXPLICIT DECISIONS --"
+            jq -r '[(.source.sections//[])[]|select(.key=="explicitDecisions")|.lines[]?|(.text//.pt//.en)]|map("  ✓ "+.)|join("\n")' /tmp/p 2>/dev/null || true
           done
