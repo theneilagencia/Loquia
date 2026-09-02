@@ -7,6 +7,7 @@ import {
   type AIPack,
   type AIPackSection,
 } from '@loquia/domain';
+import { Quote } from 'lucide-react';
 import { Badge, Card, CardContent } from '@loquia/ui';
 import { TimestampLink } from './timestamp-link';
 
@@ -73,13 +74,21 @@ function SectionBody({
     );
   }
   return (
-    <ul className="space-y-2">
+    <ul className="space-y-3.5">
       {section.lines.map((line, i) => (
-        <li key={i} className="flex items-start gap-2 text-sm leading-relaxed">
-          {line.atSeconds != null && (
-            <TimestampLink seconds={line.atSeconds} onSeek={onSeek} className="mt-0.5 shrink-0" />
+        <li key={i} className="space-y-2">
+          <div className="flex items-start gap-2 text-sm leading-relaxed">
+            {line.atSeconds != null && (
+              <TimestampLink seconds={line.atSeconds} onSeek={onSeek} className="mt-0.5 shrink-0" />
+            )}
+            <span>{line.text}</span>
+          </div>
+          {line.quote && (
+            <div className="ml-1 flex items-start gap-2 rounded-lg bg-canvas px-3 py-2">
+              <Quote className="mt-0.5 size-3.5 shrink-0 text-iris" />
+              <p className="text-[12.5px] italic leading-snug text-muted-foreground">{line.quote}</p>
+            </div>
           )}
-          <span>{line.text}</span>
         </li>
       ))}
     </ul>

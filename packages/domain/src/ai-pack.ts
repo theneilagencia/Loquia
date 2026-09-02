@@ -20,7 +20,9 @@ export type PackSectionKey =
   | 'topics'
   | 'importantStatements'
   | 'explicitDecisions'
+  | 'actionItems'
   | 'openPoints'
+  | 'risks'
   | 'questions'
   | 'numbersAndDates'
   | 'ambiguities'
@@ -37,7 +39,9 @@ export const PACK_SECTION_KEYS: readonly PackSectionKey[] = [
   'topics',
   'importantStatements',
   'explicitDecisions',
+  'actionItems',
   'openPoints',
+  'risks',
   'questions',
   'numbersAndDates',
   'ambiguities',
@@ -55,7 +59,9 @@ export const PACK_SECTION_TITLE: Record<PackSectionKey, string> = {
   topics: 'Topics',
   importantStatements: 'Important statements',
   explicitDecisions: 'Explicit decisions',
+  actionItems: 'Action items',
   openPoints: 'Open points',
+  risks: 'Risks',
   questions: 'Questions raised',
   numbersAndDates: 'Numbers and dates',
   ambiguities: 'Ambiguities',
@@ -77,7 +83,9 @@ export const PACK_SECTION_REQUIRED: Record<PackSectionKey, boolean> = {
   topics: false,
   importantStatements: false,
   explicitDecisions: true,
+  actionItems: true,
   openPoints: true,
+  risks: false,
   questions: false,
   numbersAndDates: false,
   ambiguities: false,
@@ -91,6 +99,7 @@ export const PACK_SECTION_EMPTY_PHRASE: Partial<
 > = {
   participants: { 'pt-BR': 'Participantes não identificados.', 'en-US': 'Participants not identified.' },
   explicitDecisions: { 'pt-BR': 'Nenhuma decisão explícita.', 'en-US': 'No explicit decisions.' },
+  actionItems: { 'pt-BR': 'Nenhuma ação definida.', 'en-US': 'No action items.' },
   openPoints: { 'pt-BR': 'Nenhum ponto aberto.', 'en-US': 'No open points.' },
 };
 
@@ -102,6 +111,8 @@ export interface AIPackLine {
   text: string;
   /** Optional evidence/seek pointer, in seconds. */
   atSeconds?: number;
+  /** Original-language transcript excerpt this line is grounded in (the quote). */
+  quote?: string;
 }
 
 export interface AIPackSection {
@@ -152,6 +163,8 @@ export interface SourceLine {
   text?: string;
   /** Seek pointer, in seconds — resolved from the cited segment(s). */
   atSeconds?: number;
+  /** Original-language excerpt of the cited segment(s) — shown as the quote. */
+  quote?: string;
   /** Evidence: ids of the TranscriptSegment(s) that support this line. */
   segmentIds?: string[];
   /** Resolved speaker of the primary cited segment (technical key). */
@@ -182,10 +195,13 @@ export function resolvePack(source: PackSource, outputLanguage: string): AIPack 
       title: PACK_SECTION_TITLE[s.key],
       required: PACK_SECTION_REQUIRED[s.key],
       confidence: s.confidence,
-      lines: s.lines.map((l) => ({
-        text: l.text ?? (pt ? (l.pt ?? l.en ?? '') : (l.en ?? l.pt ?? '')),
-        atSeconds: l.atSeconds,
-      })),
+      lines: s.lines.map((l) => {
+        const text = l.text ?? (pt ? (l.pt ?? l.en ?? '') : (l.en ?? l.pt ?? ''));
+        // Only show a quote when it adds something beyond the line text itself
+        // (verbatim sections already render the excerpt as their text).
+        const quote = l.quote && l.quote !== text ? l.quote : undefined;
+        return { text, atSeconds: l.atSeconds, quote };
+      }),
     })),
   };
 }

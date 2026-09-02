@@ -111,6 +111,11 @@ export function buildPackSource(
       } else {
         line.en = fact.text;
       }
+      // Ground the synthesized statement with the original transcript excerpt it
+      // came from (the on-screen quote + timestamp shown next to each item).
+      if (!VERBATIM_SECTIONS.has(section.key) && resolved.length) {
+        line.quote = resolved.map((s) => s.text).join(' ');
+      }
       lines.push(line);
       classifications.push(fact.classification);
 

@@ -180,6 +180,8 @@ describe('evidence resolution + pack building', () => {
     // Timestamp comes from the cited segment, not the model.
     expect(topics.lines[0]!.atSeconds).toBe(20);
     expect(topics.lines[0]!.speakerId).toBe('sp2');
+    // A synthesized line carries the original transcript excerpt as its quote.
+    expect(topics.lines[0]!.quote).toContain('R$ 120 mil');
     // The synthesized openPoint survives (content over silence) without a link.
     const open = source.sections.find((s) => s.key === 'openPoints')!;
     expect(open.lines[0]!.pt).toBe('ghost');
@@ -232,7 +234,7 @@ describe('factory', () => {
   it('exposes exactly the canonical LLM section keys', () => {
     expect([...LLM_SECTION_KEYS]).toEqual([
       'purpose', 'executiveContext', 'topics', 'importantStatements',
-      'explicitDecisions', 'openPoints', 'questions', 'numbersAndDates', 'ambiguities',
+      'explicitDecisions', 'actionItems', 'openPoints', 'risks', 'questions', 'numbersAndDates', 'ambiguities',
     ]);
   });
 });

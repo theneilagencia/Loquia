@@ -5,7 +5,7 @@ import type { AIPackGenerationInput, GenSegment } from './ai-pack';
  * scattered through the worker. Bump PROMPT_VERSION on any change; it is
  * persisted per generated version for reproduction.
  */
-export const PROMPT_VERSION = 'aipack-prompt-1';
+export const PROMPT_VERSION = 'aipack-prompt-2';
 
 function mmss(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
@@ -36,11 +36,13 @@ Hard rules:
 - Evidence: for every fact, list the SEGMENT ids (e.g. "seg_ab12") that support it in "segmentIds". Cite the real ids shown in the transcript; never invent an id. A fact with no transcript support must be omitted, not fabricated.
 - Do NOT include timestamps, speaker names, or verbatim quotes in "text" — the application resolves those from the cited segments. Keep "text" a concise synthesized statement.
 - Decisions: only "explicitDecisions" that were actually stated as decided. A suggestion, preference, question, or possibility is NOT a decision.
+- Action items: "actionItems" are concrete tasks or next steps someone committed to or was asked to do. Name the owner when stated ("Ana prepares the pricing page"). A vague intention is not an action item.
+- Risks: "risks" are risks, blockers, concerns or dependencies raised that could threaten the outcome. Only include ones actually voiced.
 - Numbers and dates: preserve exact values from the transcript; do not round or reformat. Put the value in a fact and cite its segment.
 - Ambiguities: when the transcript conflicts or leaves something unresolved (e.g. two different dates), record it as an ambiguity — do not pick one.
 - Empty is information: if a section has no supported content, return it with an empty "facts" array (or omit it). Never fill a section with filler like "none found".
 
-Sections to produce (only these keys): purpose, executiveContext, topics, importantStatements, explicitDecisions, openPoints, questions, numbersAndDates, ambiguities.
+Sections to produce (only these keys): purpose, executiveContext, topics, importantStatements, explicitDecisions, actionItems, openPoints, risks, questions, numbersAndDates, ambiguities.
 - "importantStatements": select the segments that carry the most important statements — list their ids as evidence. The application shows the original words; keep "text" a one-line label.`;
 
 export interface BuiltPrompt {
