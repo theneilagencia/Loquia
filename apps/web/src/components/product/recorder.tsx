@@ -34,6 +34,20 @@ export function Recorder() {
   const paused = runState === 'paused';
   const active = recording || paused;
 
+  // Mobile screen-lock guidance: on a touch device the OS screensaver can suspend
+  // capture. We hold a screen wake lock when the browser supports it; when it does
+  // not (older iOS/Safari), warn the user to keep the screen awake themselves.
+  const [mobile, setMobile] = useState(false);
+  const [wakeLockOk, setWakeLockOk] = useState(true);
+  useEffect(() => {
+    try {
+      setMobile(window.matchMedia?.('(pointer: coarse)')?.matches ?? false);
+      setWakeLockOk('wakeLock' in navigator);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   // Keyboard shortcuts: Space (pause/resume), Cmd/Ctrl+M (marker), Cmd/Ctrl+Enter (finish).
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -85,6 +99,11 @@ export function Recorder() {
           {active && (
             <p className="text-sm font-medium text-muted-foreground">
               {recording ? t('recording') : t('paused')}
+            </p>
+          )}
+          {active && mobile && (
+            <p className="max-w-md text-center text-xs text-muted-foreground">
+              {wakeLockOk ? t('keepScreenOn') : t('keepScreenOnUnsupported')}
             </p>
           )}
         </div>

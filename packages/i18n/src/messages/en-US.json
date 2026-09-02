@@ -219,7 +219,9 @@
     "recording": "Recording",
     "paused": "Paused",
     "miniRecording": "Recording in progress",
-    "shortcuts": "Space to pause/resume · Cmd/Ctrl+M to mark · Cmd/Ctrl+Enter to finish"
+    "shortcuts": "Space to pause/resume · Cmd/Ctrl+M to mark · Cmd/Ctrl+Enter to finish",
+    "keepScreenOn": "On mobile, keep the screen on while recording — the screen lock can interrupt capture.",
+    "keepScreenOnUnsupported": "This browser can't prevent the screen from locking. Increase your phone's auto-lock time or tap the screen occasionally so the recording isn't interrupted."
   },
   "upload": {
     "title": "Upload",

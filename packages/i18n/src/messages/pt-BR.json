@@ -219,7 +219,9 @@
     "recording": "Gravando",
     "paused": "Pausado",
     "miniRecording": "Gravação em andamento",
-    "shortcuts": "Espaço para pausar/retomar · Cmd/Ctrl+M para marcar · Cmd/Ctrl+Enter para concluir"
+    "shortcuts": "Espaço para pausar/retomar · Cmd/Ctrl+M para marcar · Cmd/Ctrl+Enter para concluir",
+    "keepScreenOn": "No celular, mantenha a tela ligada durante a gravação — a proteção de tela pode interromper a captura.",
+    "keepScreenOnUnsupported": "Este navegador não consegue impedir o bloqueio de tela. Aumente o tempo de bloqueio automático do celular ou toque na tela de vez em quando para não interromper a gravação."
   },
   "upload": {
     "title": "Enviar",

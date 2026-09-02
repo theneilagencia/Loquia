@@ -88,7 +88,10 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
   // sleeps. Holding a 'screen' wake lock while recording keeps the display awake.
   // The lock is auto-released by the browser when the tab is hidden, so we also
   // re-acquire it on visibilitychange whenever we're still recording.
-  type WakeLockSentinelLike = { release: () => Promise<void> | void };
+  type WakeLockSentinelLike = {
+    release: () => Promise<void> | void;
+    addEventListener?: (type: 'release', listener: () => void) => void;
+  };
   let wakeLock: WakeLockSentinelLike | null = null;
   let onVisibility: (() => void) | null = null;
 
@@ -98,7 +101,15 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
         wakeLock?: { request: (type: 'screen') => Promise<WakeLockSentinelLike> };
       }).wakeLock;
       if (!wl || wakeLock) return;
-      wakeLock = await wl.request('screen');
+      const sentinel = await wl.request('screen');
+      wakeLock = sentinel;
+      // The OS can drop the lock (e.g. the tab briefly backgrounds); when it does,
+      // re-acquire immediately as long as we are still recording, so the screen
+      // does not get a chance to sleep and suspend the capture.
+      sentinel.addEventListener?.('release', () => {
+        wakeLock = null;
+        if (running) void acquireWakeLock();
+      });
     } catch {
       // Not supported (older iOS/Safari) or blocked — non-fatal; recording still runs.
     }
@@ -206,11 +217,25 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
       }
 
       // Keep the screen awake so the mobile screensaver can't suspend capture,
-      // and re-arm the lock each time the tab returns to the foreground.
+      // and re-arm everything each time the tab returns to the foreground: the OS
+      // releases the wake lock and suspends the AudioContext (and sometimes the
+      // MediaRecorder) when the screen sleeps, so on return we re-acquire the lock,
+      // resume the audio graph, and resume a recorder the OS paused.
       void acquireWakeLock();
       if (typeof document !== 'undefined') {
         onVisibility = () => {
-          if (document.visibilityState === 'visible' && running) void acquireWakeLock();
+          if (document.visibilityState !== 'visible' || !running) return;
+          void acquireWakeLock();
+          try {
+            if (audioCtx && audioCtx.state === 'suspended') void audioCtx.resume();
+          } catch {
+            /* ignore */
+          }
+          try {
+            if (recorder && recorder.state === 'paused') recorder.resume();
+          } catch {
+            /* ignore */
+          }
         };
         document.addEventListener('visibilitychange', onVisibility);
       }
