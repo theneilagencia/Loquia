@@ -54,19 +54,31 @@ jobs:
             echo ""
             echo "==================== meeting ${MID} ===================="
             curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}" -o /tmp/m || true
-            jq '{title,source,status,aiPackStatus,participantCount,durationSeconds}' /tmp/m 2>/dev/null
+            jq '{title,source,status,aiPackStatus,participantCount}' /tmp/m 2>/dev/null
 
-            echo "-- transcript speakers + segment count --"
+            echo "-- transcript segments/speakers --"
             curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/transcript" -o /tmp/t || true
-            jq -r '"  speakers=\((.speakers//[])|length): " + ((.speakers//[])|map(.diarizationLabel + (if .displayName then " ("+.displayName+")" else "" end))|join(", ")) + "\n  segments=\((.segments//[])|length)  distinctSpeakerKeys=\([(.segments//[])[].speakerId]|unique|length)"' /tmp/t 2>/dev/null || echo "  (no transcript)"
+            jq -r '"  speakers=\((.speakers//[])|length)  segments=\((.segments//[])|length)"' /tmp/t 2>/dev/null || echo "  (no transcript)"
 
-            echo "-- current AI Pack (section -> line count) --"
+            echo "-- latest ai_pack JOB (why it is stuck) --"
+            curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/job" -o /tmp/j || true
+            jq '{type,status,stage,progress,attempt,maxAttempts,errorCode,errorMessage,provider,model,createdAt,updatedAt}' /tmp/j 2>/dev/null || { echo "  raw:"; head -c 300 /tmp/j; }
+
+            echo "-- current pack (section -> line count) --"
             curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/aipack" -o /tmp/p || true
-            jq -r '(.source.sections // []) | if length==0 then "  <no pack>" else (map("  [\(.key)] lines=\((.lines//[])|length)")|join("\n")) end' /tmp/p 2>/dev/null || echo "  (no pack)"
-            echo "  sample lines:"
-            jq -r '[(.source.sections//[])[] | select(.key|test("purpose|explicitDecisions|numbersAndDates")) | (.lines//[])[] | (.text // .pt // .en)] | .[0:4] | map("     - "+.)|join("\n")' /tmp/p 2>/dev/null || true
+            jq -r '(.source.sections // []) | if length==0 then "  <no pack>" else (map("  [\(.key)] \((.lines//[])|length)")|join("  ")) end' /tmp/p 2>/dev/null || echo "  (no pack)"
 
-            echo "-- ai_pack job DTO --"
-            curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/ai-pack/status" -o /tmp/s || true
-            jq '{status,hasCurrent,version,provider,model,generatedAt}' /tmp/s 2>/dev/null || true
+            # If this meeting is mid-generation, watch it for ~5 min to see if the
+            # boot-time self-heal reclaims and completes it.
+            ai="$(jq -r '.aiPackStatus // "?"' /tmp/m 2>/dev/null)"
+            if [ "$ai" = "generating" ] || [ "$ai" = "queued" ]; then
+              echo "-- WATCHING stuck meeting for recovery (up to ~5 min) --"
+              for i in $(seq 1 20); do
+                sleep 15
+                st="$(curl -sS -m 30 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}" | jq -r '.aiPackStatus // "?"' 2>/dev/null || echo '?')"
+                echo "  watch ${i}: aiPackStatus=${st}"
+                case "$st" in ready|failed) break;; esac
+              done
+              echo "  final job:"; curl -sS -m 30 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/job" | jq '{status,attempt,errorCode,errorMessage}' 2>/dev/null || true
+            fi
           done
