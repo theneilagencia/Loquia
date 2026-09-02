@@ -94,10 +94,14 @@ export default function ProcessingPage({
           <div className="mt-6 space-y-3 rounded-xl bg-danger-soft p-4">
             <div className="flex items-center gap-2 text-danger">
               <AlertCircle className="size-4" />
-              <p className="font-medium">{t('failedTitle')}</p>
+              <p className="font-medium">
+                {job?.errorCode === 'no_speech' ? t('noSpeechTitle') : t('failedTitle')}
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground">{t('failedBody')}</p>
-            {job?.errorMessage && (
+            <p className="text-sm text-muted-foreground">
+              {job?.errorCode === 'no_speech' ? t('noSpeechBody') : t('failedBody')}
+            </p>
+            {job?.errorCode !== 'no_speech' && job?.errorMessage && (
               <p className="font-mono text-xs text-muted-foreground">{job.errorMessage}</p>
             )}
             <Button size="sm" onClick={() => void retry()}>

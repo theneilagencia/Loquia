@@ -269,6 +269,8 @@
     },
     "failedTitle": "Processing failed",
     "failedBody": "What we captured is preserved. You can retry processing.",
+    "noSpeechTitle": "No speech detected in this recording",
+    "noSpeechBody": "The recording arrived with no audible audio — the mic may be muted, disabled, or capturing the wrong source. Check the microphone and record again.",
     "retry": "Retry processing",
     "open": "Open meeting"
   },

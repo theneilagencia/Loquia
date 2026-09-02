@@ -12,6 +12,8 @@ export interface MockCallbackPayload {
   language: string;
   /** When true, parseCallback returns a failure (to test the failed-callback path). */
   fail?: boolean;
+  /** When true, parseCallback succeeds but with NO words (silent-recording path). */
+  empty?: boolean;
 }
 
 let mockCounter = 0;
@@ -32,8 +34,8 @@ export class MockTranscriptionAdapter implements TranscriptionProvider {
   }
 
   /** A deterministic callback body the webhook can be driven with in tests/dev. */
-  static sampleCallbackPayload(requestId: string, opts?: { language?: string; fail?: boolean }): MockCallbackPayload {
-    return { request_id: requestId, language: opts?.language ?? 'pt-BR', fail: opts?.fail };
+  static sampleCallbackPayload(requestId: string, opts?: { language?: string; fail?: boolean; empty?: boolean }): MockCallbackPayload {
+    return { request_id: requestId, language: opts?.language ?? 'pt-BR', fail: opts?.fail, empty: opts?.empty };
   }
 
   callbackRequestId(payload: unknown): string | undefined {
@@ -44,6 +46,10 @@ export class MockTranscriptionAdapter implements TranscriptionProvider {
     const p = payload as MockCallbackPayload | null;
     if (!p || typeof p.request_id !== 'string') return { ok: false, category: 'provider_rejected', message: 'Invalid mock callback' };
     if (p.fail) return { ok: false, category: 'unsupported_media', message: 'Mock provider rejected the media' };
+    // A successful transcription that found no speech at all (silent recording).
+    if (p.empty) {
+      return { ok: true, result: { words: [], detectedLanguage: 'pt-BR', provider: 'mock', providerRequestId: p.request_id, model: 'mock-1', durationMs: 60_000 } };
+    }
 
     const pt = (p.language ?? 'pt-BR').toLowerCase().startsWith('pt');
     const turns: { speaker: number; text: string }[] = pt

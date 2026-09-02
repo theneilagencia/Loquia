@@ -27,8 +27,8 @@ async function submit(cookie: string, query = 'title=Sales%20call&meetingLanguag
 }
 
 /** Post a provider callback for a job's providerRequestId. */
-async function postCallback(providerRequestId: string, opts?: { token?: string; fail?: boolean; language?: string }) {
-  const payload = MockTranscriptionAdapter.sampleCallbackPayload(providerRequestId, { language: opts?.language, fail: opts?.fail });
+async function postCallback(providerRequestId: string, opts?: { token?: string; fail?: boolean; empty?: boolean; language?: string }) {
+  const payload = MockTranscriptionAdapter.sampleCallbackPayload(providerRequestId, { language: opts?.language, fail: opts?.fail, empty: opts?.empty });
   return t.app.inject({ method: 'POST', url: `/api/webhooks/deepgram?token=${encodeURIComponent(opts?.token ?? CALLBACK_TOKEN)}`, headers: { 'content-type': 'application/json' }, payload });
 }
 
@@ -128,6 +128,27 @@ describe('direct audio ingest — async submission (M5.2)', () => {
     const meeting = (await t.db.select().from(meetings).where(eq(meetings.id, meetingId)))[0]!;
     expect(meeting.status).toBe('failed');
     expect((await t.db.select().from(transcriptSegments).where(eq(transcriptSegments.meetingId, meetingId)))).toHaveLength(0);
+  });
+
+  it('a successful-but-empty transcription (silent recording) fails as no_speech and enqueues NO AI Pack', async () => {
+    const { cookie } = await ownerCookie('Silent');
+    const { meetingId, processingJobId } = (await submit(cookie)).json();
+    const reqId = (await jobRow(processingJobId)).providerRequestId!;
+
+    const res = await postCallback(reqId, { empty: true });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().status).toBe('failed');
+
+    const job = await jobRow(processingJobId);
+    expect(job.status).toBe('failed');
+    expect(job.errorCode).toBe('no_speech');
+    // The meeting must NOT read as ready — it is a clear failure the user can retry.
+    const meeting = (await t.db.select().from(meetings).where(eq(meetings.id, meetingId)))[0]!;
+    expect(meeting.status).toBe('failed');
+    expect(meeting.participantCount).toBe(0);
+    expect((await t.db.select().from(transcriptSegments).where(eq(transcriptSegments.meetingId, meetingId)))).toHaveLength(0);
+    // Crucially, no AI Pack job is created on an empty transcript.
+    expect((await t.db.select().from(processingJobs).where(and(eq(processingJobs.meetingId, meetingId), eq(processingJobs.type, 'ai_pack'))))).toHaveLength(0);
   });
 
   it('reprocess (§9) starts a NEW submission for an existing meeting; workspace-isolated', async () => {

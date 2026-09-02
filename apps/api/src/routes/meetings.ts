@@ -153,6 +153,16 @@ export async function registerMeetingRoutes(app: FastifyInstance): Promise<void>
     return rows[0] ? toProcessingJobDTO(rows[0]) : null;
   });
 
+  // Full processing-job history for a meeting (transcription + ai_pack), newest
+  // first — so a failure can be traced to the right stage (e.g. a transcription
+  // job that returned no words vs an AI Pack error).
+  app.get('/:id/jobs', async (request) => {
+    const auth = requireAuth(request.auth);
+    const meeting = await loadOwnedMeeting(app, auth, (request.params as { id: string }).id);
+    const rows = await db.select().from(processingJobs).where(eq(processingJobs.meetingId, meeting.id)).orderBy(desc(processingJobs.createdAt));
+    return rows.map(toProcessingJobDTO);
+  });
+
   app.post('/:id/job/tick', async (request) => {
     const auth = requireAuth(request.auth);
     const meeting = await loadOwnedMeeting(app, auth, (request.params as { id: string }).id);

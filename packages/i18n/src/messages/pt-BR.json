@@ -269,6 +269,8 @@
     },
     "failedTitle": "O processamento falhou",
     "failedBody": "O que capturamos está preservado. Você pode tentar processar de novo.",
+    "noSpeechTitle": "Não detectamos fala nesta gravação",
+    "noSpeechBody": "A gravação chegou sem áudio audível — o microfone pode estar mudo, desativado ou capturando a fonte errada. Confira o microfone e grave novamente.",
     "retry": "Tentar processar de novo",
     "open": "Abrir reunião"
   },

@@ -106,6 +106,19 @@ export async function applyTranscriptionCallback(
   const detectedLanguage = result.detectedLanguage ?? 'pt-BR';
   const durationMs = result.durationMs ?? (segments.length ? segments[segments.length - 1]!.endMs : 0);
 
+  // A successful callback with NO transcribable speech (silent/muted mic, wrong
+  // input device, empty or corrupt recording) must NOT masquerade as a ready
+  // meeting. Marking it 'ready' left the user with an empty "Pronta" meeting,
+  // zero participants, and a doomed AI Pack running on nothing. Surface it
+  // honestly as a reuploadable 'no_speech' failure so the UI prompts a re-record,
+  // and never enqueue an AI Pack on an empty transcript.
+  if (result.words.length === 0 || segments.length === 0) {
+    await db.update(processingJobs).set({ status: 'failed', errorCode: 'no_speech', errorMessage: 'No speech detected in the recording', stage: 'transcribing', metrics: { segmentCount: 0, wordCount: result.words.length, speakerCount: 0 }, updatedAt: new Date() }).where(and(eq(processingJobs.id, processingJobId), ne(processingJobs.status, 'completed')));
+    await db.update(meetings).set({ status: 'failed', durationSeconds: Math.round(durationMs / 1000), participantCount: 0, updatedAt: new Date() }).where(eq(meetings.id, meetingId));
+    log('stt_callback_empty', { processingJobId, meetingId, wordCount: result.words.length });
+    return { status: 'failed', category: 'needs_reupload' };
+  }
+
   const aiPackJobId = await db.transaction(async (tx) => {
     // Re-check inside the transaction for concurrent duplicate callbacks.
     const fresh = (await tx.select({ status: processingJobs.status }).from(processingJobs).where(eq(processingJobs.id, processingJobId)).limit(1))[0];
