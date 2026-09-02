@@ -161,6 +161,21 @@ describe('consolidation', () => {
     // Most cautious classification wins.
     expect(merged[0]!.facts[0]!.classification).toBe('inferred');
   });
+
+  it('caps each section to its hard limit so an over-produced meeting stays tight', () => {
+    // Model returns 30 distinct topics; the pack must keep at most the cap (8).
+    const facts = Array.from({ length: 30 }, (_, i) => ({
+      text: `Topic ${i}`,
+      classification: 'explicit' as const,
+      segmentIds: [`s${i}`],
+    }));
+    const merged = consolidateSections([[{ key: 'topics', facts }]]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]!.facts).toHaveLength(8);
+    // Order preserved: the highest-priority items the model listed first survive.
+    expect(merged[0]!.facts[0]!.text).toBe('Topic 0');
+    expect(merged[0]!.facts[7]!.text).toBe('Topic 7');
+  });
 });
 
 describe('evidence resolution + pack building', () => {

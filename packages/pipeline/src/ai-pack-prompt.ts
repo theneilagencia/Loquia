@@ -5,7 +5,7 @@ import type { AIPackGenerationInput, GenSegment } from './ai-pack';
  * scattered through the worker. Bump PROMPT_VERSION on any change; it is
  * persisted per generated version for reproduction.
  */
-export const PROMPT_VERSION = 'aipack-prompt-4';
+export const PROMPT_VERSION = 'aipack-prompt-5';
 
 function mmss(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
@@ -29,13 +29,14 @@ const SYSTEM = `You are a meticulous meeting analyst. You turn a raw, often mess
 BE FAITHFUL — accuracy first (this is what makes the pack trustworthy):
 - Every statement must be FULLY supported by the exact segments you cite in "segmentIds", and by nothing else. Never merge points from different moments, topics or speakers into one claim. Never add a detail, owner, number, cause or consequence that is not in those cited segments. One fact = one clearly-supported point.
 - When the transcript is garbled, ambiguous, jargon-heavy, or you are not sure what was meant (bad ASR, half-finished sentences, unclear references, misheard names), DO NOT guess and DO NOT smooth over the gap with a plausible-sounding invention. Mark it "uncertain" or leave it out entirely.
+- DISTRUST lone, odd proper names. A capitalized word that looks like a company, person or place but appears only ONCE, is unusual, and is not corroborated anywhere else in the transcript is very likely a speech-to-text error, not a real entity (e.g. "foge da Nelsada" is almost certainly "foge da minha alçada"). NEVER build a topic, decision, action or statement around a name you cannot corroborate: drop the point, or state it generically without the garbled word. A real entity is mentioned clearly and usually more than once.
 - Accuracy beats completeness. A short, correct pack is far better than a long, confident, wrong one. If little was actually decided, say little.
 - Classify honestly: "explicit" (directly stated), "inferred" (a careful conclusion you can defend from the cited segments), "uncertain" (ambiguous/conflicting/unclear). Never mark an inference as explicit. When in doubt, downgrade.
 
 WRITE CLEANLY (without changing the meaning):
 - Write each "text" as clean professional prose: drop filler ("aí", "né", "tipo", "então", "you know"), false starts and repetitions, and fix obvious transcription typos. But cleaning up wording must NEVER change or inflate the meaning — if cleaning it up would require guessing what they meant, keep it cautious or mark it uncertain instead.
 - Be specific only where the transcript is specific: name the real companies, people, amounts and deadlines when they are clearly stated; do not invent or "correct" a name you are unsure of.
-- Keep it tight. Prefer a few faithful, high-value items over a long shallow or speculative list.
+- Keep it tight. Prefer a few faithful, high-value items over a long shallow or speculative list. HARD LIMITS — never exceed, and usually stay well under: topics ≤ 8, importantStatements ≤ 6, explicitDecisions ≤ 8, actionItems ≤ 10, openPoints ≤ 6, risks ≤ 6, questions ≤ 6, ambiguities ≤ 5, numbersAndDates ≤ 12, purpose ≤ 3, executiveContext ≤ 4. If a meeting seems to have more, you are splitting one point into many or including noise — merge and cut down to only the items that genuinely matter.
 - Do NOT put timestamps, speaker names or raw quotes inside "text" — the app attaches the original excerpt and timestamp from the cited segments.
 
 Section guidance:

@@ -1,5 +1,5 @@
 import type { FactClassification, GeneratedFact, GeneratedSection } from './ai-pack';
-import { LLM_SECTION_KEYS } from './ai-pack-schema';
+import { LLM_SECTION_KEYS, MAX_LINES_PER_SECTION, type LlmSectionKey } from './ai-pack-schema';
 
 /**
  * Consolidate per-chunk section results into one set (Milestone 4 §35).
@@ -60,6 +60,11 @@ export function consolidateSections(partials: GeneratedSection[][]): GeneratedSe
     if (key === 'summary' && out.length > 1) {
       out = [out.reduce((a, b) => (b.text.length > a.text.length ? b : a))];
     }
+    // Hard cap: keep a tight briefing even when the model over-produces. Order is
+    // preserved (the model lists the most important first), so the trim drops the
+    // long tail, not the headline items.
+    const cap = MAX_LINES_PER_SECTION[key as LlmSectionKey];
+    if (cap != null && out.length > cap) out = out.slice(0, cap);
     result.push({ key, facts: out });
   }
   return result;

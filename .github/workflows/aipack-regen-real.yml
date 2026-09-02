@@ -1,0 +1,119 @@
+name: Regenerate real meeting
+
+# After the current commit is LIVE on loquia-api, regenerate the account owner's
+# REAL meeting (the one whose title contains "oren") with the new prompt, then
+# report the result: section sizes (bloat check), whether the garbled ASR token
+# still surfaces, and the executive summary. The old pack version stays until the
+# new one lands, so this is non-destructive. Opt-in: [regenreal]. Prints only the
+# owner's own summary text (minimal exposure), never secrets.
+
+on:
+  workflow_dispatch:
+    inputs:
+      match:
+        description: Substring of the meeting title to regenerate
+        default: oren
+  push:
+    branches: [claude/loquia-milestone-1-frontend-rnoc96]
+
+concurrency:
+  group: aipack-regen-real
+  cancel-in-progress: false
+
+jobs:
+  regen:
+    name: Wait for deploy + regenerate + report
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[regenreal]') }}
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      API_HOST: https://api.loquia.com.br
+      WWW: https://www.loquia.com.br
+      EMAIL: vinicius@apymine.com
+      PW: ${{ secrets.ADMIN_PASSWORD }}
+      MATCH: ${{ github.event.inputs.match || 'oren' }}
+    steps:
+      - name: Wait for THIS COMMIT to be live on loquia-api
+        run: |
+          set -uo pipefail
+          RENDER_API_KEY="$(printf '%s' "$RENDER_API_KEY" | tr -d '[:space:]')"
+          API="https://api.render.com/v1"
+          auth=(-H "Authorization: Bearer ${RENDER_API_KEY}" -H "Accept: application/json")
+          svc="$(curl -fsS -m 30 "${auth[@]}" "${API}/services?limit=100" || echo '[]')"
+          api_id="$(jq -r '.[].service|select(.name=="loquia-api")|.id' <<<"$svc" | head -n1)"
+          SHA="${GITHUB_SHA}"
+          echo "  waiting for deploy of commit ${SHA} on ${api_id}"
+          live=0
+          for i in $(seq 1 80); do
+            d="$(curl -fsS -m 30 "${auth[@]}" "${API}/services/${api_id}/deploys?limit=20" || echo '[]')"
+            st="$(jq -r --arg s "$SHA" '.[] | select(.deploy.commit.id==$s) | .deploy.status' <<<"$d" | head -n1)"
+            if [ -z "$st" ] || [ "$st" = "null" ]; then echo "  our deploy not created yet (poll ${i})"; sleep 15; continue; fi
+            echo "  our commit deploy: ${st} (poll ${i})"
+            case "$st" in
+              live) live=1; break;;
+              build_failed|update_failed|canceled|deactivated|pre_deploy_failed) echo "::error::deploy ${st} for ${SHA}"; exit 1;;
+            esac
+            sleep 15
+          done
+          [ "$live" = "1" ] || { echo "::error::commit ${SHA} never went live"; exit 1; }
+          sleep 20
+          for k in 1 2 3 4 5; do c="$(curl -sS -o /dev/null -m 30 -w '%{http_code}' "${API_HOST}/health" || echo 000)"; echo "  health -> $c"; [ "$c" = "200" ] && break; sleep 5; done
+          sleep 10
+
+      - name: Regenerate the real meeting and report
+        run: |
+          set -uo pipefail
+          PW="${PW:-password123}"
+          MT="$(printf '%s' "$MATCH" | tr '[:upper:]' '[:lower:]')"
+          jar="$(mktemp)"
+          lc="$(curl -sS -m 60 -c "$jar" -o /dev/null -w '%{http_code}' -X POST "${API_HOST}/api/auth/login" \
+            -H 'content-type: application/json' -H "Origin: ${WWW}" \
+            -d "{\"email\":\"${EMAIL}\",\"password\":\"${PW}\"}" || echo 000)"
+          echo "login=${lc}"; [ "$lc" = "200" ] || { echo "::error::login failed"; exit 1; }
+
+          curl -sS -m 60 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings?includeArchived=true" -o /tmp/list || true
+          MID="$(jq -r --arg m "$MT" '.[] | select((.title//""|ascii_downcase)|contains($m)) | .id' /tmp/list 2>/dev/null | head -n1)"
+          [ -n "$MID" ] || { echo "::error::no meeting matching '${MT}'"; exit 1; }
+          echo "  regenerating meeting ${MID} ($(jq -r --arg id "$MID" '.[]|select(.id==$id)|.title' /tmp/list))"
+
+          rc="$(curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" -o /tmp/r -w '%{http_code}' -X POST "${API_HOST}/api/meetings/${MID}/ai-pack/regenerate" || echo 000)"
+          echo "  regenerate http=${rc}  $(head -c 200 /tmp/r)"
+          if [ "$rc" != "200" ] && [ "$rc" != "201" ]; then
+            echo "::warning::regenerate rejected (likely hourly limit); reporting the CURRENT pack instead"
+          fi
+
+          echo "== Poll aiPackStatus (up to ~8 min) =="
+          started=$(date +%s); final=""
+          for i in $(seq 1 32); do
+            st="$(curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}" | jq -r '.aiPackStatus // "?"' 2>/dev/null || echo '?')"
+            echo "  poll ${i} (+$(( $(date +%s) - started ))s): aiPackStatus=${st}"
+            case "$st" in ready|failed) final="$st"; break;; esac
+            sleep 15
+          done
+
+          echo "== Latest job =="
+          curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/job" -o /tmp/job || true
+          jq '{status,errorCode,errorMessage,provider,model}' /tmp/job 2>/dev/null || head -c 300 /tmp/job
+
+          echo "== New pack version =="
+          curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/ai-pack/status" -o /tmp/s || true
+          jq '{version,generatedAt}' /tmp/s 2>/dev/null || head -c 200 /tmp/s
+
+          echo "== Section sizes (bloat check — should be tight now) =="
+          curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/aipack" -o /tmp/p || true
+          jq -r '(.source.sections // []) | if length==0 then "  <no pack>" else (map("[\(.key)]\((.lines//[])|length)")|join(" ")) end' /tmp/p 2>/dev/null || echo "  (no pack)"
+
+          echo "== Garbled ASR token still surfaced? (should be 0) =="
+          for TK in nelsad; do
+            n="$(jq --arg tk "$TK" '[(.source.sections//[])[]|.lines[]?|select((.text//""|ascii_downcase)|contains($tk))]|length' /tmp/p 2>/dev/null || echo '?')"
+            echo "  pack lines containing '${TK}': ${n}"
+          done
+
+          echo "== Executive summary (the intelligence) =="
+          jq -r '[(.source.sections//[])[] | select(.key=="summary") | (.lines//[])[] | .text] | map("   "+.)|join("\n")' /tmp/p 2>/dev/null || true
+
+          case "$final" in
+            ready) echo "RESULT: real meeting regenerated OK." ;;
+            failed) echo "::error::RESULT: regeneration FAILED — see job error above." ;;
+            *) echo "::warning::RESULT: still generating after ~8 min." ;;
+          esac

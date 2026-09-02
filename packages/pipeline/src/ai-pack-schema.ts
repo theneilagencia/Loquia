@@ -31,6 +31,29 @@ export const LLM_SECTION_KEYS = [
 
 export type LlmSectionKey = (typeof LLM_SECTION_KEYS)[number];
 
+/**
+ * Hard upper bound on how many lines a section may keep after consolidation.
+ * A backstop against over-synthesis: even when the model over-produces (e.g. a
+ * long, rambling meeting yielding 69 "topics"), the pack stays a tight briefing
+ * instead of an exhausting dump. The model is also told these limits in the
+ * prompt; this enforces them regardless. Order is preserved, so the highest-value
+ * items the model listed first survive the trim.
+ */
+export const MAX_LINES_PER_SECTION: Record<LlmSectionKey, number> = {
+  summary: 1,
+  purpose: 3,
+  executiveContext: 4,
+  topics: 8,
+  importantStatements: 6,
+  explicitDecisions: 8,
+  actionItems: 10,
+  openPoints: 6,
+  risks: 6,
+  questions: 6,
+  numbersAndDates: 12,
+  ambiguities: 5,
+};
+
 export const factClassificationSchema = z.enum(['explicit', 'inferred', 'uncertain']);
 
 export const candidateFactSchema = z.object({
