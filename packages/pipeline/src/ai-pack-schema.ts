@@ -5,7 +5,7 @@ import type { PackSectionKey } from '@loquia/domain';
  * Canonical AI Pack schema (Milestone 4). Bump this when the shape below
  * changes; it is persisted per version for reproduction/regeneration.
  */
-export const SCHEMA_VERSION = 'aipack-2';
+export const SCHEMA_VERSION = 'aipack-3';
 
 /**
  * The content sections the model extracts. `metadata`/`participants` are derived
@@ -15,6 +15,7 @@ export const SCHEMA_VERSION = 'aipack-2';
  * invent a section outside this set.
  */
 export const LLM_SECTION_KEYS = [
+  'summary',
   'purpose',
   'executiveContext',
   'topics',

@@ -111,10 +111,12 @@ export function buildPackSource(
       } else {
         line.en = fact.text;
       }
-      // Ground the synthesized statement with the original transcript excerpt it
-      // came from (the on-screen quote + timestamp shown next to each item).
+      // Ground the synthesized statement with the primary transcript excerpt it
+      // came from (the on-screen quote + timestamp shown next to each item). Use
+      // the first cited segment only — a tight, relevant quote, not a wall of
+      // concatenated (often ASR-noisy) text.
       if (!VERBATIM_SECTIONS.has(section.key) && resolved.length) {
-        line.quote = resolved.map((s) => s.text).join(' ');
+        line.quote = resolved[0]!.text;
       }
       lines.push(line);
       classifications.push(fact.classification);

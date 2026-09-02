@@ -233,7 +233,7 @@ describe('factory', () => {
 
   it('exposes exactly the canonical LLM section keys', () => {
     expect([...LLM_SECTION_KEYS]).toEqual([
-      'purpose', 'executiveContext', 'topics', 'importantStatements',
+      'summary', 'purpose', 'executiveContext', 'topics', 'importantStatements',
       'explicitDecisions', 'actionItems', 'openPoints', 'risks', 'questions', 'numbersAndDates', 'ambiguities',
     ]);
   });

@@ -125,6 +125,8 @@ jobs:
           curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/aipack" -o /tmp/pack || true
           # Section -> line counts (persisted content lives in `.lines`).
           jq -r '(.source.sections // []) | if length==0 then "  <no sections>" else (map("  [\(.key)] lines=\((.lines//[])|length)")|join("\n")) end' /tmp/pack 2>/dev/null || { echo "  raw:"; head -c 800 /tmp/pack; }
+          echo "  -- EXECUTIVE SUMMARY (the intelligence) --"
+          jq -r '[(.source.sections//[])[] | select(.key=="summary") | (.lines//[])[] | (.text // .pt // .en)] | map("     "+.)|join("\n")' /tmp/pack 2>/dev/null || true
           echo "  -- sample actions / risks / decisions (LP sections) --"
           jq -r '[(.source.sections//[])[] | select(.key=="actionItems") | (.lines//[])[] | (.text // .pt // .en)] | .[0:3] | map("     action: "+.)|join("\n")' /tmp/pack 2>/dev/null || true
           jq -r '[(.source.sections//[])[] | select(.key=="risks") | (.lines//[])[] | (.text // .pt // .en)] | .[0:3] | map("     risk: "+.)|join("\n")' /tmp/pack 2>/dev/null || true

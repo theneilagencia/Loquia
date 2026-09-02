@@ -15,6 +15,7 @@ export type PackSectionKey =
   | 'instructions'
   | 'metadata'
   | 'participants'
+  | 'summary'
   | 'purpose'
   | 'executiveContext'
   | 'topics'
@@ -34,6 +35,7 @@ export const PACK_SECTION_KEYS: readonly PackSectionKey[] = [
   'instructions',
   'metadata',
   'participants',
+  'summary',
   'purpose',
   'executiveContext',
   'topics',
@@ -54,6 +56,7 @@ export const PACK_SECTION_TITLE: Record<PackSectionKey, string> = {
   instructions: 'Instructions for the AI',
   metadata: 'Meeting',
   participants: 'Participants',
+  summary: 'Executive summary',
   purpose: 'Meeting purpose',
   executiveContext: 'Executive context',
   topics: 'Topics',
@@ -77,6 +80,7 @@ export const PACK_SECTION_REQUIRED: Record<PackSectionKey, boolean> = {
   instructions: false,
   metadata: true,
   participants: true,
+  summary: true,
   // purpose/topics are normally present but omitted when empty (no phrase).
   purpose: false,
   executiveContext: false,
@@ -98,6 +102,7 @@ export const PACK_SECTION_EMPTY_PHRASE: Partial<
   Record<PackSectionKey, { 'pt-BR': string; 'en-US': string }>
 > = {
   participants: { 'pt-BR': 'Participantes não identificados.', 'en-US': 'Participants not identified.' },
+  summary: { 'pt-BR': 'Resumo indisponível.', 'en-US': 'Summary unavailable.' },
   explicitDecisions: { 'pt-BR': 'Nenhuma decisão explícita.', 'en-US': 'No explicit decisions.' },
   actionItems: { 'pt-BR': 'Nenhuma ação definida.', 'en-US': 'No action items.' },
   openPoints: { 'pt-BR': 'Nenhum ponto aberto.', 'en-US': 'No open points.' },
