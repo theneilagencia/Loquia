@@ -53,7 +53,14 @@ export function consolidateSections(partials: GeneratedSection[][]): GeneratedSe
         order.push(norm);
       }
     }
-    result.push({ key, facts: order.map((n) => merged.get(n)!) });
+    let out = order.map((n) => merged.get(n)!);
+    // The executive summary must be a SINGLE paragraph. When a meeting is split
+    // into chunks each returns its own summary; keep only the most complete one
+    // (longest) so the reader gets one tight briefing, not N overlapping ones.
+    if (key === 'summary' && out.length > 1) {
+      out = [out.reduce((a, b) => (b.text.length > a.text.length ? b : a))];
+    }
+    result.push({ key, facts: out });
   }
   return result;
 }
