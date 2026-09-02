@@ -469,7 +469,10 @@
     "genericBody": "A ação não foi concluída. Nada foi perdido. Tente de novo.",
     "whatHappened": "O que aconteceu",
     "whatPreserved": "O que foi preservado",
-    "nextAction": "Próximo passo"
+    "nextAction": "Próximo passo",
+    "regenLimit": "Você regenerou o AI Pack muitas vezes nesta hora. Aguarde um pouco e tente de novo.",
+    "transcriptNotReady": "A transcrição ainda não está pronta.",
+    "genericError": "Não foi possível gerar o AI Pack agora. Tente novamente."
   },
   "validation": {
     "name_min": "Informe seu nome completo.",

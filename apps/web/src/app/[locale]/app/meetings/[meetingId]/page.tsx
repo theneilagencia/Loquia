@@ -64,17 +64,35 @@ export default function MeetingDetailPage({
   }, [aiPackStatus]);
 
   const [busy, setBusy] = useState(false);
+  const [aiPackError, setAiPackError] = useState<string | null>(null);
+  // Surface a failed generate/regenerate (e.g. the hourly regeneration limit)
+  // and ALWAYS clear busy — otherwise the button stays stuck on "generating".
+  function messageFor(code: string): string {
+    if (code === 'ai_pack_regenerations') return errors('regenLimit');
+    if (code === 'transcript_not_ready') return errors('transcriptNotReady');
+    return errors('genericError');
+  }
   async function regenerate() {
+    setAiPackError(null);
     setBusy(true);
-    await services.meetings.regenerateAIPack(meetingId);
-    setBusy(false);
-    void aiPackStatusQ.refetch();
+    try {
+      const res = await services.meetings.regenerateAIPack(meetingId);
+      if (!res.ok) setAiPackError(messageFor(res.error.code));
+    } finally {
+      setBusy(false);
+      void aiPackStatusQ.refetch();
+    }
   }
   async function generate() {
+    setAiPackError(null);
     setBusy(true);
-    await services.meetings.generateAIPack(meetingId);
-    setBusy(false);
-    void aiPackStatusQ.refetch();
+    try {
+      const res = await services.meetings.generateAIPack(meetingId);
+      if (!res.ok) setAiPackError(messageFor(res.error.code));
+    } finally {
+      setBusy(false);
+      void aiPackStatusQ.refetch();
+    }
   }
 
   const meeting = meetingQ.data;
@@ -176,14 +194,22 @@ export default function MeetingDetailPage({
             if (aiPackQ.data) {
               return (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-end gap-3">
+                  <div className="flex flex-wrap items-center justify-end gap-3">
                     {generating && (
-                      <span className="text-xs text-muted-foreground">{aiPackT('regenerating')}</span>
+                      <span className="inline-flex items-center gap-2 rounded-full border border-iris-line bg-iris-tint/50 px-3 py-1.5 text-xs font-medium text-iris">
+                        <RefreshCw className="size-3.5 animate-spin" />
+                        {aiPackT('regenerating')}
+                      </span>
                     )}
                     <Button variant="outline" size="sm" disabled={generating} onClick={() => void regenerate()}>
                       <RefreshCw className="size-3.5" /> {aiPackT('regenerate')}
                     </Button>
                   </div>
+                  {aiPackError && (
+                    <p role="alert" className="rounded-lg bg-danger-soft px-3.5 py-2.5 text-sm text-danger">
+                      {aiPackError}
+                    </p>
+                  )}
                   <AIPackView pack={aiPackQ.data} onSeek={setSeekTo} />
                 </div>
               );
@@ -206,6 +232,7 @@ export default function MeetingDetailPage({
               return (
                 <div className="space-y-3 py-8 text-center">
                   <p className="text-sm text-muted-foreground">{aiPackT('notProcessed')}</p>
+                  {aiPackError && <p role="alert" className="text-sm text-danger">{aiPackError}</p>}
                   <Button size="sm" onClick={() => void generate()}>
                     <Sparkles className="size-3.5" /> {aiPackT('generate')}
                   </Button>
