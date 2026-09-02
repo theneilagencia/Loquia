@@ -496,6 +496,9 @@
     "errorQuota": "There isn't enough space to store this recording on your device.",
     "errorUploadIntent": "We couldn't start processing. Your recording is still with you.",
     "errorProcessingUpload": "We couldn't send the recording for processing. The audio is still saved on this device.",
-    "retryProcessing": "Try processing again"
+    "retryProcessing": "Try processing again",
+    "errorSilent": "We didn't capture any audible audio in this recording — the mic may be muted, disabled, or capturing the wrong source. Check the microphone and record again.",
+    "recordAgain": "Record again",
+    "sendAnyway": "Send anyway"
   }
 }

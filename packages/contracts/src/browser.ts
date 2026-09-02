@@ -50,6 +50,18 @@ export interface RecorderResult {
   blob?: Blob;
   /** MIME type of `blob` (e.g. "audio/webm"); coherent with the real container. */
   mimeType?: string;
+  /**
+   * True when a REAL microphone stream was captured through MediaRecorder (not the
+   * headless/no-mic fallback blob). Only when this is true is `peakLevel` a
+   * meaningful measure of what the mic actually picked up.
+   */
+  capturedReal?: boolean;
+  /**
+   * Peak real input level in [0,1] measured from the live stream (Web Audio RMS).
+   * Near-zero over a real capture means the mic delivered no audible audio (muted,
+   * disabled, or the wrong input device) — the recording would transcribe to nothing.
+   */
+  peakLevel?: number;
 }
 
 export interface MediaRecorderAdapter {

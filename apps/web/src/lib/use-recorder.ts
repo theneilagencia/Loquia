@@ -93,6 +93,9 @@ export function useRecorder() {
     [services, router],
   );
 
+  /** Peak real level below this (over an entire real capture) = a silent mic. */
+  const SILENCE_PEAK = 0.01;
+
   const finish = useCallback(async () => {
     // Finalize the recording — a REAL captured Blob (or deterministic fallback).
     const result = await getAdapter().stop();
@@ -101,7 +104,27 @@ export function useRecorder() {
     const mimeType = result.mimeType ?? blob.type ?? 'audio/webm';
     const filename = `recording.${extensionForMime(mimeType)}`;
     const durationSeconds = result.durationSeconds || Math.round(state.elapsedSeconds ?? 0);
+
+    // A real capture whose measured input level never rose above silence means the
+    // mic delivered no audible audio (muted, disabled, or the wrong device). Sending
+    // it would produce an empty transcript and a wasted meeting, so we stop here and
+    // let the user re-record — or send anyway if they know it's just very quiet. This
+    // NEVER blocks the headless/no-mic fallback (capturedReal=false there).
+    if (result.capturedReal && result.peakLevel != null && result.peakLevel < SILENCE_PEAK) {
+      useRecorderStore.getState().setPendingBlob({ blob, mimeType, filename, durationSeconds, meetingLanguage: state.meetingLanguage });
+      useRecorderStore.getState().setError('silent_recording');
+      return null;
+    }
+
     return sendForProcessing(blob, mimeType, filename, durationSeconds, state.meetingLanguage, state.title || 'Nova gravação');
+  }, [sendForProcessing]);
+
+  /** Send the retained recording despite a silent-mic warning ("send anyway"). */
+  const sendAnyway = useCallback(async () => {
+    const pending = useRecorderStore.getState().pendingBlob;
+    if (!pending) return null;
+    useRecorderStore.getState().setError(null);
+    return sendForProcessing(pending.blob, pending.mimeType, pending.filename, pending.durationSeconds, pending.meetingLanguage, useRecorderStore.getState().title || 'Nova gravação');
   }, [sendForProcessing]);
 
   /** Retry after a failed first attempt, reusing the retained recording (§13/§14). */
@@ -111,5 +134,5 @@ export function useRecorder() {
     return sendForProcessing(pending.blob, pending.mimeType, pending.filename, pending.durationSeconds, pending.meetingLanguage, useRecorderStore.getState().title || 'Nova gravação');
   }, [sendForProcessing]);
 
-  return { ...store, requestPermission, start, pause, resume, addMarker, finish, retryProcessing };
+  return { ...store, requestPermission, start, pause, resume, addMarker, finish, retryProcessing, sendAnyway };
 }

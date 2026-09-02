@@ -496,6 +496,9 @@
     "errorQuota": "Não há espaço suficiente para guardar esta gravação no dispositivo.",
     "errorUploadIntent": "Não foi possível iniciar o processamento. A gravação continua com você.",
     "errorProcessingUpload": "Não foi possível enviar a gravação para processamento. O áudio continua salvo neste dispositivo.",
-    "retryProcessing": "Tentar processar novamente"
+    "retryProcessing": "Tentar processar novamente",
+    "errorSilent": "Não captamos áudio audível nesta gravação — o microfone pode estar mudo, desativado ou capturando a fonte errada. Confira o microfone e grave novamente.",
+    "recordAgain": "Gravar novamente",
+    "sendAnyway": "Enviar mesmo assim"
   }
 }

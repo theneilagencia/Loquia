@@ -19,7 +19,7 @@ interface RecorderState {
   title: string;
   meetingLanguage: string;
   /** Set when finishing/uploading fails, so the recording isn't silently lost (§13/§14). */
-  error: 'local_quota_exceeded' | 'processing_upload_failed' | null;
+  error: 'local_quota_exceeded' | 'processing_upload_failed' | 'silent_recording' | null;
   /** The finished recording, retained in hand so a failed first attempt can retry (§14). */
   pendingBlob: { blob: Blob; mimeType: string; filename: string; durationSeconds: number; meetingLanguage: string } | null;
   setPermission: (p: RecorderPermissionState) => void;

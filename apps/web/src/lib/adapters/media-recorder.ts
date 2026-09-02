@@ -25,6 +25,64 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
   let chunks: Blob[] = [];
   const peaks: number[] = [];
 
+  // Real input-level metering (Web Audio). Lets us show the ACTUAL mic level and,
+  // crucially, tell whether the mic delivered any audible audio at all — a silent
+  // capture transcribes to nothing. Degrades to the synthesized signal if Web
+  // Audio is unavailable or fails (headless/tests/older browsers).
+  type AudioCtxCtor = new () => AudioContext;
+  let audioCtx: AudioContext | null = null;
+  let analyser: AnalyserNode | null = null;
+  let levelBuf: Uint8Array | null = null;
+  let realMeter = false;
+  let realPeak = 0;
+
+  function setupMeter(src: MediaStream): void {
+    try {
+      const Ctor = (window as unknown as { AudioContext?: AudioCtxCtor; webkitAudioContext?: AudioCtxCtor });
+      const AC = Ctor.AudioContext ?? Ctor.webkitAudioContext;
+      if (!AC) return;
+      audioCtx = new AC();
+      const node = audioCtx.createMediaStreamSource(src);
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 512;
+      levelBuf = new Uint8Array(analyser.fftSize);
+      node.connect(analyser);
+      realMeter = true;
+    } catch {
+      audioCtx = null;
+      analyser = null;
+      realMeter = false;
+    }
+  }
+
+  /** Current real RMS level in [0,1], or null when metering is unavailable. */
+  function realLevel(): number | null {
+    if (!analyser || !levelBuf) return null;
+    try {
+      analyser.getByteTimeDomainData(levelBuf);
+      let sum = 0;
+      for (let i = 0; i < levelBuf.length; i += 1) {
+        const v = (levelBuf[i]! - 128) / 128; // center at 0, range [-1,1]
+        sum += v * v;
+      }
+      return Math.min(1, Math.sqrt(sum / levelBuf.length));
+    } catch {
+      return null;
+    }
+  }
+
+  function teardownMeter(): void {
+    try {
+      void audioCtx?.close();
+    } catch {
+      /* ignore */
+    }
+    audioCtx = null;
+    analyser = null;
+    levelBuf = null;
+    realMeter = false;
+  }
+
   // Screen Wake Lock — on mobile the OS screensaver/auto-lock suspends the page
   // and kills the mic capture, so a recording silently stops when the screen
   // sleeps. Holding a 'screen' wake lock while recording keeps the display awake.
@@ -131,6 +189,7 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
       elapsedMs = 0;
       peaks.length = 0;
       chunks = [];
+      realPeak = 0;
 
       // Real capture when a live stream + MediaRecorder exist.
       if (stream && typeof window !== 'undefined' && typeof window.MediaRecorder !== 'undefined') {
@@ -143,6 +202,7 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
         } catch {
           recorder = null; // fall back to synth-only below
         }
+        setupMeter(stream); // measure the ACTUAL input level alongside capture
       }
 
       // Keep the screen awake so the mobile screensaver can't suspend capture,
@@ -159,7 +219,13 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
       timer = setInterval(() => {
         if (!running) return;
         elapsedMs += step;
-        const amplitude = synthAmplitude(elapsedMs);
+        // Prefer the REAL measured level; keep a floor so the waveform still reads
+        // as "live" for very quiet speech. Fall back to the synthesized signal only
+        // when metering is unavailable.
+        const measured = realLevel();
+        if (measured != null) realPeak = Math.max(realPeak, measured);
+        const amplitude =
+          measured != null ? Math.min(1, Math.max(0.06, measured * 3)) : synthAmplitude(elapsedMs);
         if (elapsedMs % 500 === 0) peaks.push(Number(amplitude.toFixed(3)));
         onTick({ elapsedSeconds: Math.floor(elapsedMs / 1000), amplitude });
       }, step);
@@ -188,6 +254,9 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
     async stop(): Promise<RecorderResult> {
       running = false;
       releaseWakeLock();
+      const meteredReal = realMeter;
+      const measuredPeak = realPeak;
+      teardownMeter();
       if (onVisibility && typeof document !== 'undefined') {
         document.removeEventListener('visibilitychange', onVisibility);
         onVisibility = null;
@@ -221,7 +290,12 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
         stream = null;
       }
 
-      // No real capture (or empty) → deterministic fallback blob so the flow works.
+      // A REAL capture happened when a MediaRecorder produced non-empty audio.
+      const capturedReal = !!blob && blob.size > 0;
+
+      // No real capture (or empty) → deterministic fallback blob so the flow works
+      // on machines without a mic (headless/tests). This is silence, so it must NOT
+      // be reported as a real capture.
       if (!blob || blob.size === 0) {
         const fb = fallbackBlob(durationSeconds);
         blob = fb.blob;
@@ -234,6 +308,9 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
         waveformPeaks,
         blob,
         mimeType,
+        // Only trustworthy when we actually captured a real stream AND metered it.
+        capturedReal,
+        peakLevel: capturedReal && meteredReal ? measuredPeak : undefined,
       };
     },
   };
