@@ -1,15 +1,19 @@
 name: Diagnose AI Pack state
 
-# Read-only production diagnosis of the account owner's REAL meetings: source,
-# status, aiPackStatus, the transcript's speaker distribution + segment count,
-# the CURRENT pack's section/line content, and how many ai_pack jobs exist in the
-# last hour (regeneration-limit proximity). Reveals whether a meeting's pack is
-# empty vs coherent, and whether its transcript lost speaker attribution (old
-# single-speaker ingest) — which regeneration alone cannot fix. Never prints
-# secrets. Opt-in: [aipack].
+# Read-only production diagnosis. Traces a suspicious token (e.g. an ASR-garbled
+# name the owner says never existed) to its ORIGIN: does it appear literally in
+# the transcript segments (Deepgram mis-transcription the model then faithfully
+# repeats) or only in the generated pack (model hallucination)? Also reports the
+# current pack's generatedAt so we know whether the owner is looking at an old
+# prompt-3 pack or a regenerated prompt-4 one. Prints only the matching segments
+# (minimal exposure of private content), never secrets. Opt-in: [aipack].
 
 on:
   workflow_dispatch:
+    inputs:
+      token:
+        description: Token stem to trace (case-insensitive)
+        default: nelsad
   push:
     branches: [claude/loquia-milestone-1-frontend-rnoc96]
 
@@ -19,7 +23,7 @@ concurrency:
 
 jobs:
   diag:
-    name: Inspect real meetings
+    name: Trace token origin
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[aipack]') }}
     env:
@@ -27,6 +31,7 @@ jobs:
       WWW: https://www.loquia.com.br
       EMAIL: vinicius@apymine.com
       PW: ${{ secrets.ADMIN_PASSWORD }}
+      TOKEN: ${{ github.event.inputs.token || 'nelsad' }}
     steps:
       - name: Wait for a healthy API
         run: |
@@ -36,10 +41,12 @@ jobs:
             echo "  health -> $c (try $k)"; [ "$c" = "200" ] && break; sleep 10
           done
 
-      - name: Inspect meetings, transcripts and packs
+      - name: Trace token across transcript and pack
         run: |
           set -uo pipefail
           PW="${PW:-password123}"
+          TK="$(printf '%s' "$TOKEN" | tr '[:upper:]' '[:lower:]')"
+          echo "tracing token stem: '${TK}'"
           jar="$(mktemp)"
           lc="$(curl -sS -m 60 -c "$jar" -o /dev/null -w '%{http_code}' -X POST "${API_HOST}/api/auth/login" \
             -H 'content-type: application/json' -H "Origin: ${WWW}" \
@@ -48,37 +55,29 @@ jobs:
 
           curl -sS -m 60 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings?includeArchived=true" -o /tmp/list || true
           echo "== meetings: $(jq 'length' /tmp/list 2>/dev/null) =="
-          jq -r '.[] | "\(.id)\t\(.source)\t\(.status)\tai=\(.aiPackStatus)\tp=\(.participantCount)\t\(.title)"' /tmp/list 2>/dev/null || head -c 400 /tmp/list
+          jq -r '.[] | "\(.id)\t\(.source)\tai=\(.aiPackStatus)\t\(.title)"' /tmp/list 2>/dev/null || head -c 400 /tmp/list
 
           for MID in $(jq -r '.[].id' /tmp/list 2>/dev/null); do
+            TITLE="$(jq -r --arg id "$MID" '.[]|select(.id==$id)|.title' /tmp/list 2>/dev/null)"
             echo ""
-            echo "==================== meeting ${MID} ===================="
-            curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}" -o /tmp/m || true
-            jq '{title,source,status,aiPackStatus,participantCount}' /tmp/m 2>/dev/null
+            echo "==================== ${TITLE} (${MID}) ===================="
 
-            echo "-- transcript segments/speakers --"
+            echo "-- pack generatedAt / provider / model (old prompt-3 vs new prompt-4?) --"
+            curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/ai-pack/status" -o /tmp/s || true
+            jq '{status,version,provider,model,generatedAt}' /tmp/s 2>/dev/null || head -c 200 /tmp/s
+
+            echo "-- TRANSCRIPT matches for '${TK}' (origin = ASR if present here) --"
             curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/transcript" -o /tmp/t || true
-            jq -r '"  speakers=\((.speakers//[])|length)  segments=\((.segments//[])|length)"' /tmp/t 2>/dev/null || echo "  (no transcript)"
+            tcount="$(jq --arg tk "$TK" '[(.segments//[])[]|select((.text//""|ascii_downcase)|contains($tk))]|length' /tmp/t 2>/dev/null || echo '?')"
+            echo "  transcript segments containing '${TK}': ${tcount}"
+            jq -r --arg tk "$TK" '(.segments//[])[]|select((.text//""|ascii_downcase)|contains($tk))|"  [\(.startSeconds|floor)s \(.speakerLabel // .speaker // "?")] \(.text)"' /tmp/t 2>/dev/null | head -20 || true
 
-            echo "-- latest ai_pack JOB (why it is stuck) --"
-            curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/job" -o /tmp/j || true
-            jq '{type,status,stage,progress,attempt,maxAttempts,errorCode,errorMessage,provider,model,createdAt,updatedAt}' /tmp/j 2>/dev/null || { echo "  raw:"; head -c 300 /tmp/j; }
-
-            echo "-- current pack (section -> line count) --"
+            echo "-- PACK matches for '${TK}' (origin = model if here but NOT in transcript) --"
             curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/aipack" -o /tmp/p || true
-            jq -r '(.source.sections // []) | if length==0 then "  <no pack>" else (map("  [\(.key)] \((.lines//[])|length)")|join("  ")) end' /tmp/p 2>/dev/null || echo "  (no pack)"
+            pcount="$(jq --arg tk "$TK" '[(.source.sections//[])[]|.lines[]?|select((.text//""|ascii_downcase)|contains($tk))]|length' /tmp/p 2>/dev/null || echo '?')"
+            echo "  pack lines containing '${TK}': ${pcount}"
+            jq -r --arg tk "$TK" '(.source.sections//[])[]|.key as $k|.lines[]?|select((.text//""|ascii_downcase)|contains($tk))|"  [\($k)] \(.text)"' /tmp/p 2>/dev/null | head -20 || true
 
-            # If this meeting is mid-generation, watch it for ~5 min to see if the
-            # boot-time self-heal reclaims and completes it.
-            ai="$(jq -r '.aiPackStatus // "?"' /tmp/m 2>/dev/null)"
-            if [ "$ai" = "generating" ] || [ "$ai" = "queued" ]; then
-              echo "-- WATCHING stuck meeting for recovery (up to ~5 min) --"
-              for i in $(seq 1 20); do
-                sleep 15
-                st="$(curl -sS -m 30 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}" | jq -r '.aiPackStatus // "?"' 2>/dev/null || echo '?')"
-                echo "  watch ${i}: aiPackStatus=${st}"
-                case "$st" in ready|failed) break;; esac
-              done
-              echo "  final job:"; curl -sS -m 30 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/job" | jq '{status,attempt,errorCode,errorMessage}' 2>/dev/null || true
-            fi
+            echo "-- pack section sizes (bloat check) --"
+            jq -r '(.source.sections // []) | if length==0 then "  <no pack>" else (map("[\(.key)]\((.lines//[])|length)")|join(" ")) end' /tmp/p 2>/dev/null || echo "  (no pack)"
           done
