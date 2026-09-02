@@ -19,7 +19,6 @@ const PERMISSION_ERROR_KEYS: Record<string, string> = {
 const FINISH_ERROR_KEYS: Record<string, string> = {
   local_quota_exceeded: 'errorQuota',
   processing_upload_failed: 'errorProcessingUpload',
-  silent_recording: 'errorSilent',
 };
 
 export function Recorder() {
@@ -121,16 +120,6 @@ export function Recorder() {
               <Button size="sm" variant="outline" onClick={() => void recorder.retryProcessing()}>
                 {rec('retryProcessing')}
               </Button>
-            )}
-            {recorder.error === 'silent_recording' && recorder.pendingBlob && (
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" onClick={() => recorder.start(title, language)}>
-                  {rec('recordAgain')}
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => void recorder.sendAnyway()}>
-                  {rec('sendAnyway')}
-                </Button>
-              </div>
             )}
           </div>
         )}
