@@ -221,7 +221,7 @@ export interface JobRunner {
 }
 
 const DEFAULT_POLL_MS = 15_000;
-const DEFAULT_STALE_MS = 5 * 60_000; // a `running` job older than this is presumed abandoned
+const DEFAULT_STALE_MS = 90_000; // a `running` job older than this is presumed abandoned (fast recovery)
 
 export function createInProcessRunner(deps: JobDeps, opts: { pollMs?: number; staleMs?: number } = {}): JobRunner {
   const pollMs = opts.pollMs ?? DEFAULT_POLL_MS;
@@ -245,6 +245,27 @@ export function createInProcessRunner(deps: JobDeps, opts: { pollMs?: number; st
       .orderBy(asc(processingJobs.createdAt))
       .limit(1);
     return rows[0]?.id;
+  }
+
+  /**
+   * On boot, any `ai_pack` job still marked `running` is orphaned — the process
+   * that was running it is gone (a redeploy/restart) — so reset it to `queued`
+   * for immediate re-pickup instead of waiting out the stale window. This is
+   * what makes generation self-heal instantly across the frequent redeploys of
+   * this single-instance in-process runner, rather than stranding a meeting in
+   * "generating" for minutes.
+   */
+  async function reclaimOrphaned(): Promise<void> {
+    try {
+      const reset = await deps.db
+        .update(processingJobs)
+        .set({ status: 'queued', updatedAt: new Date() })
+        .where(and(eq(processingJobs.type, 'ai_pack'), eq(processingJobs.status, 'running')))
+        .returning({ id: processingJobs.id });
+      if (reset.length > 0) deps.log('ai_pack_orphans_reclaimed', { count: reset.length });
+    } catch (err) {
+      deps.log('ai_pack_reclaim_error', { error: err instanceof Error ? err.message : String(err) });
+    }
   }
 
   async function drain(): Promise<void> {
@@ -281,6 +302,7 @@ export function createInProcessRunner(deps: JobDeps, opts: { pollMs?: number; st
     },
     async start() {
       stopped = false;
+      await reclaimOrphaned(); // a fresh process owns no running job → reclaim them
       await drain(); // startup reconcile: finish anything a prior process left queued
       timer = setInterval(() => void drain(), pollMs);
       // Don't keep the event loop alive just for the poller.
