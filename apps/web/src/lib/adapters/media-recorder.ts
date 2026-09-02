@@ -18,86 +18,28 @@ import type {
 export function createMediaRecorderAdapter(): MediaRecorderAdapter {
   let permission: RecorderPermissionState = 'permission_unknown';
   let timer: ReturnType<typeof setInterval> | null = null;
+  // Elapsed time is derived from the WALL CLOCK, never from counting interval
+  // ticks: browsers throttle setInterval (background tabs, and mobile in general),
+  // so a tick-counter runs far behind real time — a 5-minute recording would show
+  // ~1 minute, and the reported duration would be wrong too. `runStartedAt` marks
+  // when the current running segment began; `accumulatedMs` holds completed
+  // (pre-pause) segments.
+  let runStartedAt = 0;
+  let accumulatedMs = 0;
   let elapsedMs = 0;
   let running = false;
+
+  function now(): number {
+    return typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
+  }
+  /** True wall-clock elapsed time across pauses, in ms. */
+  function elapsedNow(): number {
+    return accumulatedMs + (running ? now() - runStartedAt : 0);
+  }
   let stream: MediaStream | null = null;
   let recorder: MediaRecorder | null = null;
   let chunks: Blob[] = [];
   const peaks: number[] = [];
-
-  // Real input-level metering (Web Audio). Lets us show the ACTUAL mic level and,
-  // crucially, tell whether the mic delivered any audible audio at all — a silent
-  // capture transcribes to nothing. Degrades to the synthesized signal if Web
-  // Audio is unavailable or fails (headless/tests/older browsers).
-  type AudioCtxCtor = new () => AudioContext;
-  let audioCtx: AudioContext | null = null;
-  let analyser: AnalyserNode | null = null;
-  let levelBuf: Uint8Array | null = null;
-  let realMeter = false;
-  let realPeak = 0;
-  // Count of readings taken while the context was genuinely RUNNING. On iOS an
-  // AudioContext starts suspended and its readings are all-zero until resumed —
-  // trusting those would falsely flag a real recording as silent and block it.
-  // We only trust the peak (and thus the silence check) when the meter actually ran.
-  let meterSamples = 0;
-
-  function setupMeter(src: MediaStream): void {
-    try {
-      const Ctor = (window as unknown as { AudioContext?: AudioCtxCtor; webkitAudioContext?: AudioCtxCtor });
-      const AC = Ctor.AudioContext ?? Ctor.webkitAudioContext;
-      if (!AC) return;
-      audioCtx = new AC();
-      const node = audioCtx.createMediaStreamSource(src);
-      analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 512;
-      levelBuf = new Uint8Array(analyser.fftSize);
-      node.connect(analyser);
-      realMeter = true;
-      // iOS/Safari: the context is created suspended; resume it (we are inside the
-      // user gesture that started recording, so this is allowed).
-      void audioCtx.resume?.();
-    } catch {
-      audioCtx = null;
-      analyser = null;
-      realMeter = false;
-    }
-  }
-
-  /**
-   * Current real RMS level in [0,1], or null when a trustworthy reading is not
-   * available (no analyser, or the context is not RUNNING — e.g. suspended on iOS).
-   * Returning null keeps a suspended-context zero from being mistaken for silence.
-   */
-  function realLevel(): number | null {
-    if (!analyser || !levelBuf || !audioCtx) return null;
-    if (audioCtx.state !== 'running') {
-      void audioCtx.resume?.(); // nudge it back; skip this reading
-      return null;
-    }
-    try {
-      analyser.getByteTimeDomainData(levelBuf);
-      let sum = 0;
-      for (let i = 0; i < levelBuf.length; i += 1) {
-        const v = (levelBuf[i]! - 128) / 128; // center at 0, range [-1,1]
-        sum += v * v;
-      }
-      return Math.min(1, Math.sqrt(sum / levelBuf.length));
-    } catch {
-      return null;
-    }
-  }
-
-  function teardownMeter(): void {
-    try {
-      void audioCtx?.close();
-    } catch {
-      /* ignore */
-    }
-    audioCtx = null;
-    analyser = null;
-    levelBuf = null;
-    realMeter = false;
-  }
 
   // Screen Wake Lock — on mobile the OS screensaver/auto-lock suspends the page
   // and kills the mic capture, so a recording silently stops when the screen
@@ -214,10 +156,10 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
     async start(onTick: (tick: RecorderTick) => void) {
       running = true;
       elapsedMs = 0;
+      accumulatedMs = 0;
+      runStartedAt = now();
       peaks.length = 0;
       chunks = [];
-      realPeak = 0;
-      meterSamples = 0;
 
       // Real capture when a live stream + MediaRecorder exist.
       if (stream && typeof window !== 'undefined' && typeof window.MediaRecorder !== 'undefined') {
@@ -230,24 +172,17 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
         } catch {
           recorder = null; // fall back to synth-only below
         }
-        setupMeter(stream); // measure the ACTUAL input level alongside capture
       }
 
       // Keep the screen awake so the mobile screensaver can't suspend capture,
       // and re-arm everything each time the tab returns to the foreground: the OS
-      // releases the wake lock and suspends the AudioContext (and sometimes the
-      // MediaRecorder) when the screen sleeps, so on return we re-acquire the lock,
-      // resume the audio graph, and resume a recorder the OS paused.
+      // releases the wake lock (and sometimes pauses the MediaRecorder) when the
+      // screen sleeps, so on return we re-acquire the lock and resume the recorder.
       void acquireWakeLock();
       if (typeof document !== 'undefined') {
         onVisibility = () => {
           if (document.visibilityState !== 'visible' || !running) return;
           void acquireWakeLock();
-          try {
-            if (audioCtx && audioCtx.state === 'suspended') void audioCtx.resume();
-          } catch {
-            /* ignore */
-          }
           try {
             if (recorder && recorder.state === 'paused') recorder.resume();
           } catch {
@@ -260,23 +195,18 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
       const step = 100;
       timer = setInterval(() => {
         if (!running) return;
-        elapsedMs += step;
-        // Prefer the REAL measured level; keep a floor so the waveform still reads
-        // as "live" for very quiet speech. Fall back to the synthesized signal only
-        // when metering is unavailable.
-        const measured = realLevel();
-        if (measured != null) {
-          realPeak = Math.max(realPeak, measured);
-          meterSamples += 1;
-        }
-        const amplitude =
-          measured != null ? Math.min(1, Math.max(0.06, measured * 3)) : synthAmplitude(elapsedMs);
-        if (elapsedMs % 500 === 0) peaks.push(Number(amplitude.toFixed(3)));
+        // Elapsed comes from the wall clock, so throttled/coalesced ticks never
+        // make the displayed time drift behind the real recording length.
+        elapsedMs = elapsedNow();
+        const amplitude = synthAmplitude(elapsedMs);
+        peaks.push(Number(amplitude.toFixed(3)));
+        if (peaks.length > 600) peaks.shift(); // bound memory on long recordings
         onTick({ elapsedSeconds: Math.floor(elapsedMs / 1000), amplitude });
       }, step);
     },
 
     pause() {
+      if (running) accumulatedMs += now() - runStartedAt; // bank the running segment
       running = false;
       releaseWakeLock();
       try {
@@ -287,6 +217,7 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
     },
 
     resume() {
+      runStartedAt = now(); // start a new running segment
       running = true;
       void acquireWakeLock();
       try {
@@ -297,16 +228,9 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
     },
 
     async stop(): Promise<RecorderResult> {
+      elapsedMs = elapsedNow(); // final wall-clock length before we stop the clock
       running = false;
       releaseWakeLock();
-      // Only trust the level (for the silence check) when the meter actually RAN
-      // long enough — at least ~1.5s of readings from a running context. Otherwise
-      // (context stayed suspended, e.g. iOS, or a very short take) we report no
-      // level so a real recording is NEVER falsely blocked as silent.
-      const MIN_METER_SAMPLES = 15;
-      const meteredReal = realMeter && meterSamples >= MIN_METER_SAMPLES;
-      const measuredPeak = realPeak;
-      teardownMeter();
       if (onVisibility && typeof document !== 'undefined') {
         document.removeEventListener('visibilitychange', onVisibility);
         onVisibility = null;
@@ -358,9 +282,7 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
         waveformPeaks,
         blob,
         mimeType,
-        // Only trustworthy when we actually captured a real stream AND metered it.
         capturedReal,
-        peakLevel: capturedReal && meteredReal ? measuredPeak : undefined,
       };
     },
   };
