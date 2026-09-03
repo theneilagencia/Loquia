@@ -85,9 +85,9 @@ jobs:
             tsegs="$(jq '((.segments//[])|length)' /tmp/t 2>/dev/null || echo '?')"
             echo "  transcript segments=${tsegs}"
 
-            echo "-- ALL processing jobs (trace transcription vs ai_pack) --"
+            echo "-- ALL processing jobs (trace transcription vs ai_pack; submittedMime/Bytes reveal silent-WAV fallback vs real webm) --"
             curl -sS -m 40 -b "$jar" -H "Origin: ${WWW}" "${API_HOST}/api/meetings/${MID}/jobs" -o /tmp/js || true
-            jq -r 'if type=="array" then (.[]|"  [\(.type)] status=\(.status) stage=\(.stage) err=\(.errorCode // "-") msg=\(.errorMessage // "-")") else "  (no jobs endpoint / \(.|tostring[0:80]))" end' /tmp/js 2>/dev/null || echo "  (jobs unavailable)"
+            jq -r 'if type=="array" then (.[]|"  [\(.type)] status=\(.status) stage=\(.stage) err=\(.errorCode // "-") mime=\((.metrics.submittedMime) // "-") bytes=\((.metrics.submittedBytes) // "-") words=\((.metrics.wordCount) // "-") msg=\(.errorMessage // "-")") else "  (no jobs endpoint / \(.|tostring[0:80]))" end' /tmp/js 2>/dev/null || echo "  (jobs unavailable)"
 
             echo "-- pack section sizes (bloat check) --"
             jq -r '(.source.sections // []) | if length==0 then "  <no pack>" else (map("[\(.key)]\((.lines//[])|length)")|join(" ")) end' /tmp/p 2>/dev/null || echo "  (no pack)"

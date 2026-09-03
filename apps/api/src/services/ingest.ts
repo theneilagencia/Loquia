@@ -52,8 +52,8 @@ export async function submitForTranscription(deps: IngestDeps, input: SubmitInpu
   const { db, transcription, log } = deps;
   const { processingJobId, meetingId, workspaceId, tempPath, mimeType } = input;
   try {
-    await db.update(processingJobs).set({ status: 'running', stage: 'transcribing', startedAt: new Date(), updatedAt: new Date() }).where(eq(processingJobs.id, processingJobId));
-    log('stt_submission_started', { processingJobId, meetingId, workspaceId, provider: transcription.name, sizeBytes: input.sizeBytes });
+    await db.update(processingJobs).set({ status: 'running', stage: 'transcribing', startedAt: new Date(), updatedAt: new Date(), metrics: { submittedBytes: input.sizeBytes, submittedMime: input.mimeType } }).where(eq(processingJobs.id, processingJobId));
+    log('stt_submission_started', { processingJobId, meetingId, workspaceId, provider: transcription.name, sizeBytes: input.sizeBytes, mimeType: input.mimeType });
 
     const bytes = new Uint8Array(await readFile(tempPath));
     const started = Date.now();
@@ -113,7 +113,7 @@ export async function applyTranscriptionCallback(
   // honestly as a reuploadable 'no_speech' failure so the UI prompts a re-record,
   // and never enqueue an AI Pack on an empty transcript.
   if (result.words.length === 0 || segments.length === 0) {
-    await db.update(processingJobs).set({ status: 'failed', errorCode: 'no_speech', errorMessage: 'No speech detected in the recording', stage: 'transcribing', metrics: { segmentCount: 0, wordCount: result.words.length, speakerCount: 0 }, updatedAt: new Date() }).where(and(eq(processingJobs.id, processingJobId), ne(processingJobs.status, 'completed')));
+    await db.update(processingJobs).set({ status: 'failed', errorCode: 'no_speech', errorMessage: 'No speech detected in the recording', stage: 'transcribing', metrics: { ...(job.metrics as Record<string, string | number> | null), segmentCount: 0, wordCount: result.words.length, speakerCount: 0, provider: result.provider, model: result.model ?? 'n/a' }, updatedAt: new Date() }).where(and(eq(processingJobs.id, processingJobId), ne(processingJobs.status, 'completed')));
     await db.update(meetings).set({ status: 'failed', durationSeconds: Math.round(durationMs / 1000), participantCount: 0, updatedAt: new Date() }).where(eq(meetings.id, meetingId));
     log('stt_callback_empty', { processingJobId, meetingId, wordCount: result.words.length });
     return { status: 'failed', category: 'needs_reupload' };

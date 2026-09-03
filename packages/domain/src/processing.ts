@@ -65,6 +65,10 @@ export interface ProcessingJob {
   maxAttempts: number;
   errorCode?: string;
   errorMessage?: string;
+  /** Provider that ran the job (e.g. "deepgram"), when known. */
+  provider?: string;
+  /** Free-form job metrics (submitted audio size/mime, word/segment counts, …). */
+  metrics?: Record<string, unknown>;
   createdAt: ISODateString;
   startedAt?: ISODateString;
   completedAt?: ISODateString;

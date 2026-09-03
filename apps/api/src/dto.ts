@@ -147,6 +147,8 @@ export function toProcessingJobDTO(row: typeof processingJobs.$inferSelect): Pro
     maxAttempts: row.maxAttempts,
     errorCode: row.errorCode ?? undefined,
     errorMessage: row.errorMessage ?? undefined,
+    provider: row.provider ?? undefined,
+    metrics: (row.metrics as Record<string, unknown> | null) ?? undefined,
     createdAt: new Date(row.createdAt).toISOString(),
     startedAt: iso(row.startedAt),
     completedAt: iso(row.completedAt),
