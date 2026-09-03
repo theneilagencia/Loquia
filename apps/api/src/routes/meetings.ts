@@ -276,6 +276,17 @@ export async function registerMeetingRoutes(app: FastifyInstance): Promise<void>
     const current = (
       await db.select().from(aiPacks).where(and(eq(aiPacks.meetingId, meeting.id), eq(aiPacks.isCurrent, true))).orderBy(desc(aiPacks.version)).limit(1)
     )[0];
+    // When generation failed, surface the latest ai_pack job's error code so the UI
+    // can explain WHY (e.g. the provider is out of credits) instead of a generic retry.
+    let failureCode: string | null = null;
+    if (meeting.aiPackStatus === 'failed') {
+      const lastJob = (
+        await db.select({ errorCode: processingJobs.errorCode }).from(processingJobs)
+          .where(and(eq(processingJobs.meetingId, meeting.id), eq(processingJobs.type, 'ai_pack')))
+          .orderBy(desc(processingJobs.createdAt)).limit(1)
+      )[0];
+      failureCode = lastJob?.errorCode ?? null;
+    }
     return {
       status: meeting.aiPackStatus,
       hasCurrent: Boolean(current),
@@ -283,6 +294,7 @@ export async function registerMeetingRoutes(app: FastifyInstance): Promise<void>
       provider: current?.provider ?? null,
       model: current?.model ?? null,
       generatedAt: current ? new Date(current.createdAt).toISOString() : null,
+      failureCode,
     };
   });
 

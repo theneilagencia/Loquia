@@ -130,6 +130,8 @@ export interface AIPackStatusInfo {
   provider: string | null;
   model: string | null;
   generatedAt: string | null;
+  /** When status is 'failed', the latest job's error code (e.g. 'provider_credits'). */
+  failureCode?: string | null;
 }
 
 export interface CreateMeetingInput {

@@ -299,6 +299,7 @@
     "regenerate": "Regenerar",
     "regenerating": "Gerando uma nova versão… o AI Pack atual permanece até ficar pronto.",
     "failed": "Não foi possível preparar o AI Pack. Sua gravação e transcrição foram preservadas. Tente novamente.",
+    "failedCredits": "O gerador de IA está sem créditos na conta Anthropic, então o AI Pack não pôde ser criado. Sua gravação e transcrição estão salvas. Adicione créditos em console.anthropic.com (Plans & Billing) e gere novamente.",
     "retry": "Tentar novamente",
     "export": "Exportar"
   },

@@ -8,6 +8,8 @@ export type PipelineErrorCategory =
   | 'invalid_audio'
   | 'authorization'
   | 'provider_rejected'
+  /** The AI provider account is out of credits / billing blocked (non-retryable). */
+  | 'provider_credits'
   | 'unknown';
 
 const RETRYABLE: ReadonlySet<PipelineErrorCategory> = new Set([

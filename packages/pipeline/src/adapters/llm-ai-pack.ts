@@ -219,6 +219,12 @@ export class LLMAIPackGenerator implements AIPackGenerator {
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       if (res.status === 401 || res.status === 403) throw new PipelineError('authorization', 'AI Pack provider authorization failed');
+      // Out of credits / billing blocked — a 400 the provider returns when the
+      // account balance is too low. Non-retryable and needs a human to add credits,
+      // so classify it distinctly instead of a generic rejection.
+      if (/credit balance is too low|purchase credits|billing|insufficient/i.test(body)) {
+        throw new PipelineError('provider_credits', 'AI Pack provider: credit balance too low');
+      }
       if (res.status === 429) throw new PipelineError('provider_5xx', 'AI Pack provider rate limited');
       if (res.status >= 500) throw new PipelineError('provider_5xx', `AI Pack provider ${res.status}`);
       throw new PipelineError('provider_rejected', `AI Pack provider ${res.status}: ${body.slice(0, 200)}`);

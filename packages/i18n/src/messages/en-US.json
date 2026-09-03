@@ -299,6 +299,7 @@
     "regenerate": "Regenerate",
     "regenerating": "Generating a new version… the current AI Pack stays until it's ready.",
     "failed": "We couldn't prepare the AI Pack. Your recording and transcript were preserved. Try again.",
+    "failedCredits": "The AI generator's Anthropic account is out of credits, so the AI Pack couldn't be created. Your recording and transcript are saved. Add credits at console.anthropic.com (Plans & Billing) and generate again.",
     "retry": "Try again",
     "export": "Export"
   },

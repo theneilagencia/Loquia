@@ -219,12 +219,20 @@ export default function MeetingDetailPage({
               return <AiPackGenerating />;
             }
             if (status === 'failed') {
+              // Out of provider credits is a billing block, not a transient error —
+              // retrying won't help until credits are added, so say so and don't
+              // offer a misleading "try again".
+              const outOfCredits = aiPackStatusQ.data?.failureCode === 'provider_credits';
               return (
                 <div className="space-y-3 py-8 text-center">
-                  <p className="text-sm text-muted-foreground">{aiPackT('failed')}</p>
-                  <Button variant="outline" size="sm" onClick={() => void generate()}>
-                    <RefreshCw className="size-3.5" /> {aiPackT('retry')}
-                  </Button>
+                  <p className="text-sm text-muted-foreground">
+                    {outOfCredits ? aiPackT('failedCredits') : aiPackT('failed')}
+                  </p>
+                  {!outOfCredits && (
+                    <Button variant="outline" size="sm" onClick={() => void generate()}>
+                      <RefreshCw className="size-3.5" /> {aiPackT('retry')}
+                    </Button>
+                  )}
                 </div>
               );
             }
