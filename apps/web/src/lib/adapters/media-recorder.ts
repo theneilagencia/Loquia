@@ -230,14 +230,20 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
       }
 
       const step = 100;
+      let lastPeakMs = -1000;
       timer = setInterval(() => {
         if (!running) return;
         // Elapsed comes from the wall clock, so throttled/coalesced ticks never
         // make the displayed time drift behind the real recording length.
         elapsedMs = elapsedNow();
         const amplitude = synthAmplitude(elapsedMs);
-        peaks.push(Number(amplitude.toFixed(3)));
-        if (peaks.length > 600) peaks.shift(); // bound memory on long recordings
+        // Add a waveform bar ~every 500ms so a long recording stays a readable
+        // window of bars rather than an ever-denser wall.
+        if (elapsedMs - lastPeakMs >= 500) {
+          lastPeakMs = elapsedMs;
+          peaks.push(Number(amplitude.toFixed(3)));
+          if (peaks.length > 240) peaks.shift(); // bound memory on long recordings
+        }
         onTick({ elapsedSeconds: Math.floor(elapsedMs / 1000), amplitude });
       }, step);
     },

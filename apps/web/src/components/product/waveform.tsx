@@ -18,7 +18,7 @@ export function Waveform({
   const data = peaks.length ? peaks : [0.2, 0.4, 0.3, 0.5];
   return (
     <div
-      className={cn('flex h-12 items-center gap-0.5', className)}
+      className={cn('flex h-12 items-center gap-0.5 overflow-hidden', className)}
       role="img"
       aria-label="waveform"
     >
@@ -27,8 +27,11 @@ export function Waveform({
         return (
           <span
             key={i}
+            // Bars flex to SHARE the available width and never overflow the
+            // container, regardless of how many samples accumulate (a fixed-width
+            // bar list overflowed and broke the recording card's layout).
             className={cn(
-              'w-1 shrink-0 rounded-full',
+              'min-w-0 max-w-[4px] flex-1 rounded-full',
               active ? 'bg-primary' : 'bg-muted-foreground/40',
               live && i === data.length - 1 && 'animate-pulsebar bg-primary',
             )}
