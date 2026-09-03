@@ -201,7 +201,13 @@ export function createMediaRecorderAdapter(): MediaRecorderAdapter {
       // Real capture when a live stream + MediaRecorder exist.
       if (stream && typeof window !== 'undefined' && typeof window.MediaRecorder !== 'undefined') {
         try {
-          recorder = new window.MediaRecorder(stream);
+          // A 128 kbps floor keeps speech clean for transcription; fall back to the
+          // browser default if the option isn't accepted.
+          try {
+            recorder = new window.MediaRecorder(stream, { audioBitsPerSecond: 128000 });
+          } catch {
+            recorder = new window.MediaRecorder(stream);
+          }
           recorder.ondataavailable = (e: BlobEvent) => {
             if (e.data && e.data.size > 0) chunks.push(e.data);
           };

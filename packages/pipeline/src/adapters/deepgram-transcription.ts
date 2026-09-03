@@ -49,7 +49,10 @@ export class DeepgramTranscriptionAdapter implements TranscriptionProvider {
   private readonly timeoutMs: number;
 
   constructor(private readonly config: DeepgramConfig) {
-    this.model = config.model?.trim() || 'nova-2'; // `||`: a blank model env var falls back to the default
+    // nova-3 is Deepgram's most accurate model — ~34% lower batch WER than nova-2
+    // for Portuguese — and, in multilingual mode, transcribes pt↔en code-switching
+    // (common in Brazilian business meetings). `||`: a blank env var uses this default.
+    this.model = config.model?.trim() || 'nova-3';
     this.timeoutMs = config.timeoutMs ?? 30_000; // submission is fast; the result comes via callback
   }
 
@@ -61,8 +64,17 @@ export class DeepgramTranscriptionAdapter implements TranscriptionProvider {
       smart_format: 'true',
       callback: input.callbackUrl,
     });
-    if (input.languageHint) params.set('language', input.languageHint);
-    else params.set('detect_language', 'true');
+    // nova-3 multilingual ('language=multi') handles Portuguese plus embedded English
+    // terms far more faithfully than a single-language model. Older models keep the
+    // explicit hint (or auto-detect). Deepgram accepts pt-BR only on nova-2/-1 models,
+    // so we must NOT send pt-BR to nova-3.
+    if (this.model.startsWith('nova-3')) {
+      params.set('language', 'multi');
+    } else if (input.languageHint) {
+      params.set('language', input.languageHint);
+    } else {
+      params.set('detect_language', 'true');
+    }
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
